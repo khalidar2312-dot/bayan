@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكاديمية بيان | المنصة التعليمية للعلوم الشرعية والأزهرية</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cairo & Reem Kufi -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                        kufi: ['Reem Kufi', 'sans-serif'],
+                    },
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                            950: '#022c22',
+                        },
+                        amber: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Cairo', sans-serif; }
+        .font-kufi { font-family: 'Reem Kufi', sans-serif; }
+
+        .bg-islamic-pattern {
+            background-color: #064e3b;
+            background-image: radial-gradient(#d97706 0.75px, transparent 0.75px), radial-gradient(#d97706 0.75px, #064e3b 0.75px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            opacity: 0.98;
+        }
+
+        .bg-islamic-light {
+            background-color: #f8fafc;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%20059669' fill-opacity='0.04' fill-rule='evenodd'%3E%3Cpath d='M30 30L15 0h30L30 30zM0 30l30 15v-30L0 30zm60 0L30 15v30l30-15zM30 30l15 30H15l15-30z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body class="bg-islamic-light text-slate-800 antialiased selection:bg-emerald-600 selection:text-white">
+
+    <!-- Navbar -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-emerald-900/10 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer">
+                <div class="w-12 h-12 bg-gradient-to-tr from-emerald-800 to-emerald-600 rounded-2xl flex items-center justify-center text-amber-400 shadow-md border border-amber-500/30">
+                    <i class="fa-solid fa-book-quran text-2xl"></i>
+                </div>
+                <div>
+                    <span class="text-2xl font-extrabold font-kufi text-emerald-900">أكاديمية بيان</span>
+                    <span class="block text-xs font-semibold text-amber-600">للمناهج الأزهرية والعلوم الشرعية</span>
+                </div>
+            </div>
+
+            <!-- القائمة الرئيسية -->
+            <nav class="hidden md:flex items-center gap-8 font-semibold text-slate-700">
+                <a href="#hero" class="hover:text-emerald-700 transition">الرئيسية</a>
+                <a href="#features" class="hover:text-emerald-700 transition">لماذا تشترك معانا؟</a>
+                <a href="#courses" class="hover:text-emerald-700 transition">المواد الشرعية</a>
+            </nav>
+
+            <!-- منطقة الأزرار والبروفايل -->
+            <div class="flex items-center gap-3">
+                <div id="authButtons" class="flex items-center gap-2">
+                    <button onclick="openLoginModal()" class="hidden sm:inline-flex px-4 py-2 rounded-xl font-bold text-slate-700 hover:bg-emerald-50 transition">تسجيل الدخول</button>
+                    <button onclick="openRegisterModal()" class="px-5 py-2 rounded-xl font-bold text-slate-900 bg-gradient-to-r from-amber-400 to-amber-500 shadow-md transition text-sm">إنشاء حساب جديد</button>
+                </div>
+
+                <div id="userProfileHeader" class="hidden flex items-center gap-3">
+                    <!-- 🔔 زر الإشعارات -->
+                    <button onclick="toggleNotificationModal()" class="relative p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span id="notifBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">0</span>
+                    </button>
+
+                    <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-2xl">
+                        <div class="w-8 h-8 rounded-full bg-emerald-800 text-amber-400 flex items-center justify-center font-bold text-sm">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="text-right">
+                            <span id="headerUserName" class="block font-bold text-xs text-emerald-950">طالب</span>
+                            <span id="headerUserGrade" class="block text-[10px] text-emerald-700 font-semibold">المرحلة</span>
+                        </div>
+                    </div>
+                    <button onclick="handleLogout()" class="px-2.5 py-1.5 rounded-xl text-red-600 hover:bg-red-50 font-bold text-xs transition" title="تسجيل الخروج">
+                        <i class="fa-solid fa-right-from-bracket text-base"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="hero" class="relative overflow-hidden py-16 bg-islamic-pattern text-white">
+        <div class="absolute inset-0 bg-gradient-to-b from-emerald-950/80 via-emerald-900/90 to-emerald-950/95"></div>
+        <div class="relative max-w-7xl mx-auto px-4 grid lg:grid-cols-12 gap-8 items-center">
+            
+            <div class="lg:col-span-7 space-y-4 text-center lg:text-right">
+                <span class="inline-block px-4 py-1.5 rounded-full bg-emerald-800/80 border border-amber-500/30 text-amber-300 font-bold text-xs">
+                    <i class="fa-solid fa-mosque"></i> منصة التعليم الأزهري المعتمد
+                </span>
+                <h1 class="text-3xl sm:text-5xl font-black font-kufi leading-tight">طريقك للتفوق والدرجات النهائية في العلوم الشرعية</h1>
+                <p class="text-emerald-100/90 text-sm sm:text-base">شرح كامل للمناهج الأزهرية بالفيديو المسجل، واختبارات تفاعلية.</p>
+            </div>
+
+            <div class="lg:col-span-5 flex justify-center">
+                <div class="relative w-64 h-64 sm:w-72 sm:h-72 rounded-3xl bg-gradient-to-tr from-emerald-900/90 to-emerald-800/80 border-2 border-amber-500/40 shadow-2xl flex flex-col items-center justify-center p-6 text-center space-y-4 backdrop-blur-sm group hover:border-amber-400 transition duration-500">
+                    <div class="absolute inset-0 rounded-3xl bg-amber-500/5 group-hover:bg-amber-500/10 transition"></div>
+                    
+                    <div class="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-emerald-950 flex items-center justify-center text-4xl shadow-lg shadow-amber-500/20">
+                        <i class="fa-solid fa-kaaba"></i>
+                    </div>
+
+                    <div class="relative space-y-1">
+                        <h3 class="font-kufi font-bold text-xl text-amber-300">أكاديمية بيان</h3>
+                        <p class="text-xs text-emerald-200/80 font-medium">نور العلم وبناء العقول على منهج الأزهر الشريف</p>
+                    </div>
+
+                    <div class="relative flex items-center gap-2 text-amber-400/60 text-xs">
+                        <i class="fa-solid fa-star-and-crescent"></i>
+                        <span>جودة تعليمية معتمدة</span>
+                        <i class="fa-solid fa-star-and-crescent"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- لماذا تشترك معنا؟ -->
+    <section id="features" class="py-16 bg-white border-b border-slate-100">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center max-w-3xl mx-auto mb-12 space-y-2">
+                <span class="text-amber-600 font-extrabold text-xs uppercase">مميزات الأكاديمية</span>
+                <h2 class="text-3xl font-extrabold font-kufi text-emerald-950">لماذا تشترك معانا؟</h2>
+                <p class="text-slate-600 text-sm">نوفر لك بيئة تعليمية متكاملة لضمان التفوق الأزهري</p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-emerald-50/40 p-6 rounded-3xl border border-emerald-900/10 hover:shadow-lg transition space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-lightbulb"></i></div>
+                    <h3 class="font-bold text-emerald-950 text-base">شرح بسيط ومفهوم</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">توصيل المعلومات الشرعية والمعقدة بأبسط الطرق الممكنة.</p>
+                </div>
+                <div class="bg-emerald-50/40 p-6 rounded-3xl border border-emerald-900/10 hover:shadow-lg transition space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-photo-film"></i></div>
+                    <h3 class="font-bold text-emerald-950 text-base">فيديوهات برسومات توضيحية</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">استخدام الرسوم والأشكال لتثبيت المعلومة في ذهن الطالب.</p>
+                </div>
+                <div class="bg-emerald-50/40 p-6 rounded-3xl border border-emerald-900/10 hover:shadow-lg transition space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-gamepad"></i></div>
+                    <h3 class="font-bold text-emerald-950 text-base">تمارين تفاعلية على الدروس</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">تدريبات تطبيقية بعد كل درس لاختبار مدى استيعابك.</p>
+                </div>
+                <div class="bg-emerald-50/40 p-6 rounded-3xl border border-emerald-900/10 hover:shadow-lg transition space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <h3 class="font-bold text-emerald-950 text-base">مرونة كاملة في المذاكرة</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">دروس مسجلة تتيح لك المذاكرة في أي وقت ومن أي مكان.</p>
+                </div>
+                <div class="bg-emerald-50/40 p-6 rounded-3xl border border-emerald-900/10 hover:shadow-lg transition space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-clipboard-check"></i></div>
+                    <h3 class="font-bold text-emerald-950 text-base">اختبارات مستمرة</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">امتحانات دورية ومتابعة دقيقة لمستوى تحصيلك العلمي.</p>
+                </div>
+                <div class="bg-emerald-50/40 p-6 rounded-3xl border border-emerald-900/10 hover:shadow-lg transition space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-layer-group"></i></div>
+                    <h3 class="font-bold text-emerald-950 text-base">محتوى متكامل ومنظم</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">تقسيم المناهج إلى وحدات ودروس مرتبة بدقة وعناية.</p>
+                </div>
+                <div class="bg-emerald-50/40 p-6 rounded-3xl border border-emerald-900/10 hover:shadow-lg transition space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-arrows-rotate"></i></div>
+                    <h3 class="font-bold text-emerald-950 text-base">تحديث مستمر حسب المنهج</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">مواكبة دائمة لكافة التعديلات والقرارات في المقررات الأزهرية.</p>
+                </div>
+                <div class="bg-emerald-50/40 p-6 rounded-3xl border border-emerald-900/10 hover:shadow-lg transition space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-xl"><i class="fa-solid fa-users"></i></div>
+                    <h3 class="font-bold text-emerald-950 text-base">مجتمع طلابي ضخم</h3>
+                    <p class="text-slate-600 text-xs leading-relaxed">تواصل مع زملائك المتفوقين وتبادل الخبرات التشجيعية.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Courses Section -->
+    <section id="courses" class="py-16 bg-islamic-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center max-w-3xl mx-auto mb-12 space-y-2">
+                <span class="text-amber-600 font-extrabold text-xs uppercase">المناهج والعلوم الشرعية</span>
+                <h2 class="text-3xl font-extrabold font-kufi text-emerald-950">المواد الدراسية</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- 1. الفقه -->
+                <div class="bg-white rounded-3xl border border-emerald-900/10 p-5 flex flex-col justify-between shadow-sm">
+                    <div class="space-y-3 text-center">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <h3 class="text-xl font-bold text-emerald-950">الفقه الميسر</h3>
+                        <p class="text-slate-600 text-xs">شرح أحكام العبادات والمعاملات.</p>
+                    </div>
+                    <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                        <div><span class="text-[10px] text-slate-400 block">السعر</span><span class="text-xl font-black text-emerald-900">350 ج.م</span></div>
+                        <button id="btn-fiqh" onclick="handleCourseClick('fiqh', 'الفقه الميسر', 350)" class="px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm">اشترك الآن</button>
+                    </div>
+                </div>
+
+                <!-- 2. التفسير -->
+                <div class="bg-white rounded-3xl border border-emerald-900/10 p-5 flex flex-col justify-between shadow-sm">
+                    <div class="space-y-3 text-center">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-book-quran"></i></div>
+                        <h3 class="text-xl font-bold text-emerald-950">علم التفسير</h3>
+                        <p class="text-slate-600 text-xs">قراءة آيات التنزيل وتدبر المعاني.</p>
+                    </div>
+                    <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                        <div><span class="text-[10px] text-slate-400 block">السعر</span><span class="text-xl font-black text-emerald-900">400 ج.م</span></div>
+                        <button id="btn-tafseer" onclick="handleCourseClick('tafseer', 'علم التفسير', 400)" class="px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm">اشترك الآن</button>
+                    </div>
+                </div>
+
+                <!-- 3. الحديث -->
+                <div class="bg-white rounded-3xl border border-emerald-900/10 p-5 flex flex-col justify-between shadow-sm">
+                    <div class="space-y-3 text-center">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-scroll"></i></div>
+                        <h3 class="text-xl font-bold text-emerald-950">الحديث الشريف</h3>
+                        <p class="text-slate-600 text-xs">دراسة الأحاديث النبوية المقررة.</p>
+                    </div>
+                    <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                        <div><span class="text-[10px] text-slate-400 block">السعر</span><span class="text-xl font-black text-emerald-900">300 ج.م</span></div>
+                        <button id="btn-hadith" onclick="handleCourseClick('hadith', 'الحديث الشريف', 300)" class="px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm">اشترك الآن</button>
+                    </div>
+                </div>
+
+                <!-- 4. التوحيد -->
+                <div class="bg-white rounded-3xl border border-emerald-900/10 p-5 flex flex-col justify-between shadow-sm">
+                    <div class="space-y-3 text-center">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-800 text-amber-400 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-hands-praying"></i></div>
+                        <h3 class="text-xl font-bold text-emerald-950">علم التوحيد</h3>
+                        <p class="text-slate-600 text-xs">شرح العقيدة والسمعيات.</p>
+                    </div>
+                    <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                        <div><span class="text-[10px] text-slate-400 block">السعر</span><span class="text-xl font-black text-emerald-900">300 ج.م</span></div>
+                        <button id="btn-tawheed" onclick="handleCourseClick('tawheed', 'علم التوحيد', 300)" class="px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm">اشترك الآن</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-emerald-950 text-white pt-16 pb-8 border-t border-emerald-900">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-10 pb-12 border-b border-emerald-900/60">
+            
+            <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-tr from-amber-500 to-amber-400 text-emerald-950 rounded-xl flex items-center justify-center font-bold text-xl shadow-md">
+                        <i class="fa-solid fa-book-quran"></i>
+                    </div>
+                    <span class="text-2xl font-extrabold font-kufi text-amber-300">أكاديمية بيان</span>
+                </div>
+                <p class="text-emerald-200/80 text-xs leading-relaxed">
+                    منصة تعليمية متخصصة في تبسيط وتدريس المناهج الأزهرية والعلوم الشرعية لجميع المراحل بأساليب حديثة وميسرة.
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="font-kufi font-bold text-amber-300 text-lg">روابط سريعة</h4>
+                <ul class="space-y-2 text-xs text-emerald-200/80">
+                    <li><a href="#hero" class="hover:text-amber-400 transition">الرئيسية</a></li>
+                    <li><a href="#features" class="hover:text-amber-400 transition">مميزات الأكاديمية</a></li>
+                    <li><a href="#courses" class="hover:text-amber-400 transition">المواد الشرعية</a></li>
+                    <li><a href="#" onclick="openLoginModal(); return false;" class="hover:text-amber-400 transition">تسجيل الدخول</a></li>
+                </ul>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="font-kufi font-bold text-amber-300 text-lg">تواصل معنا والدعم الفني</h4>
+                <div class="space-y-2.5 text-xs text-emerald-200/90">
+                    <p class="flex items-center gap-2">
+                        <i class="fa-brands fa-whatsapp text-amber-400 text-base"></i>
+                        <span dir="ltr">01283848324</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <i class="fa-solid fa-envelope text-amber-400 text-base"></i>
+                        <span>khalidar2312@gmail.com</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <i class="fa-solid fa-location-dot text-amber-400 text-base"></i>
+                        <span>جمهورية مصر العربية</span>
+                    </p>
+                </div>
+                <div class="flex items-center gap-3 pt-2">
+                    <a href="https://www.facebook.com/khaled.cr4" target="_blank" class="w-9 h-9 rounded-xl bg-emerald-900 hover:bg-emerald-800 text-amber-400 flex items-center justify-center transition" title="فيسبوك">
+                        <i class="fa-brands fa-facebook-f"></i>
+                    </a>
+                    <a href="https://t.me/khalidar6" target="_blank" class="w-9 h-9 rounded-xl bg-emerald-900 hover:bg-emerald-800 text-amber-400 flex items-center justify-center transition" title="تليجرام">
+                        <i class="fa-brands fa-telegram"></i>
+                    </a>
+                    <a href="https://wa.me/01283848324" target="_blank" class="w-9 h-9 rounded-xl bg-emerald-900 hover:bg-emerald-800 text-amber-400 flex items-center justify-center transition" title="محادثة واتساب">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-emerald-300/60 gap-3 text-center">
+            <p>جميع الحقوق محفوظة © 2026 أكاديمية بيان للعلوم الشرعية.</p>
+            <p>تصميم وتطوير المنصة التعليمية الأزهرية</p>
+        </div>
+    </footer>
+
+    <!-- 🔔 Modal نافذة الإشعارات -->
+    <div id="notificationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4">
+            <button onclick="toggleNotificationModal()" class="absolute top-4 left-4 text-slate-400 hover:text-slate-600 text-xl font-bold"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-xl font-extrabold font-kufi text-slate-900 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-bell text-amber-500"></i> الإشعارات والتنبيهات
+            </h3>
+            <div id="notificationsList" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                <!-- الإشعارات تعبأ هنا عبر JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal الدفع -->
+    <div id="checkoutModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4 text-sm">
+            <button onclick="closeModal('checkoutModal')" class="absolute top-4 left-4 text-slate-400 text-xl font-bold"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-xl font-extrabold font-kufi text-emerald-950 mb-2 text-center">تفاصيل دفع الاشتراك</h3>
+            <p id="checkoutCourseTitle" class="text-center font-bold text-amber-600 mb-4"></p>
+            
+            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 mb-4 space-y-1">
+                <p class="font-bold text-emerald-950">طريقة الدفع (فودافون كاش / انستا باي):</p>
+                <p class="text-lg font-black text-emerald-700 font-mono text-center">01283848324</p>
+            </div>
+
+            <form onsubmit="handlePaymentSubmit(event)" class="space-y-3">
+                <input type="hidden" id="selectedCourseId">
+                <input type="hidden" id="selectedCourseTitleInput">
+                <input type="hidden" id="selectedCoursePriceInput">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">رقم المحفظة المحول منها <span class="text-red-500">*</span></label>
+                    <input type="tel" id="senderPhone" required placeholder="010XXXXXXXX" class="w-full px-3.5 py-2 rounded-xl border border-slate-300">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">ملاحظات (اختياري)</label>
+                    <input type="text" id="transferNotes" class="w-full px-3.5 py-2 rounded-xl border border-slate-300">
+                </div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition shadow-md shadow-emerald-200">تأكيد إرسال إثبات الدفع</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl hidden flex items-center gap-3 text-sm font-bold border border-slate-700 transition-all duration-300">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastText">تم إرسال طلبك بنجاح!</span>
+    </div>
+
+    <!-- Modals الدخول والتسجيل -->
+    <div id="loginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4">
+            <button onclick="closeModal('loginModal')" class="absolute top-4 left-4 text-slate-400 text-xl font-bold"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-2xl font-extrabold font-kufi text-emerald-950 mb-4 text-center">تسجيل الدخول</h3>
+            <form onsubmit="handleLoginSubmit(event)" class="space-y-4 text-sm">
+                <div><label class="block font-bold text-slate-700 mb-1">البريد الإلكتروني</label><input type="text" id="loginId" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">كلمة المرور</label><input type="password" id="loginPassword" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300"></div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold">تسجيل الدخول</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="registerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4 text-sm">
+            <button onclick="closeModal('registerModal')" class="absolute top-4 left-4 text-slate-400 text-xl font-bold"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-2xl font-extrabold font-kufi text-emerald-950 mb-4 text-center">إنشاء حساب جديد</h3>
+            <form onsubmit="handleRegisterSubmit(event)" class="space-y-3">
+                <div><label class="block font-bold text-slate-700 mb-1">الاسم بالكامل</label><input type="text" id="regFullName" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">البريد الإلكتروني</label><input type="email" id="regEmail" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">رقم الواتساب</label><input type="tel" id="regPhone" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300"></div>
+                <!-- الحقل الجديد: رقم ولي الأمر -->
+                <div><label class="block font-bold text-slate-700 mb-1">رقم ولي الأمر (للمتابعة)</label><input type="tel" id="regParentPhone" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300" placeholder="010XXXXXXXX"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">كلمة المرور</label><input type="password" id="regPassword" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300"></div>
+                <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 font-bold text-slate-950 mt-2">إنشاء الحساب</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            checkLoggedInUser();
+        });
+
+        function getActiveUser() { return JSON.parse(localStorage.getItem('activeUser')); }
+
+        function checkLoggedInUser() {
+            let activeUser = getActiveUser();
+            if (activeUser) {
+                const updatedUser = JSON.parse(localStorage.getItem('user_' + activeUser.email));
+                if (updatedUser) {
+                    activeUser = updatedUser;
+                    localStorage.setItem('activeUser', JSON.stringify(updatedUser));
+                }
+
+                document.getElementById('authButtons').classList.add('hidden');
+                document.getElementById('userProfileHeader').classList.remove('hidden');
+                document.getElementById('headerUserName').innerText = activeUser.fullName;
+                document.getElementById('headerUserGrade').innerText = activeUser.grade || 'طالب علم';
+
+                updateCourseButtons(activeUser);
+                renderNotifications(activeUser);
+            }
+        }
+
+        // دالة التوافق المباشرة مع المواد الأربع الرسمية للمنصة
+        function updateCourseButtons(user) {
+            const subscriptions = user.subscriptions || {};
+            const courses = ['fiqh', 'tafseer', 'hadith', 'tawheed'];
+
+            courses.forEach(courseId => {
+                const btn = document.getElementById(`btn-${courseId}`);
+                if (!btn) return;
+                
+                const status = subscriptions[courseId];
+                if (status === 'approved') {
+                    btn.innerText = "شاهد المحتوى 🔓";
+                    btn.className = "px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-sm shadow-md";
+                } else if (status === 'pending') {
+                    btn.innerText = "قيد التفعيل ⏳";
+                    btn.className = "px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-bold text-sm cursor-not-allowed";
+                } else {
+                    btn.innerText = "اشترك الآن";
+                    btn.className = "px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition";
+                }
+            });
+        }
+
+        function renderNotifications(user) {
+            const list = document.getElementById('notificationsList');
+            const badge = document.getElementById('notifBadge');
+            
+            // فلترة وحذف أي إشعار فارغ أو تالف يحتوي على undefined تلقائياً
+            if (user.notifications) {
+                user.notifications = user.notifications.filter(n => n.text && !n.text.includes('undefined'));
+            }
+
+            const notifications = user.notifications || [];
+            const unreadCount = notifications.filter(n => !n.read).length;
+
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            if (notifications.length === 0) {
+                list.innerHTML = `<p class="text-center text-slate-400 text-xs py-4">لا توجد إشعارات حالياً</p>`;
+                return;
+            }
+
+            list.innerHTML = notifications.map(n => `
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+                    <p class="font-bold text-slate-800">${n.text}</p>
+                    <span class="text-[10px] text-slate-400 block">${n.date || ''}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleNotificationModal() {
+            const modal = document.getElementById('notificationModal');
+            modal.classList.toggle('hidden');
+
+            // بمجرد فتح النافذة، يتم تعليم الإشعارات كمقروءة وإزالة الشارة الحمراء فوراً
+            if (!modal.classList.contains('hidden')) {
+                const activeUser = getActiveUser();
+                if (activeUser && activeUser.notifications) {
+                    activeUser.notifications = activeUser.notifications.filter(n => n.text && !n.text.includes('undefined'));
+                    activeUser.notifications.forEach(n => n.read = true);
+                    
+                    localStorage.setItem('activeUser', JSON.stringify(activeUser));
+                    localStorage.setItem('user_' + activeUser.email, JSON.stringify(activeUser));
+                    
+                    renderNotifications(activeUser);
+                }
+            }
+        }
+
+        function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+        function openRegisterModal() { document.getElementById('registerModal').classList.remove('hidden'); }
+        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastText').innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+
+        function handleRegisterSubmit(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('regFullName').value;
+            const email = document.getElementById('regEmail').value;
+            const phone = document.getElementById('regPhone').value;
+            const parentPhone = document.getElementById('regParentPhone').value;
+            const password = document.getElementById('regPassword').value;
+
+            const userData = { 
+                fullName, 
+                email, 
+                phone, 
+                parentPhone, 
+                password, 
+                subscriptions: {}, 
+                notifications: [] 
+            };
+            
+            localStorage.setItem('user_' + email, JSON.stringify(userData));
+            localStorage.setItem('activeUser', JSON.stringify(userData));
+
+            closeModal('registerModal');
+            showToast('تم إنشاء الحساب وتسجيل الدخول بنجاح!');
+            checkLoggedInUser();
+        }
+
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginId').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const user = JSON.parse(localStorage.getItem('user_' + email));
+            if (user && user.password === password) {
+                localStorage.setItem('activeUser', JSON.stringify(user));
+                closeModal('loginModal');
+                showToast('مرحباً بك مجدداً!');
+                checkLoggedInUser();
+            } else {
+                alert('البريد الإلكتروني أو كلمة المرور غير صحيحة!');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('activeUser');
+            location.reload();
+        }
+
+        function handleCourseClick(courseId, courseTitle, price) {
+            const activeUser = getActiveUser();
+            if (!activeUser) {
+                alert('يرجى تسجيل الدخول أو إنشاء حساب أولاً للاشتراك في المواد.');
+                openLoginModal();
+                return;
+            }
+
+            const subscriptions = activeUser.subscriptions || {};
+            const status = subscriptions[courseId];
+
+            if (status === 'approved') {
+                alert(`أنت مشترك بالفعل في مادة "${courseTitle}" ويمكنك مشاهدة المحتوى.`);
+            } else if (status === 'pending') {
+                alert('طلب اشتراكك في هذه المادة قيد المراجعة والتفعيل حالياً.');
+            } else {
+                document.getElementById('selectedCourseId').value = courseId;
+                document.getElementById('selectedCourseTitleInput').value = courseTitle;
+                document.getElementById('selectedCoursePriceInput').value = price;
+                document.getElementById('checkoutCourseTitle').innerText = `${courseTitle} - ${price} ج.م`;
+                document.getElementById('checkoutModal').classList.remove('hidden');
+            }
+        }
+
+        function handlePaymentSubmit(e) {
+            e.preventDefault();
+            const activeUser = getActiveUser();
+            if (!activeUser) return;
+
+            const courseId = document.getElementById('selectedCourseId').value;
+            const courseTitle = document.getElementById('selectedCourseTitleInput').value;
+            const coursePrice = document.getElementById('selectedCoursePriceInput').value;
+            const senderPhone = document.getElementById('senderPhone').value;
+            const transferNotes = document.getElementById('transferNotes').value;
+
+            if (!activeUser.subscriptions) activeUser.subscriptions = {};
+            activeUser.subscriptions[courseId] = 'pending';
+
+            if (!activeUser.notifications) activeUser.notifications = [];
+            activeUser.notifications.unshift({
+                text: `تم استلام طلب اشتراكك في مادة "${courseTitle}" وسيتم التفعيل قريباً.`,
+                date: new Date().toLocaleDateString('ar-EG'),
+                read: false
+            });
+
+            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+            localStorage.setItem('user_' + activeUser.email, JSON.stringify(activeUser));
+
+            let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+            
+            const existingIndex = adminRequests.findIndex(r => r.userEmail === activeUser.email && r.courseId === courseId);
+            const newRequest = {
+                userName: activeUser.fullName,
+                userEmail: activeUser.email,
+                userPhone: activeUser.phone || '',
+                parentPhone: activeUser.parentPhone || '',
+                courseId: courseId,
+                courseTitle: courseTitle,
+                coursePrice: coursePrice,
+                senderPhone: senderPhone,
+                notes: transferNotes,
+                date: new Date().toLocaleString('ar-EG')
+            };
+
+            if (existingIndex >= 0) {
+                adminRequests[existingIndex] = newRequest;
+            } else {
+                adminRequests.push(newRequest);
+            }
+
+            localStorage.setItem('adminRequests', JSON.stringify(adminRequests));
+
+            closeModal('checkoutModal');
+            showToast('تم إرسال إثبات الدفع بنجاح، بانتظار التفعيل!');
+            checkLoggedInUser();
+        }
+    </script>
+</body>
+</html>

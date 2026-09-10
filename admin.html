@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكاديمية بيان | لوحة التحكم الإدارية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'], kufi: ['Reem Kufi', 'sans-serif'] },
+                    colors: {
+                        emerald: { 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b', 950: '#022c22' },
+                        amber: { 400: '#fbbf24', 500: '#f59e0b' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+
+    <!-- عنصر الصوت المخصص sound.mp3 -->
+    <audio id="notifSound" preload="auto">
+        <source src="sound.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- شاشة تسجيل الدخول الموحدة -->
+    <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-emerald-950 p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-emerald-900 text-amber-400 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-md">
+                    <i class="fa-solid fa-id-card-clip"></i>
+                </div>
+                <h2 class="text-2xl font-black font-kufi text-emerald-950">بوابة دخول الإدارة والموظفين</h2>
+                <p class="text-xs text-slate-400 mt-1">يرجى إدخال بيانات الحساب للتوجه للوحة التحكم</p>
+            </div>
+            
+            <form onsubmit="handleUnifiedLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم (Username)</label>
+                    <input type="text" id="loginUser" required placeholder="admin أو اسم الموظف" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور (Password)</label>
+                    <input type="password" id="loginPass" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                </div>
+                <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-800 text-amber-300 font-bold hover:bg-emerald-900 transition shadow-lg text-sm">تسجيل الدخول</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- محتوى لوحة التحكم الشاملة -->
+    <div id="adminDashboardContent" class="hidden">
+        <!-- Header -->
+        <header class="bg-emerald-950 text-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-500 text-emerald-950 rounded-xl flex items-center justify-center font-bold text-xl">
+                        <i class="fa-solid fa-gauge"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-extrabold font-kufi">لوحة تحكم أكاديمية بيان</h1>
+                        <p id="currentUserBadge" class="text-xs text-amber-400 font-semibold"></p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button onclick="testAudio()" class="px-3 py-2 rounded-xl bg-amber-500 text-emerald-950 font-bold text-xs hover:bg-amber-400 transition flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-volume-high"></i> اختبار الصوت
+                    </button>
+                    <a href="index.html" class="px-4 py-2 rounded-xl bg-emerald-900 text-amber-300 font-bold text-xs hover:bg-emerald-800 transition">الرئيسية</a>
+                    <button onclick="logoutAdmin()" class="px-3 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition">خروج</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+            
+            <!-- قسم الإحصائيات السريعة -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-bold">الطلبات المعلقة</p>
+                        <h3 id="statPendingCount" class="text-2xl font-black text-amber-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-bold">إجمالي الطلاب</p>
+                        <h3 id="statUsersCount" class="text-2xl font-black text-emerald-900 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-bold">الموظفين المعينين</p>
+                        <h3 id="statStaffCount" class="text-2xl font-black text-blue-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-bold">حالة النظام</p>
+                        <h3 class="text-base font-black text-emerald-600 mt-1">يعمل بانتظام</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قسم تغيير الرقم السري -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-key text-amber-500"></i> إعدادات الحساب: تغيير الرقم السري
+                </h2>
+                <form onsubmit="changePassword(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الرقم السري الحالي</label>
+                        <input type="password" id="currentPassInput" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الرقم السري الجديد</label>
+                        <input type="password" id="newPassInput" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">تأكيد الرقم السري الجديد</label>
+                        <input type="password" id="confirmPassInput" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-800 text-amber-300 font-bold text-xs hover:bg-emerald-900 transition shadow-sm">حفظ الرقم السري</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 1. قسم تعيين وإدارة الموظفين الجدد -->
+            <div id="staffManagementSection" class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-extrabold font-kufi text-emerald-950 flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-blue-600"></i> تعيين وإدارة موظف جديد
+                    </h2>
+                </div>
+                
+                <form onsubmit="addNewStaff(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم الموظف</label>
+                        <input type="text" id="staffName" required placeholder="أحمد محمد" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم</label>
+                        <input type="text" id="staffUsername" required placeholder="ahmed22" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور</label>
+                        <input type="password" id="staffPassword" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">الدور / الصلاحية</label>
+                        <select id="staffRole" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 bg-white">
+                            <option value="موظف خدمة عملاء">موظف خدمة عملاء</option>
+                            <option value="مساعد مراجعة اشتراكات">مساعد مراجعة اشتراكات</option>
+                            <option value="مشرف أكاديمي">مشرف أكاديمي</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition shadow-sm">إضافة الموظف</button>
+                    </div>
+                </form>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs text-slate-500 bg-slate-50">
+                                <th class="p-3">اسم الموظف</th>
+                                <th class="p-3">اسم المستخدم</th>
+                                <th class="p-3">كلمة المرور</th>
+                                <th class="p-3">الدور / الصلاحية</th>
+                                <th class="p-3">تاريخ التعيين</th>
+                                <th class="p-3 text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffTableBody" class="text-xs">
+                            <!-- تُعبأ البيانات تلقائياً -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. جدول طلبات الاشتراكات المعلقة -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-amber-500"></i> طلبات الاشتراكات المعلقة
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs text-slate-500 bg-slate-50">
+                                <th class="p-3">اسم الطالب</th>
+                                <th class="p-3">رقم الطالب</th>
+                                <th class="p-3">رقم ولي الأمر</th>
+                                <th class="p-3">المادة المطلوبة</th>
+                                <th class="p-3">رقم المحفظة المحول منها</th>
+                                <th class="p-3">التاريخ</th>
+                                <th class="p-3 text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsTableBody" class="text-xs">
+                            <!-- تُعبأ البيانات تلقائياً -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. جدول إدارة جميع الطلاب المسجلين -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-user-graduate text-emerald-700"></i> إدارة جميع الطلاب المسجلين
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs text-slate-500 bg-slate-50">
+                                <th class="p-3">اسم الطالب</th>
+                                <th class="p-3">البريد الإلكتروني</th>
+                                <th class="p-3">رقم الواتساب</th>
+                                <th class="p-3">رقم ولي الأمر</th>
+                                <th class="p-3">المواد المشترك بها</th>
+                                <th class="p-3 text-center">إدارة الحساب</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody" class="text-xs">
+                            <!-- تُعبأ البيانات تلقائياً -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modal تعديل اشتراكات الطالب -->
+    <div id="editSubscriptionsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4 text-sm">
+            <button onclick="closeEditModal()" class="absolute top-4 left-4 text-slate-400 text-xl font-bold"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-xl font-extrabold font-kufi text-emerald-950 mb-1 text-center">تعديل اشتراكات الطالب</h3>
+            <p id="editStudentNameTitle" class="text-center text-xs font-bold text-amber-600 mb-4"></p>
+            
+            <input type="hidden" id="editingUserEmail">
+
+            <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-5">
+                <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
+                    <input type="checkbox" id="sub-fiqh" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                    <span class="font-bold text-slate-800">الفقه الميسر</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
+                    <input type="checkbox" id="sub-tafseer" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                    <span class="font-bold text-slate-800">علم التفسير</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
+                    <input type="checkbox" id="sub-hadith" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                    <span class="font-bold text-slate-800">الحديث الشريف</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
+                    <input type="checkbox" id="sub-tawheed" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                    <span class="font-bold text-slate-800">علم التوحيد</span>
+                </label>
+            </div>
+
+            <button onclick="saveStudentSubscriptions()" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition shadow-md">حفظ التغييرات</button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl hidden flex items-center gap-3 text-sm font-bold border border-slate-700">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastText">تم بنجاح!</span>
+    </div>
+
+    <script>
+        let lastRequestsCount = 0;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
+            if (isLoggedIn === 'true') {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('adminDashboardContent').classList.remove('hidden');
+                initAdminPanel();
+            }
+        });
+
+        // دالة تغيير الرقم السري
+        function changePassword(event) {
+            event.preventDefault();
+            const currentInput = document.getElementById('currentPassInput').value.trim();
+            const newInput = document.getElementById('newPassInput').value.trim();
+            const confirmInput = document.getElementById('confirmPassInput').value.trim();
+
+            const loggedInUser = localStorage.getItem('currentLoggedInName');
+            const loggedInRole = localStorage.getItem('currentLoggedInRole');
+
+            if (newInput !== confirmInput) {
+                alert('الرقم السري الجديد وتأكيده غير متطابقين!');
+                return;
+            }
+
+            if (loggedInRole === 'مدير النظام (Admin)') {
+                const savedAdminPass = localStorage.getItem('adminCustomPassword') || '1522001';
+                if (currentInput !== savedAdminPass) {
+                    alert('الرقم السري الحالي غير صحيح!');
+                    return;
+                }
+                localStorage.setItem('adminCustomPassword', newInput);
+                showToast('تم تغيير كلمة مرور الأدمن بنجاح!');
+            } else {
+                let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+                let staffIndex = staffList.findIndex(s => s.name === loggedInUser);
+                if (staffIndex !== -1) {
+                    if (staffList[staffIndex].password !== currentInput) {
+                        alert('الرقم السري الحالي غير صحيح!');
+                        return;
+                    }
+                    staffList[staffIndex].password = newInput;
+                    localStorage.setItem('adminStaffList', JSON.stringify(staffList));
+                    showToast('تم تغيير كلمة المرور الخاصة بك بنجاح!');
+                }
+            }
+
+            document.getElementById('currentPassInput').value = '';
+            document.getElementById('newPassInput').value = '';
+            document.getElementById('confirmPassInput').value = '';
+        }
+
+        // دالة تسجيل الدخول الموحدة
+        function handleUnifiedLogin(event) {
+            event.preventDefault();
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+
+            const adminPass = localStorage.getItem('adminCustomPassword') || '1522001';
+
+            // 1. التحقق من الأدمن الأساسي
+            if (user === 'admin' && pass === adminPass) {
+                localStorage.setItem('isAdminLoggedIn', 'true');
+                localStorage.setItem('currentLoggedInRole', 'مدير النظام (Admin)');
+                localStorage.setItem('currentLoggedInName', 'المسؤول الرئيسي');
+                startDashboardSession();
+                return;
+            }
+
+            // 2. التحقق من قائمة الموظفين
+            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            const foundStaff = staffList.find(s => s.username === user && s.password === pass);
+
+            if (foundStaff) {
+                localStorage.setItem('isAdminLoggedIn', 'true');
+                localStorage.setItem('currentLoggedInRole', foundStaff.role);
+                localStorage.setItem('currentLoggedInName', foundStaff.name);
+                startDashboardSession();
+                return;
+            }
+
+            alert('اسم المستخدم أو كلمة المرور غير صحيحة!');
+        }
+
+        function startDashboardSession() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('adminDashboardContent').classList.remove('hidden');
+            
+            const roleName = localStorage.getItem('currentLoggedInRole') || 'موظف';
+            const personName = localStorage.getItem('currentLoggedInName') || '';
+            document.getElementById('currentUserBadge').innerText = `المستخدم الحالي: ${personName} (${roleName})`;
+
+            initAdminPanel();
+            showToast(`مرحباً بك، تم تسجيل الدخول بنجاح`);
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem('isAdminLoggedIn');
+            localStorage.removeItem('currentLoggedInRole');
+            localStorage.removeItem('currentLoggedInName');
+            location.reload();
+        }
+
+        function initAdminPanel() {
+            loadAdminDashboard();
+            lastRequestsCount = (JSON.parse(localStorage.getItem('adminRequests')) || []).length;
+
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'adminRequests') {
+                    const newRequests = JSON.parse(e.newValue) || [];
+                    if (newRequests.length > lastRequestsCount) {
+                        triggerAlert();
+                    }
+                    lastRequestsCount = newRequests.length;
+                    loadAdminDashboard();
+                }
+            });
+
+            setInterval(() => {
+                const currentRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+                if (currentRequests.length > lastRequestsCount) {
+                    triggerAlert();
+                    loadAdminDashboard();
+                }
+                lastRequestsCount = currentRequests.length;
+            }, 2000);
+        }
+
+        function testAudio() {
+            const sound = document.getElementById('notifSound');
+            sound.currentTime = 0;
+            sound.play().then(() => {
+                showToast("🔊 الصوت يعمل بشكل سليم!");
+            }).catch(err => {
+                alert("تعذر تشغيل الصوت. تأكد أن ملف sound.mp3 موجود في نفس المجلد.");
+            });
+        }
+
+        function triggerAlert() {
+            const sound = document.getElementById('notifSound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(err => {});
+            }
+            showToast("⚠️ تنبيه هام: يوجد طالب جديد يطلب الاشتراك الآن!");
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastText').innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('hidden'); }, 5000);
+        }
+
+        function loadAdminDashboard() {
+            loadAdminRequests();
+            loadAllUsers();
+            loadStaffMembers();
+        }
+
+        function addNewStaff(event) {
+            event.preventDefault();
+            const name = document.getElementById('staffName').value.trim();
+            const username = document.getElementById('staffUsername').value.trim();
+            const password = document.getElementById('staffPassword').value.trim();
+            const role = document.getElementById('staffRole').value;
+
+            let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            
+            staffList.push({
+                name,
+                username,
+                password,
+                role,
+                date: new Date().toLocaleDateString('ar-EG')
+            });
+
+            localStorage.setItem('adminStaffList', JSON.stringify(staffList));
+            
+            document.getElementById('staffName').value = '';
+            document.getElementById('staffUsername').value = '';
+            document.getElementById('staffPassword').value = '';
+            
+            showToast("تم تعيين وإضافة الموظف بنجاح وأصبح بإمكانه الدخول الآن");
+            loadStaffMembers();
+        }
+
+        function loadStaffMembers() {
+            const tbody = document.getElementById('staffTableBody');
+            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            
+            document.getElementById('statStaffCount').innerText = staffList.length;
+
+            if (staffList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد موظفين معينين حتى الآن</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = staffList.map((staff, index) => `
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="p-3 font-bold text-slate-900">${staff.name}</td>
+                    <td class="p-3 font-mono text-slate-600" dir="ltr">${staff.username}</td>
+                    <td class="p-3 font-mono text-slate-600" dir="ltr">${staff.password}</td>
+                    <td class="p-3 font-semibold text-blue-700">${staff.role}</td>
+                    <td class="p-3 text-slate-400">${staff.date}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteStaff(${index})" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">إلغاء التعيين</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteStaff(index) {
+            if (confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
+                let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+                staffList.splice(index, 1);
+                localStorage.setItem('adminStaffList', JSON.stringify(staffList));
+                showToast("تم إزالة الموظف بنجاح");
+                loadStaffMembers();
+            }
+        }
+
+        function loadAdminRequests() {
+            const tbody = document.getElementById('requestsTableBody');
+            const adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+            
+            document.getElementById('statPendingCount').innerText = adminRequests.length;
+
+            if (adminRequests.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">لا توجد طلبات اشتراك معلقة حالياً</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = adminRequests.map((req, index) => `
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="p-3 font-bold text-slate-900">${req.userName}</td>
+                    <td class="p-3 font-mono" dir="ltr">${req.userPhone || '-'}</td>
+                    <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${req.parentPhone || 'غير مسجل'}</td>
+                    <td class="p-3 font-bold text-emerald-900">${req.courseTitle} (${req.coursePrice} ج.م)</td>
+                    <td class="p-3 font-mono text-amber-600" dir="ltr">${req.senderPhone}</td>
+                    <td class="p-3 text-slate-400">${req.date}</td>
+                    <td class="p-3 text-center space-x-2 space-x-reverse">
+                        <button onclick="approveRequest(${index})" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition">قبول وتفعيل</button>
+                        <button onclick="rejectRequest(${index})" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">رفض</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadAllUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            let users = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('user_')) {
+                    try {
+                        const userData = JSON.parse(localStorage.getItem(key));
+                        if (userData && userData.email) {
+                            users.push(userData);
+                        }
+                    } catch(e) {}
+                }
+            }
+
+            document.getElementById('statUsersCount').innerText = users.length;
+
+            if (users.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد طلاب مسجلين حتى الآن</td></tr>`;
+                return;
+            }
+
+            const courseNamesMap = {
+                'fiqh': 'الفقه',
+                'tafseer': 'التفسير',
+                'hadith': 'الحديث',
+                'tawheed': 'التوحيد'
+            };
+
+            tbody.innerHTML = users.map(user => {
+                const subs = user.subscriptions || {};
+                const activeSubs = Object.keys(subs)
+                    .filter(courseId => subs[courseId] === 'approved')
+                    .map(courseId => courseNamesMap[courseId] || courseId)
+                    .join(', ') || 'لا توجد اشتراكات مفعلة';
+
+                return `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50">
+                        <td class="p-3 font-bold text-slate-900">${user.fullName || 'بدون اسم'}</td>
+                        <td class="p-3 font-mono text-slate-600" dir="ltr">${user.email}</td>
+                        <td class="p-3 font-mono" dir="ltr">${user.phone || '-'}</td>
+                        <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
+                        <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
+                        <td class="p-3 text-center space-x-2 space-x-reverse">
+                            <button onclick="openEditModal('${user.email}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
+                            <button onclick="deleteUserAccount('${user.email}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openEditModal(email) {
+            const user = JSON.parse(localStorage.getItem('user_' + email));
+            if (!user) return;
+
+            document.getElementById('editingUserEmail').value = email;
+            document.getElementById('editStudentNameTitle').innerText = `الطالب: ${user.fullName}`;
+
+            const subs = user.subscriptions || {};
+            document.getElementById('sub-fiqh').checked = (subs['fiqh'] === 'approved');
+            document.getElementById('sub-tafseer').checked = (subs['tafseer'] === 'approved');
+            document.getElementById('sub-hadith').checked = (subs['hadith'] === 'approved');
+            document.getElementById('sub-tawheed').checked = (subs['tawheed'] === 'approved');
+
+            document.getElementById('editSubscriptionsModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editSubscriptionsModal').classList.add('hidden');
+        }
+
+        function saveStudentSubscriptions() {
+            const email = document.getElementById('editingUserEmail').value;
+            let user = JSON.parse(localStorage.getItem('user_' + email));
+            if (!user) return;
+
+            if (!user.subscriptions) user.subscriptions = {};
+
+            const courses = ['fiqh', 'tafseer', 'hadith', 'tawheed'];
+            courses.forEach(courseId => {
+                const isChecked = document.getElementById(`sub-${courseId}`).checked;
+                if (isChecked) {
+                    user.subscriptions[courseId] = 'approved';
+                } else {
+                    delete user.subscriptions[courseId];
+                }
+            });
+
+            if (!user.notifications) user.notifications = [];
+            user.notifications.unshift({
+                text: `تم تحديث موادك واشتراكاتك الدراسية بواسطة الإدارة.`,
+                date: new Date().toLocaleDateString('ar-EG'),
+                read: false
+            });
+
+            localStorage.setItem('user_' + email, JSON.stringify(user));
+
+            let activeUser = JSON.parse(localStorage.getItem('activeUser'));
+            if (activeUser && activeUser.email === email) {
+                localStorage.setItem('activeUser', JSON.stringify(user));
+            }
+
+            closeEditModal();
+            showToast('تم تحديث اشتراكات الطالب بنجاح');
+            loadAdminDashboard();
+        }
+
+        function approveRequest(index) {
+            let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+            const req = adminRequests[index];
+
+            let user = JSON.parse(localStorage.getItem('user_' + req.userEmail));
+            if (user) {
+                if (!user.subscriptions) user.subscriptions = {};
+                user.subscriptions[req.courseId] = 'approved';
+
+                if (!user.notifications) user.notifications = [];
+                user.notifications.unshift({
+                    text: `مبروك! تم قبول وتفعيل اشتراكك في مادة "${req.courseTitle}".`,
+                    date: new Date().toLocaleDateString('ar-EG'),
+                    read: false
+                });
+
+                localStorage.setItem('user_' + req.userEmail, JSON.stringify(user));
+
+                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
+                if (activeUser && activeUser.email === req.userEmail) {
+                    localStorage.setItem('activeUser', JSON.stringify(user));
+                }
+            }
+
+            adminRequests.splice(index, 1);
+            localStorage.setItem('adminRequests', JSON.stringify(adminRequests));
+            lastRequestsCount = adminRequests.length;
+
+            showToast('تم قبول الطلب وتفعيل الاشتراك بنجاح');
+            loadAdminDashboard();
+        }
+
+        function rejectRequest(index) {
+            let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+            const req = adminRequests[index];
+
+            let user = JSON.parse(localStorage.getItem('user_' + req.userEmail));
+            if (user) {
+                if (user.subscriptions) {
+                    delete user.subscriptions[req.courseId];
+                }
+
+                if (!user.notifications) user.notifications = [];
+                user.notifications.unshift({
+                    text: `عذراً، تم رفض طلب اشتراكك في مادة "${req.courseTitle}". يرجى التأكد من بيانات الدفع.`,
+                    date: new Date().toLocaleDateString('ar-EG'),
+                    read: false
+                });
+
+                localStorage.setItem('user_' + req.userEmail, JSON.stringify(user));
+
+                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
+                if (activeUser && activeUser.email === req.userEmail) {
+                    localStorage.setItem('activeUser', JSON.stringify(user));
+                }
+            }
+
+            adminRequests.splice(index, 1);
+            localStorage.setItem('adminRequests', JSON.stringify(adminRequests));
+            lastRequestsCount = adminRequests.length;
+
+            showToast('تم رفض الطلب وإبلاغ الطالب');
+            loadAdminDashboard();
+        }
+
+        function deleteUserAccount(email) {
+            if (confirm(`هل أنت متأكد من حذف حساب الطالب (${email}) نهائياً؟`)) {
+                localStorage.removeItem('user_' + email);
+                
+                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
+                if (activeUser && activeUser.email === email) {
+                    localStorage.removeItem('activeUser');
+                }
+
+                showToast('تم حذف حساب الطالب بنجاح');
+                loadAdminDashboard();
+            }
+        }
+    </script>
+</body>
+</html>
