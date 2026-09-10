@@ -7,11 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- تضمين مكتبات Firebase للربط السحابي اللحظي -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
     <script>
         tailwind.config = {
             theme: {
@@ -68,7 +63,7 @@
                         <i class="fa-solid fa-gauge"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-extrabold font-kufi">لوحة تحكم أكاديمية بيان (سحابي)</h1>
+                        <h1 class="text-lg font-extrabold font-kufi">لوحة تحكم أكاديمية بيان</h1>
                         <p id="currentUserBadge" class="text-xs text-amber-400 font-semibold"></p>
                     </div>
                 </div>
@@ -117,7 +112,7 @@
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
                     <div>
                         <p class="text-xs text-slate-400 font-bold">حالة النظام</p>
-                        <h3 class="text-base font-black text-emerald-600 mt-1">متصل بالسحابة ☁️</h3>
+                        <h3 class="text-base font-black text-emerald-600 mt-1">يعمل بانتظام</h3>
                     </div>
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
                         <i class="fa-solid fa-server"></i>
@@ -202,7 +197,7 @@
                 </div>
             </div>
 
-            <!-- 2. جدول طلبات الاشتراكات المعلقة (سحابي مباشر) -->
+            <!-- 2. جدول طلبات الاشتراكات المعلقة -->
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
                 <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-list-check text-amber-500"></i> طلبات الاشتراكات المعلقة
@@ -221,13 +216,13 @@
                             </tr>
                         </thead>
                         <tbody id="requestsTableBody" class="text-xs">
-                            <!-- تُعبأ البيانات تلقائياً من فايربيس -->
+                            <!-- تُعبأ البيانات تلقائياً -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- 3. جدول إدارة جميع الطلاب المسجلين (سحابي مباشر) -->
+            <!-- 3. جدول إدارة جميع الطلاب المسجلين -->
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
                 <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-user-graduate text-emerald-700"></i> إدارة جميع الطلاب المسجلين
@@ -245,7 +240,7 @@
                             </tr>
                         </thead>
                         <tbody id="usersTableBody" class="text-xs">
-                            <!-- تُعبأ البيانات تلقائياً من فايربيس -->
+                            <!-- تُعبأ البيانات تلقائياً -->
                         </tbody>
                     </table>
                 </div>
@@ -261,7 +256,7 @@
             <h3 class="text-xl font-extrabold font-kufi text-emerald-950 mb-1 text-center">تعديل اشتراكات الطالب</h3>
             <p id="editStudentNameTitle" class="text-center text-xs font-bold text-amber-600 mb-4"></p>
             
-            <input type="hidden" id="editingUserKey">
+            <input type="hidden" id="editingUserEmail">
 
             <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-5">
                 <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
@@ -293,17 +288,7 @@
     </div>
 
     <script>
-        // إعدادات قاعدة بيانات فايربيس (Firebase Config)
-        const firebaseConfig = {
-            databaseURL: "https://bayan-academy-default-rtdb.firebaseio.com/"
-        };
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.database();
-
-        let isFirstLoadRequests = true;
+        let lastRequestsCount = 0;
 
         document.addEventListener("DOMContentLoaded", function() {
             const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
@@ -364,6 +349,7 @@
 
             const adminPass = localStorage.getItem('adminCustomPassword') || '1522001';
 
+            // 1. التحقق من الأدمن الأساسي
             if (user === 'admin' && pass === adminPass) {
                 localStorage.setItem('isAdminLoggedIn', 'true');
                 localStorage.setItem('currentLoggedInRole', 'مدير النظام (Admin)');
@@ -372,6 +358,7 @@
                 return;
             }
 
+            // 2. التحقق من قائمة الموظفين
             const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
             const foundStaff = staffList.find(s => s.username === user && s.password === pass);
 
@@ -406,9 +393,28 @@
         }
 
         function initAdminPanel() {
-            loadStaffMembers();
-            listenToCloudRequests();
-            listenToCloudUsers();
+            loadAdminDashboard();
+            lastRequestsCount = (JSON.parse(localStorage.getItem('adminRequests')) || []).length;
+
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'adminRequests') {
+                    const newRequests = JSON.parse(e.newValue) || [];
+                    if (newRequests.length > lastRequestsCount) {
+                        triggerAlert();
+                    }
+                    lastRequestsCount = newRequests.length;
+                    loadAdminDashboard();
+                }
+            });
+
+            setInterval(() => {
+                const currentRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+                if (currentRequests.length > lastRequestsCount) {
+                    triggerAlert();
+                    loadAdminDashboard();
+                }
+                lastRequestsCount = currentRequests.length;
+            }, 2000);
         }
 
         function testAudio() {
@@ -437,7 +443,12 @@
             setTimeout(() => { toast.classList.add('hidden'); }, 5000);
         }
 
-        // --- الموظفين (محلية أو كما هي) ---
+        function loadAdminDashboard() {
+            loadAdminRequests();
+            loadAllUsers();
+            loadStaffMembers();
+        }
+
         function addNewStaff(event) {
             event.preventDefault();
             const name = document.getElementById('staffName').value.trim();
@@ -446,20 +457,29 @@
             const role = document.getElementById('staffRole').value;
 
             let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-            staffList.push({ name, username, password, role, date: new Date().toLocaleDateString('ar-EG') });
+            
+            staffList.push({
+                name,
+                username,
+                password,
+                role,
+                date: new Date().toLocaleDateString('ar-EG')
+            });
+
             localStorage.setItem('adminStaffList', JSON.stringify(staffList));
             
             document.getElementById('staffName').value = '';
             document.getElementById('staffUsername').value = '';
             document.getElementById('staffPassword').value = '';
             
-            showToast("تم تعيين وإضافة الموظف بنجاح");
+            showToast("تم تعيين وإضافة الموظف بنجاح وأصبح بإمكانه الدخول الآن");
             loadStaffMembers();
         }
 
         function loadStaffMembers() {
             const tbody = document.getElementById('staffTableBody');
             const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            
             document.getElementById('statStaffCount').innerText = staffList.length;
 
             if (staffList.length === 0) {
@@ -491,108 +511,100 @@
             }
         }
 
-        // --- الربط السحابي لطلبات الاشتراكات (Firebase Realtime Requests) ---
-        function listenToCloudRequests() {
-            const requestsRef = db.ref('adminRequests');
+        function loadAdminRequests() {
+            const tbody = document.getElementById('requestsTableBody');
+            const adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
             
-            requestsRef.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                const requestsArray = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-                
-                document.getElementById('statPendingCount').innerText = requestsArray.length;
-                const tbody = document.getElementById('requestsTableBody');
+            document.getElementById('statPendingCount').innerText = adminRequests.length;
 
-                if (requestsArray.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">لا توجد طلبات اشتراك معلقة حالياً</td></tr>`;
-                    isFirstLoadRequests = false;
-                    return;
+            if (adminRequests.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">لا توجد طلبات اشتراك معلقة حالياً</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = adminRequests.map((req, index) => `
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="p-3 font-bold text-slate-900">${req.userName}</td>
+                    <td class="p-3 font-mono" dir="ltr">${req.userPhone || '-'}</td>
+                    <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${req.parentPhone || 'غير مسجل'}</td>
+                    <td class="p-3 font-bold text-emerald-900">${req.courseTitle} (${req.coursePrice} ج.م)</td>
+                    <td class="p-3 font-mono text-amber-600" dir="ltr">${req.senderPhone}</td>
+                    <td class="p-3 text-slate-400">${req.date}</td>
+                    <td class="p-3 text-center space-x-2 space-x-reverse">
+                        <button onclick="approveRequest(${index})" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition">قبول وتفعيل</button>
+                        <button onclick="rejectRequest(${index})" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">رفض</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadAllUsers() {
+            const tbody = document.getElementById('usersTableBody');
+            let users = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('user_')) {
+                    try {
+                        const userData = JSON.parse(localStorage.getItem(key));
+                        if (userData && userData.email) {
+                            users.push(userData);
+                        }
+                    } catch(e) {}
                 }
+            }
 
-                if (!isFirstLoadRequests) {
-                    triggerAlert();
-                }
-                isFirstLoadRequests = false;
+            document.getElementById('statUsersCount').innerText = users.length;
 
-                tbody.innerHTML = requestsArray.map((req) => `
+            if (users.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد طلاب مسجلين حتى الآن</td></tr>`;
+                return;
+            }
+
+            const courseNamesMap = {
+                'fiqh': 'الفقه',
+                'tafseer': 'التفسير',
+                'hadith': 'الحديث',
+                'tawheed': 'التوحيد'
+            };
+
+            tbody.innerHTML = users.map(user => {
+                const subs = user.subscriptions || {};
+                const activeSubs = Object.keys(subs)
+                    .filter(courseId => subs[courseId] === 'approved')
+                    .map(courseId => courseNamesMap[courseId] || courseId)
+                    .join(', ') || 'لا توجد اشتراكات مفعلة';
+
+                return `
                     <tr class="border-b border-slate-100 hover:bg-slate-50">
-                        <td class="p-3 font-bold text-slate-900">${req.userName}</td>
-                        <td class="p-3 font-mono" dir="ltr">${req.userPhone || '-'}</td>
-                        <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${req.parentPhone || 'غير مسجل'}</td>
-                        <td class="p-3 font-bold text-emerald-900">${req.courseTitle} (${req.coursePrice} ج.م)</td>
-                        <td class="p-3 font-mono text-amber-600" dir="ltr">${req.senderPhone}</td>
-                        <td class="p-3 text-slate-400">${req.date}</td>
+                        <td class="p-3 font-bold text-slate-900">${user.fullName || 'بدون اسم'}</td>
+                        <td class="p-3 font-mono text-slate-600" dir="ltr">${user.email}</td>
+                        <td class="p-3 font-mono" dir="ltr">${user.phone || '-'}</td>
+                        <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
+                        <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
                         <td class="p-3 text-center space-x-2 space-x-reverse">
-                            <button onclick="approveRequest('${req.id}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition">قبول وتفعيل</button>
-                            <button onclick="rejectRequest('${req.id}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">رفض</button>
+                            <button onclick="openEditModal('${user.email}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
+                            <button onclick="deleteUserAccount('${user.email}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
                         </td>
                     </tr>
-                `).join('');
-            });
+                `;
+            }).join('');
         }
 
-        // --- الربط السحابي لجميع الطلاب (Firebase Realtime Users) ---
-        function listenToCloudUsers() {
-            const usersRef = db.ref('users');
+        function openEditModal(email) {
+            const user = JSON.parse(localStorage.getItem('user_' + email));
+            if (!user) return;
 
-            usersRef.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                const usersArray = Object.keys(data).map(key => ({ dbKey: key, ...data[key] }));
+            document.getElementById('editingUserEmail').value = email;
+            document.getElementById('editStudentNameTitle').innerText = `الطالب: ${user.fullName}`;
 
-                document.getElementById('statUsersCount').innerText = usersArray.length;
-                const tbody = document.getElementById('usersTableBody');
+            const subs = user.subscriptions || {};
+            document.getElementById('sub-fiqh').checked = (subs['fiqh'] === 'approved');
+            document.getElementById('sub-tafseer').checked = (subs['tafseer'] === 'approved');
+            document.getElementById('sub-hadith').checked = (subs['hadith'] === 'approved');
+            document.getElementById('sub-tawheed').checked = (subs['tawheed'] === 'approved');
 
-                if (usersArray.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد طلاب مسجلين حتى الآن</td></tr>`;
-                    return;
-                }
-
-                const courseNamesMap = {
-                    'fiqh': 'الفقه',
-                    'tafseer': 'التفسير',
-                    'hadith': 'الحديث',
-                    'tawheed': 'التوحيد'
-                };
-
-                tbody.innerHTML = usersArray.map(user => {
-                    const subs = user.subscriptions || {};
-                    const activeSubs = Object.keys(subs)
-                        .filter(courseId => subs[courseId] === 'approved')
-                        .map(courseId => courseNamesMap[courseId] || courseId)
-                        .join(', ') || 'لا توجد اشتراكات مفعلة';
-
-                    return `
-                        <tr class="border-b border-slate-100 hover:bg-slate-50">
-                            <td class="p-3 font-bold text-slate-900">${user.fullName || 'بدون اسم'}</td>
-                            <td class="p-3 font-mono text-slate-600" dir="ltr">${user.email}</td>
-                            <td class="p-3 font-mono" dir="ltr">${user.phone || '-'}</td>
-                            <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
-                            <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
-                            <td class="p-3 text-center space-x-2 space-x-reverse">
-                                <button onclick="openEditModal('${user.dbKey}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
-                                <button onclick="deleteUserAccount('${user.dbKey}', '${user.email}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            });
-        }
-
-        function openEditModal(dbKey) {
-            db.ref('users/' + dbKey).once('value').then(snapshot => {
-                const user = snapshot.val();
-                if (!user) return;
-
-                document.getElementById('editingUserKey').value = dbKey;
-                document.getElementById('editStudentNameTitle').innerText = `الطالب: ${user.fullName}`;
-
-                const subs = user.subscriptions || {};
-                document.getElementById('sub-fiqh').checked = (subs['fiqh'] === 'approved');
-                document.getElementById('sub-tafseer').checked = (subs['tafseer'] === 'approved');
-                document.getElementById('sub-hadith').checked = (subs['hadith'] === 'approved');
-                document.getElementById('sub-tawheed').checked = (subs['tawheed'] === 'approved');
-
-                document.getElementById('editSubscriptionsModal').classList.remove('hidden');
-            });
+            document.getElementById('editSubscriptionsModal').classList.remove('hidden');
         }
 
         function closeEditModal() {
@@ -600,117 +612,117 @@
         }
 
         function saveStudentSubscriptions() {
-            const dbKey = document.getElementById('editingUserKey').value;
-            
-            db.ref('users/' + dbKey).once('value').then(snapshot => {
-                let user = snapshot.val();
-                if (!user) return;
+            const email = document.getElementById('editingUserEmail').value;
+            let user = JSON.parse(localStorage.getItem('user_' + email));
+            if (!user) return;
 
+            if (!user.subscriptions) user.subscriptions = {};
+
+            const courses = ['fiqh', 'tafseer', 'hadith', 'tawheed'];
+            courses.forEach(courseId => {
+                const isChecked = document.getElementById(`sub-${courseId}`).checked;
+                if (isChecked) {
+                    user.subscriptions[courseId] = 'approved';
+                } else {
+                    delete user.subscriptions[courseId];
+                }
+            });
+
+            if (!user.notifications) user.notifications = [];
+            user.notifications.unshift({
+                text: `تم تحديث موادك واشتراكاتك الدراسية بواسطة الإدارة.`,
+                date: new Date().toLocaleDateString('ar-EG'),
+                read: false
+            });
+
+            localStorage.setItem('user_' + email, JSON.stringify(user));
+
+            let activeUser = JSON.parse(localStorage.getItem('activeUser'));
+            if (activeUser && activeUser.email === email) {
+                localStorage.setItem('activeUser', JSON.stringify(user));
+            }
+
+            closeEditModal();
+            showToast('تم تحديث اشتراكات الطالب بنجاح');
+            loadAdminDashboard();
+        }
+
+        function approveRequest(index) {
+            let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+            const req = adminRequests[index];
+
+            let user = JSON.parse(localStorage.getItem('user_' + req.userEmail));
+            if (user) {
                 if (!user.subscriptions) user.subscriptions = {};
-
-                const courses = ['fiqh', 'tafseer', 'hadith', 'tawheed'];
-                courses.forEach(courseId => {
-                    const isChecked = document.getElementById(`sub-${courseId}`).checked;
-                    if (isChecked) {
-                        user.subscriptions[courseId] = 'approved';
-                    } else {
-                        delete user.subscriptions[courseId];
-                    }
-                });
+                user.subscriptions[req.courseId] = 'approved';
 
                 if (!user.notifications) user.notifications = [];
                 user.notifications.unshift({
-                    text: `تم تحديث موادك واشتراكاتك الدراسية بواسطة الإدارة.`,
+                    text: `مبروك! تم قبول وتفعيل اشتراكك في مادة "${req.courseTitle}".`,
                     date: new Date().toLocaleDateString('ar-EG'),
                     read: false
                 });
 
-                db.ref('users/' + dbKey).update({
-                    subscriptions: user.subscriptions,
-                    notifications: user.notifications
-                }).then(() => {
-                    closeEditModal();
-                    showToast('تم تحديث اشتراكات الطالب بنجاح على السحابة');
-                });
-            });
+                localStorage.setItem('user_' + req.userEmail, JSON.stringify(user));
+
+                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
+                if (activeUser && activeUser.email === req.userEmail) {
+                    localStorage.setItem('activeUser', JSON.stringify(user));
+                }
+            }
+
+            adminRequests.splice(index, 1);
+            localStorage.setItem('adminRequests', JSON.stringify(adminRequests));
+            lastRequestsCount = adminRequests.length;
+
+            showToast('تم قبول الطلب وتفعيل الاشتراك بنجاح');
+            loadAdminDashboard();
         }
 
-        function approveRequest(reqId) {
-            db.ref('adminRequests/' + reqId).once('value').then(snapshot => {
-                const req = snapshot.val();
-                if (!req) return;
+        function rejectRequest(index) {
+            let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+            const req = adminRequests[index];
 
-                // البحث عن الطالب في السحابة لتحديث اشتراكه
-                db.ref('users').orderByChild('email').equalTo(req.userEmail).once('value').then(userSnap => {
-                    if (userSnap.exists()) {
-                        const userDataObj = userSnap.val();
-                        const userDbKey = Object.keys(userDataObj)[0];
-                        let user = userDataObj[userDbKey];
+            let user = JSON.parse(localStorage.getItem('user_' + req.userEmail));
+            if (user) {
+                if (user.subscriptions) {
+                    delete user.subscriptions[req.courseId];
+                }
 
-                        if (!user.subscriptions) user.subscriptions = {};
-                        user.subscriptions[req.courseId] = 'approved';
-
-                        if (!user.notifications) user.notifications = [];
-                        user.notifications.unshift({
-                            text: `مبروك! تم قبول وتفعيل اشتراكك في مادة "${req.courseTitle}".`,
-                            date: new Date().toLocaleDateString('ar-EG'),
-                            read: false
-                        });
-
-                        db.ref('users/' + userDbKey).update({
-                            subscriptions: user.subscriptions,
-                            notifications: user.notifications
-                        });
-                    }
-
-                    // حذف الطلب من الطلبات المعلقة
-                    db.ref('adminRequests/' + reqId).remove().then(() => {
-                        showToast('تم قبول الطلب وتفعيل الاشتراك بنجاح');
-                    });
+                if (!user.notifications) user.notifications = [];
+                user.notifications.unshift({
+                    text: `عذراً، تم رفض طلب اشتراكك في مادة "${req.courseTitle}". يرجى التأكد من بيانات الدفع.`,
+                    date: new Date().toLocaleDateString('ar-EG'),
+                    read: false
                 });
-            });
+
+                localStorage.setItem('user_' + req.userEmail, JSON.stringify(user));
+
+                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
+                if (activeUser && activeUser.email === req.userEmail) {
+                    localStorage.setItem('activeUser', JSON.stringify(user));
+                }
+            }
+
+            adminRequests.splice(index, 1);
+            localStorage.setItem('adminRequests', JSON.stringify(adminRequests));
+            lastRequestsCount = adminRequests.length;
+
+            showToast('تم رفض الطلب وإبلاغ الطالب');
+            loadAdminDashboard();
         }
 
-        function rejectRequest(reqId) {
-            db.ref('adminRequests/' + reqId).once('value').then(snapshot => {
-                const req = snapshot.val();
-                if (!req) return;
+        function deleteUserAccount(email) {
+            if (confirm(`هل أنت متأكد من حذف حساب الطالب (${email}) نهائياً؟`)) {
+                localStorage.removeItem('user_' + email);
+                
+                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
+                if (activeUser && activeUser.email === email) {
+                    localStorage.removeItem('activeUser');
+                }
 
-                db.ref('users').orderByChild('email').equalTo(req.userEmail).once('value').then(userSnap => {
-                    if (userSnap.exists()) {
-                        const userDataObj = userSnap.val();
-                        const userDbKey = Object.keys(userDataObj)[0];
-                        let user = userDataObj[userDbKey];
-
-                        if (user.subscriptions) {
-                            delete user.subscriptions[req.courseId];
-                        }
-
-                        if (!user.notifications) user.notifications = [];
-                        user.notifications.unshift({
-                            text: `عذراً، تم رفض طلب اشتراكك في مادة "${req.courseTitle}". يرجى التأكد من بيانات الدفع.`,
-                            date: new Date().toLocaleDateString('ar-EG'),
-                            read: false
-                        });
-
-                        db.ref('users/' + userDbKey).update({
-                            subscriptions: user.subscriptions,
-                            notifications: user.notifications
-                        });
-                    }
-
-                    db.ref('adminRequests/' + reqId).remove().then(() => {
-                        showToast('تم رفض الطلب وإبلاغ الطالب');
-                    });
-                });
-            });
-        }
-
-        function deleteUserAccount(dbKey, email) {
-            if (confirm(`هل أنت متأكد من حذف حساب الطالب (${email}) نهائياً من السحابة؟`)) {
-                db.ref('users/' + dbKey).remove().then(() => {
-                    showToast('تم حذف حساب الطالب بنجاح');
-                });
+                showToast('تم حذف حساب الطالب بنجاح');
+                loadAdminDashboard();
             }
         }
     </script>
