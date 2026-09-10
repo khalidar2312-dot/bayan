@@ -11,10 +11,6 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- تضمين مكتبات Firebase للربط السحابي -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
     <script>
         tailwind.config = {
             theme: {
@@ -387,158 +383,56 @@
             <button onclick="closeModal('loginModal')" class="absolute top-4 left-4 text-slate-400 text-xl font-bold"><i class="fa-solid fa-xmark"></i></button>
             <h3 class="text-2xl font-extrabold font-kufi text-emerald-950 mb-4 text-center">تسجيل الدخول</h3>
             <form onsubmit="handleLoginSubmit(event)" class="space-y-4 text-sm">
-                <div><label class="block font-bold text-slate-700 mb-1">البريد الإلكتروني</label><input type="email" id="loginId" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300" dir="ltr"></div>
-                <div><label class="block font-bold text-slate-700 mb-1">كلمة المرور</label><input type="password" id="loginPassword" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300" dir="ltr"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">البريد الإلكتروني</label><input type="text" id="loginId" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">كلمة المرور</label><input type="password" id="loginPassword" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300"></div>
                 <button type="submit" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold">تسجيل الدخول</button>
             </form>
         </div>
     </div>
 
     <div id="registerModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4 text-sm max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4 text-sm">
             <button onclick="closeModal('registerModal')" class="absolute top-4 left-4 text-slate-400 text-xl font-bold"><i class="fa-solid fa-xmark"></i></button>
             <h3 class="text-2xl font-extrabold font-kufi text-emerald-950 mb-4 text-center">إنشاء حساب جديد</h3>
             <form onsubmit="handleRegisterSubmit(event)" class="space-y-3">
                 <div><label class="block font-bold text-slate-700 mb-1">الاسم بالكامل</label><input type="text" id="regFullName" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300"></div>
-                <div><label class="block font-bold text-slate-700 mb-1">البريد الإلكتروني</label><input type="email" id="regEmail" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300" dir="ltr"></div>
-                <div><label class="block font-bold text-slate-700 mb-1">رقم الواتساب</label><input type="tel" id="regPhone" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300" dir="ltr"></div>
-                <div><label class="block font-bold text-slate-700 mb-1">رقم ولي الأمر (للمتابعة)</label><input type="tel" id="regParentPhone" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300" placeholder="010XXXXXXXX" dir="ltr"></div>
-                <div><label class="block font-bold text-slate-700 mb-1">كلمة المرور</label><input type="password" id="regPassword" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300" dir="ltr"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">البريد الإلكتروني</label><input type="email" id="regEmail" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">رقم الواتساب</label><input type="tel" id="regPhone" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300"></div>
+                <!-- الحقل الجديد: رقم ولي الأمر -->
+                <div><label class="block font-bold text-slate-700 mb-1">رقم ولي الأمر (للمتابعة)</label><input type="tel" id="regParentPhone" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300" placeholder="010XXXXXXXX"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">كلمة المرور</label><input type="password" id="regPassword" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300"></div>
                 <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 font-bold text-slate-950 mt-2">إنشاء الحساب</button>
             </form>
         </div>
     </div>
 
-    <!-- كود الربط السحابي (Firebase Realtime Database) -->
     <script>
-        // إعدادات اتصال Firebase (متوافقة مع لوحة التحكم admin.html)
-        const firebaseConfig = {
-            databaseURL: "https://bayan-academy-default-rtdb.firebaseio.com/"
-        };
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.database();
-
-        let currentActiveUserKey = null;
-        let currentActiveUserData = null;
-
         document.addEventListener("DOMContentLoaded", function() {
-            const savedEmail = localStorage.getItem('currentStudentEmail');
-            if (savedEmail) {
-                syncUserDataByEmail(savedEmail);
-            }
+            checkLoggedInUser();
         });
 
-        function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
-        function openRegisterModal() { document.getElementById('registerModal').classList.remove('hidden'); }
-        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+        function getActiveUser() { return JSON.parse(localStorage.getItem('activeUser')); }
 
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toastText').innerText = message;
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3500);
-        }
-
-        // تسجيل حساب جديد في قاعدة البيانات السحابية
-        function handleRegisterSubmit(e) {
-            e.preventDefault();
-            const fullName = document.getElementById('regFullName').value.trim();
-            const email = document.getElementById('regEmail').value.trim().toLowerCase();
-            const phone = document.getElementById('regPhone').value.trim();
-            const parentPhone = document.getElementById('regParentPhone').value.trim();
-            const password = document.getElementById('regPassword').value.trim();
-
-            const usersRef = db.ref('users');
-            usersRef.orderByChild('email').equalTo(email).once('value').then(snapshot => {
-                if (snapshot.exists()) {
-                    alert('البريد الإلكتروني مسجل مسبقاً! يرجى تسجيل الدخول.');
-                    return;
+        function checkLoggedInUser() {
+            let activeUser = getActiveUser();
+            if (activeUser) {
+                const updatedUser = JSON.parse(localStorage.getItem('user_' + activeUser.email));
+                if (updatedUser) {
+                    activeUser = updatedUser;
+                    localStorage.setItem('activeUser', JSON.stringify(updatedUser));
                 }
-
-                const newUserRef = usersRef.push();
-                const userData = {
-                    fullName,
-                    email,
-                    phone,
-                    parentPhone,
-                    password,
-                    grade: 'طالب علم أزهري',
-                    subscriptions: {},
-                    notifications: [{
-                        text: `مرحباً بك يا ${fullName} في أكاديمية بيان للعلوم الشرعية!`,
-                        date: new Date().toLocaleDateString('ar-EG'),
-                        read: false
-                    }]
-                };
-
-                newUserRef.set(userData).then(() => {
-                    localStorage.setItem('currentStudentEmail', email);
-                    closeModal('registerModal');
-                    showToast('تم إنشاء الحساب بنجاح!');
-                    syncUserDataByEmail(email);
-                });
-            });
-        }
-
-        // تسجيل الدخول والتحقق من السحابة
-        function handleLoginSubmit(e) {
-            e.preventDefault();
-            const email = document.getElementById('loginId').value.trim().toLowerCase();
-            const password = document.getElementById('loginPassword').value.trim();
-
-            db.ref('users').orderByChild('email').equalTo(email).once('value').then(snapshot => {
-                if (!snapshot.exists()) {
-                    alert('البريد الإلكتروني غير مسجل!');
-                    return;
-                }
-
-                const usersData = snapshot.val();
-                const userKey = Object.keys(usersData)[0];
-                const userData = usersData[userKey];
-
-                if (userData.password !== password) {
-                    alert('كلمة المرور غير صحيحة!');
-                    return;
-                }
-
-                localStorage.setItem('currentStudentEmail', email);
-                closeModal('loginModal');
-                showToast('مرحباً بك مجدداً!');
-                syncUserDataByEmail(email);
-            });
-        }
-
-        function handleLogout() {
-            localStorage.removeItem('currentStudentEmail');
-            location.reload();
-        }
-
-        // الاستماع للتحديثات اللحظية لبيانات الطالب من السحابة (تحديثات الإدارة تظهر فوراً)
-        function syncUserDataByEmail(email) {
-            db.ref('users').orderByChild('email').equalTo(email).on('value', snapshot => {
-                if (!snapshot.exists()) return;
-
-                const usersData = snapshot.val();
-                const userKey = Object.keys(usersData)[0];
-                currentActiveUserKey = userKey;
-                currentActiveUserData = usersData[userKey];
 
                 document.getElementById('authButtons').classList.add('hidden');
                 document.getElementById('userProfileHeader').classList.remove('hidden');
-                document.getElementById('headerUserName').innerText = currentActiveUserData.fullName;
-                document.getElementById('headerUserGrade').innerText = currentActiveUserData.grade || 'طالب علم';
+                document.getElementById('headerUserName').innerText = activeUser.fullName;
+                document.getElementById('headerUserGrade').innerText = activeUser.grade || 'طالب علم';
 
-                updateCourseButtons(currentActiveUserData);
-                renderNotifications(currentActiveUserData);
-            });
+                updateCourseButtons(activeUser);
+                renderNotifications(activeUser);
+            }
         }
 
-        // تحديث أزرار المواد بناءً على حالة الاشتراكات السحابية
+        // دالة التوافق المباشرة مع المواد الأربع الرسمية للمنصة
         function updateCourseButtons(user) {
             const subscriptions = user.subscriptions || {};
             const courses = ['fiqh', 'tafseer', 'hadith', 'tawheed'];
@@ -549,26 +443,14 @@
                 
                 const status = subscriptions[courseId];
                 if (status === 'approved') {
-                    // رابط صفحة عرض المحتوى الخاصة بالمادة المعتمدة
                     btn.innerText = "شاهد المحتوى 🔓";
                     btn.className = "px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-sm shadow-md";
-                    btn.onclick = function() {
-                        window.location.href = `lesson-${courseId}.html`;
-                    };
                 } else if (status === 'pending') {
                     btn.innerText = "قيد التفعيل ⏳";
                     btn.className = "px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-bold text-sm cursor-not-allowed";
-                    btn.onclick = function() {
-                        alert('طلب اشتراكك في هذه المادة قيد المراجعة والتفعيل من الإدارة حالياً.');
-                    };
                 } else {
                     btn.innerText = "اشترك الآن";
                     btn.className = "px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition";
-                    const titles = { 'fiqh': 'الفقه الميسر', 'tafseer': 'علم التفسير', 'hadith': 'الحديث الشريف', 'tawheed': 'علم التوحيد' };
-                    const prices = { 'fiqh': 350, 'tafseer': 400, 'hadith': 300, 'tawheed': 300 };
-                    btn.onclick = function() {
-                        handleCourseClick(courseId, titles[courseId], prices[courseId]);
-                    };
                 }
             });
         }
@@ -577,6 +459,11 @@
             const list = document.getElementById('notificationsList');
             const badge = document.getElementById('notifBadge');
             
+            // فلترة وحذف أي إشعار فارغ أو تالف يحتوي على undefined تلقائياً
+            if (user.notifications) {
+                user.notifications = user.notifications.filter(n => n.text && !n.text.includes('undefined'));
+            }
+
             const notifications = user.notifications || [];
             const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -604,29 +491,94 @@
             const modal = document.getElementById('notificationModal');
             modal.classList.toggle('hidden');
 
-            // عند فتح نافذة الإشعارات يتم تعليمها كمقروءة وتحديث السحابة
-            if (!modal.classList.contains('hidden') && currentActiveUserKey && currentActiveUserData) {
-                if (currentActiveUserData.notifications) {
-                    currentActiveUserData.notifications.forEach(n => n.read = true);
-                    db.ref('users/' + currentActiveUserKey).update({
-                        notifications: currentActiveUserData.notifications
-                    });
+            // بمجرد فتح النافذة، يتم تعليم الإشعارات كمقروءة وإزالة الشارة الحمراء فوراً
+            if (!modal.classList.contains('hidden')) {
+                const activeUser = getActiveUser();
+                if (activeUser && activeUser.notifications) {
+                    activeUser.notifications = activeUser.notifications.filter(n => n.text && !n.text.includes('undefined'));
+                    activeUser.notifications.forEach(n => n.read = true);
+                    
+                    localStorage.setItem('activeUser', JSON.stringify(activeUser));
+                    localStorage.setItem('user_' + activeUser.email, JSON.stringify(activeUser));
+                    
+                    renderNotifications(activeUser);
                 }
             }
         }
 
+        function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+        function openRegisterModal() { document.getElementById('registerModal').classList.remove('hidden'); }
+        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastText').innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+
+        function handleRegisterSubmit(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('regFullName').value;
+            const email = document.getElementById('regEmail').value;
+            const phone = document.getElementById('regPhone').value;
+            const parentPhone = document.getElementById('regParentPhone').value;
+            const password = document.getElementById('regPassword').value;
+
+            const userData = { 
+                fullName, 
+                email, 
+                phone, 
+                parentPhone, 
+                password, 
+                subscriptions: {}, 
+                notifications: [] 
+            };
+            
+            localStorage.setItem('user_' + email, JSON.stringify(userData));
+            localStorage.setItem('activeUser', JSON.stringify(userData));
+
+            closeModal('registerModal');
+            showToast('تم إنشاء الحساب وتسجيل الدخول بنجاح!');
+            checkLoggedInUser();
+        }
+
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginId').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const user = JSON.parse(localStorage.getItem('user_' + email));
+            if (user && user.password === password) {
+                localStorage.setItem('activeUser', JSON.stringify(user));
+                closeModal('loginModal');
+                showToast('مرحباً بك مجدداً!');
+                checkLoggedInUser();
+            } else {
+                alert('البريد الإلكتروني أو كلمة المرور غير صحيحة!');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('activeUser');
+            location.reload();
+        }
+
         function handleCourseClick(courseId, courseTitle, price) {
-            if (!currentActiveUserData) {
+            const activeUser = getActiveUser();
+            if (!activeUser) {
                 alert('يرجى تسجيل الدخول أو إنشاء حساب أولاً للاشتراك في المواد.');
                 openLoginModal();
                 return;
             }
 
-            const subscriptions = currentActiveUserData.subscriptions || {};
+            const subscriptions = activeUser.subscriptions || {};
             const status = subscriptions[courseId];
 
             if (status === 'approved') {
-                window.location.href = `lesson-${courseId}.html`;
+                alert(`أنت مشترك بالفعل في مادة "${courseTitle}" ويمكنك مشاهدة المحتوى.`);
             } else if (status === 'pending') {
                 alert('طلب اشتراكك في هذه المادة قيد المراجعة والتفعيل حالياً.');
             } else {
@@ -638,53 +590,57 @@
             }
         }
 
-        // إرسال طلب الاشتراك السحابي (يصل للوحة التحكم الإدارية مباشرة admin.html)
         function handlePaymentSubmit(e) {
             e.preventDefault();
-            if (!currentActiveUserData || !currentActiveUserKey) return;
+            const activeUser = getActiveUser();
+            if (!activeUser) return;
 
             const courseId = document.getElementById('selectedCourseId').value;
             const courseTitle = document.getElementById('selectedCourseTitleInput').value;
             const coursePrice = document.getElementById('selectedCoursePriceInput').value;
-            const senderPhone = document.getElementById('senderPhone').value.trim();
-            const transferNotes = document.getElementById('transferNotes').value.trim();
+            const senderPhone = document.getElementById('senderPhone').value;
+            const transferNotes = document.getElementById('transferNotes').value;
 
-            if (!currentActiveUserData.subscriptions) currentActiveUserData.subscriptions = {};
-            currentActiveUserData.subscriptions[courseId] = 'pending';
+            if (!activeUser.subscriptions) activeUser.subscriptions = {};
+            activeUser.subscriptions[courseId] = 'pending';
 
-            if (!currentActiveUserData.notifications) currentActiveUserData.notifications = [];
-            currentActiveUserData.notifications.unshift({
+            if (!activeUser.notifications) activeUser.notifications = [];
+            activeUser.notifications.unshift({
                 text: `تم استلام طلب اشتراكك في مادة "${courseTitle}" وسيتم التفعيل قريباً.`,
                 date: new Date().toLocaleDateString('ar-EG'),
                 read: false
             });
 
-            // 1. تحديث بيانات الطالب في السحابة
-            db.ref('users/' + currentActiveUserKey).update({
-                subscriptions: currentActiveUserData.subscriptions,
-                notifications: currentActiveUserData.notifications
-            });
+            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+            localStorage.setItem('user_' + activeUser.email, JSON.stringify(activeUser));
 
-            // 2. إرسال الطلب إلى قائمة الطلبات المعلقة للإدارة (adminRequests)
-            const adminRequestsRef = db.ref('adminRequests');
-            const newRequestRef = adminRequestsRef.push();
-            newRequestRef.set({
-                userName: currentActiveUserData.fullName,
-                userEmail: currentActiveUserData.email,
-                userPhone: currentActiveUserData.phone || '',
-                parentPhone: currentActiveUserData.parentPhone || '',
+            let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
+            
+            const existingIndex = adminRequests.findIndex(r => r.userEmail === activeUser.email && r.courseId === courseId);
+            const newRequest = {
+                userName: activeUser.fullName,
+                userEmail: activeUser.email,
+                userPhone: activeUser.phone || '',
+                parentPhone: activeUser.parentPhone || '',
                 courseId: courseId,
                 courseTitle: courseTitle,
                 coursePrice: coursePrice,
                 senderPhone: senderPhone,
                 notes: transferNotes,
                 date: new Date().toLocaleString('ar-EG')
-            });
+            };
+
+            if (existingIndex >= 0) {
+                adminRequests[existingIndex] = newRequest;
+            } else {
+                adminRequests.push(newRequest);
+            }
+
+            localStorage.setItem('adminRequests', JSON.stringify(adminRequests));
 
             closeModal('checkoutModal');
             showToast('تم إرسال إثبات الدفع بنجاح، بانتظار التفعيل!');
-            document.getElementById('senderPhone').value = '';
-            document.getElementById('transferNotes').value = '';
+            checkLoggedInUser();
         }
     </script>
 </body>
