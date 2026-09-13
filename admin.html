@@ -7,6 +7,46 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBDQ0cP8C5Hv3xAun7iLSD2PSp0x7sP-08",
+            authDomain: "bayan2312.firebaseapp.com",
+            projectId: "bayan2312",
+            storageBucket: "bayan2312.firebasestorage.app",
+            messagingSenderId: "710544079379",
+            appId: "1:710544079379:web:f9478de93d6005b37ddde6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // جعل الدوال متاحة عالمياً في النطاق العام (window) لكي تعمل مع أحداث HTML
+        window.db = db;
+        window.collection = collection;
+        window.getDocs = getDocs;
+        window.doc = doc;
+        window.deleteDoc = deleteDoc;
+        window.updateDoc = updateDoc;
+        window.setDoc = setDoc;
+        window.onSnapshot = onSnapshot;
+
+        // بدء تحميل لوحة التحكم المرتبطة بـ Firestore بمجرد توفر الفايربيس
+        document.addEventListener("DOMContentLoaded", function() {
+            const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
+            if (isLoggedIn === 'true') {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('adminDashboardContent').classList.remove('hidden');
+                initAdminPanel();
+            }
+        });
+    </script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -93,7 +133,7 @@
                 </div>
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-400 font-bold">إجمالي الطلاب</p>
+                        <p class="text-xs text-slate-400 font-bold">إجمالي الطلاب (من قاعدة البيانات)</p>
                         <h3 id="statUsersCount" class="text-2xl font-black text-emerald-900 mt-1">0</h3>
                     </div>
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center text-xl">
@@ -112,7 +152,7 @@
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
                     <div>
                         <p class="text-xs text-slate-400 font-bold">حالة النظام</p>
-                        <h3 class="text-base font-black text-emerald-600 mt-1">يعمل بانتظام</h3>
+                        <h3 class="text-base font-black text-emerald-600 mt-1">يعمل بانتظام (Firebase)</h3>
                     </div>
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
                         <i class="fa-solid fa-server"></i>
@@ -222,10 +262,10 @@
                 </div>
             </div>
 
-            <!-- 3. جدول إدارة جميع الطلاب المسجلين -->
+            <!-- 3. جدول إدارة جميع الطلاب المسجلين (من Firestore) -->
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
                 <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-user-graduate text-emerald-700"></i> إدارة جميع الطلاب المسجلين
+                    <i class="fa-solid fa-user-graduate text-emerald-700"></i> إدارة جميع الطلاب المسجلين (قاعدة البيانات)
                 </h2>
                 <div class="overflow-x-auto">
                     <table class="w-full text-right border-collapse">
@@ -240,7 +280,7 @@
                             </tr>
                         </thead>
                         <tbody id="usersTableBody" class="text-xs">
-                            <!-- تُعبأ البيانات تلقائياً -->
+                            <!-- تُعبأ البيانات تلقائياً من Firestore -->
                         </tbody>
                     </table>
                 </div>
@@ -256,7 +296,7 @@
             <h3 class="text-xl font-extrabold font-kufi text-emerald-950 mb-1 text-center">تعديل اشتراكات الطالب</h3>
             <p id="editStudentNameTitle" class="text-center text-xs font-bold text-amber-600 mb-4"></p>
             
-            <input type="hidden" id="editingUserEmail">
+            <input type="hidden" id="editingUserDocId">
 
             <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-5">
                 <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
@@ -289,15 +329,6 @@
 
     <script>
         let lastRequestsCount = 0;
-
-        document.addEventListener("DOMContentLoaded", function() {
-            const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
-            if (isLoggedIn === 'true') {
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('adminDashboardContent').classList.remove('hidden');
-                initAdminPanel();
-            }
-        });
 
         // دالة تغيير الرقم السري
         function changePassword(event) {
@@ -394,6 +425,8 @@
 
         function initAdminPanel() {
             loadAdminDashboard();
+            loadAllUsersFromFirestore(); // جلب الطلاب من Firestore بدلاً من localStorage
+            
             lastRequestsCount = (JSON.parse(localStorage.getItem('adminRequests')) || []).length;
 
             window.addEventListener('storage', function(e) {
@@ -403,7 +436,7 @@
                         triggerAlert();
                     }
                     lastRequestsCount = newRequests.length;
-                    loadAdminDashboard();
+                    loadAdminRequests();
                 }
             });
 
@@ -411,7 +444,7 @@
                 const currentRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
                 if (currentRequests.length > lastRequestsCount) {
                     triggerAlert();
-                    loadAdminDashboard();
+                    loadAdminRequests();
                 }
                 lastRequestsCount = currentRequests.length;
             }, 2000);
@@ -445,7 +478,6 @@
 
         function loadAdminDashboard() {
             loadAdminRequests();
-            loadAllUsers();
             loadStaffMembers();
         }
 
@@ -538,137 +570,159 @@
             `).join('');
         }
 
-        function loadAllUsers() {
+        // ==========================================
+        // التعديل الرئيسي: جلب الطلاب مباشرة من Firestore
+        // ==========================================
+        async function loadAllUsersFromFirestore() {
             const tbody = document.getElementById('usersTableBody');
-            let users = [];
-            
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith('user_')) {
-                    try {
-                        const userData = JSON.parse(localStorage.getItem(key));
-                        if (userData && userData.email) {
-                            users.push(userData);
-                        }
-                    } catch(e) {}
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">جاري جلب بيانات الطلاب من قاعدة البيانات...</td></tr>`;
+
+            try {
+                // افتراض أن مجموعة الطلاب في Firestore اسمها 'students' (يمكنك تغييرها حسب اسم الـ Collection لديك)
+                const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
+                let users = [];
+
+                querySnapshot.forEach((docSnap) => {
+                    users.push({
+                        id: docSnap.id, // معرف الوثيقة في Firestore
+                        ...docSnap.data()
+                    });
+                });
+
+                document.getElementById('statUsersCount').innerText = users.length;
+
+                if (users.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد طلاب مسجلين في قاعدة البيانات حتى الآن</td></tr>`;
+                    return;
                 }
+
+                const courseNamesMap = {
+                    'fiqh': 'الفقه',
+                    'tafseer': 'التفسير',
+                    'hadith': 'الحديث',
+                    'tawheed': 'التوحيد'
+                };
+
+                tbody.innerHTML = users.map(user => {
+                    const subs = user.subscriptions || {};
+                    const activeSubs = Object.keys(subs)
+                        .filter(courseId => subs[courseId] === 'approved')
+                        .map(courseId => courseNamesMap[courseId] || courseId)
+                        .join(', ') || 'لا توجد اشتراكات مفعلة';
+
+                    return `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50">
+                            <td class="p-3 font-bold text-slate-900">${user.fullName || user.name || 'بدون اسم'}</td>
+                            <td class="p-3 font-mono text-slate-600" dir="ltr">${user.email || '-'}</td>
+                            <td class="p-3 font-mono" dir="ltr">${user.phone || '-'}</td>
+                            <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
+                            <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
+                            <td class="p-3 text-center space-x-2 space-x-reverse">
+                                <button onclick="openEditModal('${user.id}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
+                                <button onclick="deleteUserAccount('${user.id}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error("Error loading students: ", error);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">حدث خطأ أثناء جلب البيانات من قاعدة البيانات</td></tr>`;
             }
-
-            document.getElementById('statUsersCount').innerText = users.length;
-
-            if (users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد طلاب مسجلين حتى الآن</td></tr>`;
-                return;
-            }
-
-            const courseNamesMap = {
-                'fiqh': 'الفقه',
-                'tafseer': 'التفسير',
-                'hadith': 'الحديث',
-                'tawheed': 'التوحيد'
-            };
-
-            tbody.innerHTML = users.map(user => {
-                const subs = user.subscriptions || {};
-                const activeSubs = Object.keys(subs)
-                    .filter(courseId => subs[courseId] === 'approved')
-                    .map(courseId => courseNamesMap[courseId] || courseId)
-                    .join(', ') || 'لا توجد اشتراكات مفعلة';
-
-                return `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50">
-                        <td class="p-3 font-bold text-slate-900">${user.fullName || 'بدون اسم'}</td>
-                        <td class="p-3 font-mono text-slate-600" dir="ltr">${user.email}</td>
-                        <td class="p-3 font-mono" dir="ltr">${user.phone || '-'}</td>
-                        <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
-                        <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
-                        <td class="p-3 text-center space-x-2 space-x-reverse">
-                            <button onclick="openEditModal('${user.email}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
-                            <button onclick="deleteUserAccount('${user.email}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
         }
 
-        function openEditModal(email) {
-            const user = JSON.parse(localStorage.getItem('user_' + email));
-            if (!user) return;
+        async function openEditModal(docId) {
+            try {
+                const docRef = window.doc(window.db, "students", docId);
+                // سنقوم بتخزين البيانات المؤقتة في نافذة التعديل
+                window.currentEditingDocId = docId;
+                
+                // جلب بيانات الطالب من الخادم مباشرة للعرض الدقيق
+                // أو يمكنك تمريرها، ولكن الأضمن جلبها
+                const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
+                let targetUser = null;
+                querySnapshot.forEach((d) => {
+                    if (d.id === docId) targetUser = d.data();
+                });
 
-            document.getElementById('editingUserEmail').value = email;
-            document.getElementById('editStudentNameTitle').innerText = `الطالب: ${user.fullName}`;
+                if (!targetUser) return;
 
-            const subs = user.subscriptions || {};
-            document.getElementById('sub-fiqh').checked = (subs['fiqh'] === 'approved');
-            document.getElementById('sub-tafseer').checked = (subs['tafseer'] === 'approved');
-            document.getElementById('sub-hadith').checked = (subs['hadith'] === 'approved');
-            document.getElementById('sub-tawheed').checked = (subs['tawheed'] === 'approved');
+                document.getElementById('editStudentNameTitle').innerText = `الطالب: ${targetUser.fullName || targetUser.name}`;
 
-            document.getElementById('editSubscriptionsModal').classList.remove('hidden');
+                const subs = targetUser.subscriptions || {};
+                document.getElementById('sub-fiqh').checked = (subs['fiqh'] === 'approved');
+                document.getElementById('sub-tafseer').checked = (subs['tafseer'] === 'approved');
+                document.getElementById('sub-hadith').checked = (subs['hadith'] === 'approved');
+                document.getElementById('sub-tawheed').checked = (subs['tawheed'] === 'approved');
+
+                document.getElementById('editSubscriptionsModal').classList.remove('hidden');
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         function closeEditModal() {
             document.getElementById('editSubscriptionsModal').classList.add('hidden');
         }
 
-        function saveStudentSubscriptions() {
-            const email = document.getElementById('editingUserEmail').value;
-            let user = JSON.parse(localStorage.getItem('user_' + email));
-            if (!user) return;
-
-            if (!user.subscriptions) user.subscriptions = {};
+        async function saveStudentSubscriptions() {
+            const docId = window.currentEditingDocId;
+            if (!docId) return;
 
             const courses = ['fiqh', 'tafseer', 'hadith', 'tawheed'];
+            let updatedSubs = {};
+
             courses.forEach(courseId => {
                 const isChecked = document.getElementById(`sub-${courseId}`).checked;
                 if (isChecked) {
-                    user.subscriptions[courseId] = 'approved';
-                } else {
-                    delete user.subscriptions[courseId];
+                    updatedSubs[courseId] = 'approved';
                 }
             });
 
-            if (!user.notifications) user.notifications = [];
-            user.notifications.unshift({
-                text: `تم تحديث موادك واشتراكاتك الدراسية بواسطة الإدارة.`,
-                date: new Date().toLocaleDateString('ar-EG'),
-                read: false
-            });
+            try {
+                const studentRef = window.doc(window.db, "students", docId);
+                await window.updateDoc(studentRef, {
+                    subscriptions: updatedSubs
+                });
 
-            localStorage.setItem('user_' + email, JSON.stringify(user));
-
-            let activeUser = JSON.parse(localStorage.getItem('activeUser'));
-            if (activeUser && activeUser.email === email) {
-                localStorage.setItem('activeUser', JSON.stringify(user));
+                closeEditModal();
+                showToast('تم تحديث اشتراكات الطالب في قاعدة البيانات بنجاح');
+                loadAllUsersFromFirestore();
+            } catch (e) {
+                console.error(e);
+                alert('حدث خطأ أثناء الحفظ');
             }
-
-            closeEditModal();
-            showToast('تم تحديث اشتراكات الطالب بنجاح');
-            loadAdminDashboard();
         }
 
-        function approveRequest(index) {
+        async function approveRequest(index) {
             let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
             const req = adminRequests[index];
 
-            let user = JSON.parse(localStorage.getItem('user_' + req.userEmail));
-            if (user) {
-                if (!user.subscriptions) user.subscriptions = {};
-                user.subscriptions[req.courseId] = 'approved';
+            try {
+                // البحث عن الطالب في Firestore بواسطة البريد الإلكتروني لتحديث اشتراكه
+                const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
+                let studentDocId = null;
+                let studentData = null;
 
-                if (!user.notifications) user.notifications = [];
-                user.notifications.unshift({
-                    text: `مبروك! تم قبول وتفعيل اشتراكك في مادة "${req.courseTitle}".`,
-                    date: new Date().toLocaleDateString('ar-EG'),
-                    read: false
+                querySnapshot.forEach((d) => {
+                    const data = d.data();
+                    if (data.email === req.userEmail) {
+                        studentDocId = d.id;
+                        studentData = data;
+                    }
                 });
 
-                localStorage.setItem('user_' + req.userEmail, JSON.stringify(user));
+                if (studentDocId && studentData) {
+                    let subs = studentData.subscriptions || {};
+                    subs[req.courseId] = 'approved';
 
-                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
-                if (activeUser && activeUser.email === req.userEmail) {
-                    localStorage.setItem('activeUser', JSON.stringify(user));
+                    const studentRef = window.doc(window.db, "students", studentDocId);
+                    await window.updateDoc(studentRef, {
+                        subscriptions: subs
+                    });
                 }
+            } catch (e) {
+                console.error("Error updating student subscription in firestore:", e);
             }
 
             adminRequests.splice(index, 1);
@@ -677,31 +731,37 @@
 
             showToast('تم قبول الطلب وتفعيل الاشتراك بنجاح');
             loadAdminDashboard();
+            loadAllUsersFromFirestore();
         }
 
-        function rejectRequest(index) {
+        async function rejectRequest(index) {
             let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
             const req = adminRequests[index];
 
-            let user = JSON.parse(localStorage.getItem('user_' + req.userEmail));
-            if (user) {
-                if (user.subscriptions) {
-                    delete user.subscriptions[req.courseId];
-                }
+            try {
+                const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
+                let studentDocId = null;
+                let studentData = null;
 
-                if (!user.notifications) user.notifications = [];
-                user.notifications.unshift({
-                    text: `عذراً، تم رفض طلب اشتراكك في مادة "${req.courseTitle}". يرجى التأكد من بيانات الدفع.`,
-                    date: new Date().toLocaleDateString('ar-EG'),
-                    read: false
+                querySnapshot.forEach((d) => {
+                    const data = d.data();
+                    if (data.email === req.userEmail) {
+                        studentDocId = d.id;
+                        studentData = data;
+                    }
                 });
 
-                localStorage.setItem('user_' + req.userEmail, JSON.stringify(user));
+                if (studentDocId && studentData) {
+                    let subs = studentData.subscriptions || {};
+                    delete subs[req.courseId];
 
-                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
-                if (activeUser && activeUser.email === req.userEmail) {
-                    localStorage.setItem('activeUser', JSON.stringify(user));
+                    const studentRef = window.doc(window.db, "students", studentDocId);
+                    await window.updateDoc(studentRef, {
+                        subscriptions: subs
+                    });
                 }
+            } catch (e) {
+                console.error("Error rejecting student subscription in firestore:", e);
             }
 
             adminRequests.splice(index, 1);
@@ -710,19 +770,19 @@
 
             showToast('تم رفض الطلب وإبلاغ الطالب');
             loadAdminDashboard();
+            loadAllUsersFromFirestore();
         }
 
-        function deleteUserAccount(email) {
-            if (confirm(`هل أنت متأكد من حذف حساب الطالب (${email}) نهائياً؟`)) {
-                localStorage.removeItem('user_' + email);
-                
-                let activeUser = JSON.parse(localStorage.getItem('activeUser'));
-                if (activeUser && activeUser.email === email) {
-                    localStorage.removeItem('activeUser');
+        async function deleteUserAccount(docId) {
+            if (confirm(`هل أنت متأكد من حذف حساب الطالب نهائياً من قاعدة البيانات؟`)) {
+                try {
+                    await window.deleteDoc(window.doc(window.db, "students", docId));
+                    showToast('تم حذف حساب الطالب بنجاح');
+                    loadAllUsersFromFirestore();
+                } catch (e) {
+                    console.error("Error deleting student:", e);
+                    alert('حدث خطأ أثناء الحذف');
                 }
-
-                showToast('تم حذف حساب الطالب بنجاح');
-                loadAdminDashboard();
             }
         }
     </script>
