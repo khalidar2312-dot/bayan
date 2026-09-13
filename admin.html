@@ -13,7 +13,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // إعدادات فايربيس الخاصة بك
+        // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
         const firebaseConfig = {
             apiKey: "AIzaSyBDQ0cP8C5Hv3xAun7iLSD2PSp0x7sP-08",
             authDomain: "bayan2312.firebaseapp.com",
@@ -425,7 +425,7 @@
 
         function initAdminPanel() {
             loadAdminDashboard();
-            loadAllUsersFromFirestore(); // جلب الطلاب من Firestore مباشرة
+            loadAllUsersFromFirestore(); // جلب الطلاب من Firestore بدلاً من localStorage
             
             lastRequestsCount = (JSON.parse(localStorage.getItem('adminRequests')) || []).length;
 
@@ -570,18 +570,21 @@
             `).join('');
         }
 
-        // جلب الطلاب مباشرة من مجموعة 'students' في Firestore
+        // ==========================================
+        // التعديل الرئيسي: جلب الطلاب مباشرة من Firestore
+        // ==========================================
         async function loadAllUsersFromFirestore() {
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">جاري جلب بيانات الطلاب من قاعدة البيانات...</td></tr>`;
 
             try {
+                // افتراض أن مجموعة الطلاب في Firestore اسمها 'students' (يمكنك تغييرها حسب اسم الـ Collection لديك)
                 const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
                 let users = [];
 
                 querySnapshot.forEach((docSnap) => {
                     users.push({
-                        id: docSnap.id,
+                        id: docSnap.id, // معرف الوثيقة في Firestore
                         ...docSnap.data()
                     });
                 });
@@ -630,8 +633,12 @@
 
         async function openEditModal(docId) {
             try {
+                const docRef = window.doc(window.db, "students", docId);
+                // سنقوم بتخزين البيانات المؤقتة في نافذة التعديل
                 window.currentEditingDocId = docId;
                 
+                // جلب بيانات الطالب من الخادم مباشرة للعرض الدقيق
+                // أو يمكنك تمريرها، ولكن الأضمن جلبها
                 const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
                 let targetUser = null;
                 querySnapshot.forEach((d) => {
@@ -692,6 +699,7 @@
             const req = adminRequests[index];
 
             try {
+                // البحث عن الطالب في Firestore بواسطة البريد الإلكتروني لتحديث اشتراكه
                 const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
                 let studentDocId = null;
                 let studentData = null;
@@ -752,7 +760,6 @@
                         subscriptions: subs
                     });
                 }
-            }
             } catch (e) {
                 console.error("Error rejecting student subscription in firestore:", e);
             }
