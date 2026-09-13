@@ -11,7 +11,7 @@
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
         const firebaseConfig = {
@@ -30,11 +30,15 @@
         window.db = db;
         window.collection = collection;
         window.getDocs = getDocs;
+        window.getDoc = getDoc;
         window.doc = doc;
         window.deleteDoc = deleteDoc;
         window.updateDoc = updateDoc;
         window.setDoc = setDoc;
         window.onSnapshot = onSnapshot;
+        window.query = query;
+        window.where = where;
+        window.orderBy = orderBy;
 
         // بدء تحميل لوحة التحكم المرتبطة بـ Firestore بمجرد توفر الفايربيس
         document.addEventListener("DOMContentLoaded", function() {
@@ -328,7 +332,7 @@
     </div>
 
     <script>
-        let lastRequestsCount = 0;
+        let lastRequestsCount = -1; // -1 تعني "أول تحميل" — لا يُطلق تنبيه
 
         // دالة تغيير الرقم السري
         function changePassword(event) {
@@ -424,30 +428,30 @@
         }
 
         function initAdminPanel() {
-            loadAdminDashboard();
-            loadAllUsersFromFirestore(); // جلب الطلاب من Firestore بدلاً من localStorage
-            
-            lastRequestsCount = (JSON.parse(localStorage.getItem('adminRequests')) || []).length;
+            loadStaffMembers();
+            loadAllUsersFromFirestore();
 
-            window.addEventListener('storage', function(e) {
-                if (e.key === 'adminRequests') {
-                    const newRequests = JSON.parse(e.newValue) || [];
-                    if (newRequests.length > lastRequestsCount) {
-                        triggerAlert();
-                    }
-                    lastRequestsCount = newRequests.length;
-                    loadAdminRequests();
-                }
-            });
+            // real-time listener على subscription_requests في Firestore
+            const requestsQuery = window.query(
+                window.collection(window.db, 'subscription_requests'),
+                window.where('status', '==', 'pending'),
+                window.orderBy('createdAt', 'desc')
+            );
 
-            setInterval(() => {
-                const currentRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
-                if (currentRequests.length > lastRequestsCount) {
+            window.onSnapshot(requestsQuery, function(snapshot) {
+                const count = snapshot.size;
+
+                // تنبيه صوتي لو جاء طلب جديد
+                if (count > lastRequestsCount && lastRequestsCount !== -1) {
                     triggerAlert();
-                    loadAdminRequests();
                 }
-                lastRequestsCount = currentRequests.length;
-            }, 2000);
+                lastRequestsCount = count;
+
+                document.getElementById('statPendingCount').innerText = count;
+                renderRequestsTable(snapshot);
+            }, function(error) {
+                console.error('خطأ في مراقبة الطلبات:', error);
+            });
         }
 
         function testAudio() {
@@ -477,8 +481,38 @@
         }
 
         function loadAdminDashboard() {
-            loadAdminRequests();
             loadStaffMembers();
+        }
+
+        function renderRequestsTable(snapshot) {
+            const tbody = document.getElementById('requestsTableBody');
+
+            if (snapshot.empty) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">لا توجد طلبات اشتراك معلقة حالياً</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = snapshot.docs.map((docSnap) => {
+                const req = docSnap.data();
+                const docId = docSnap.id;
+                const dateStr = req.createdAt
+                    ? new Date(req.createdAt.seconds * 1000).toLocaleString('ar-EG')
+                    : '-';
+                return `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50">
+                        <td class="p-3 font-bold text-slate-900">${req.userName || '-'}</td>
+                        <td class="p-3 font-mono" dir="ltr">${req.userPhone || '-'}</td>
+                        <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${req.parentPhone || 'غير مسجل'}</td>
+                        <td class="p-3 font-bold text-emerald-900">${req.courseTitle} (${req.coursePrice} ج.م)</td>
+                        <td class="p-3 font-mono text-amber-600" dir="ltr">${req.senderPhone || '-'}</td>
+                        <td class="p-3 text-slate-400">${dateStr}</td>
+                        <td class="p-3 text-center space-x-2 space-x-reverse">
+                            <button onclick="approveRequest('${docId}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition">قبول وتفعيل</button>
+                            <button onclick="rejectRequest('${docId}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">رفض</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function addNewStaff(event) {
@@ -543,32 +577,7 @@
             }
         }
 
-        function loadAdminRequests() {
-            const tbody = document.getElementById('requestsTableBody');
-            const adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
-            
-            document.getElementById('statPendingCount').innerText = adminRequests.length;
 
-            if (adminRequests.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">لا توجد طلبات اشتراك معلقة حالياً</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = adminRequests.map((req, index) => `
-                <tr class="border-b border-slate-100 hover:bg-slate-50">
-                    <td class="p-3 font-bold text-slate-900">${req.userName}</td>
-                    <td class="p-3 font-mono" dir="ltr">${req.userPhone || '-'}</td>
-                    <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${req.parentPhone || 'غير مسجل'}</td>
-                    <td class="p-3 font-bold text-emerald-900">${req.courseTitle} (${req.coursePrice} ج.م)</td>
-                    <td class="p-3 font-mono text-amber-600" dir="ltr">${req.senderPhone}</td>
-                    <td class="p-3 text-slate-400">${req.date}</td>
-                    <td class="p-3 text-center space-x-2 space-x-reverse">
-                        <button onclick="approveRequest(${index})" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition">قبول وتفعيل</button>
-                        <button onclick="rejectRequest(${index})" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">رفض</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
 
         // ==========================================
         // التعديل الرئيسي: جلب الطلاب مباشرة من Firestore
@@ -694,83 +703,102 @@
             }
         }
 
-        async function approveRequest(index) {
-            let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
-            const req = adminRequests[index];
+        async function approveRequest(requestDocId) {
+            if (!confirm('هل أنت متأكد من قبول هذا الطلب وتفعيل الاشتراك؟')) return;
 
             try {
-                // البحث عن الطالب في Firestore بواسطة البريد الإلكتروني لتحديث اشتراكه
-                const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
-                let studentDocId = null;
-                let studentData = null;
+                // جلب بيانات الطلب من Firestore
+                const requestRef = window.doc(window.db, 'subscription_requests', requestDocId);
+                const reqDoc = await window.getDoc(requestRef);
 
-                querySnapshot.forEach((d) => {
-                    const data = d.data();
-                    if (data.email === req.userEmail) {
-                        studentDocId = d.id;
-                        studentData = data;
-                    }
-                });
+                if (!reqDoc.exists()) {
+                    alert('الطلب غير موجود.');
+                    return;
+                }
 
-                if (studentDocId && studentData) {
+                const req = reqDoc.data();
+
+                // 1. تحديث اشتراك الطالب في students
+                const studentRef = window.doc(window.db, 'students', req.uid);
+                const studentSnap = await window.getDoc(studentRef);
+
+                if (studentSnap.exists()) {
+                    const studentData = studentSnap.data();
                     let subs = studentData.subscriptions || {};
                     subs[req.courseId] = 'approved';
 
-                    const studentRef = window.doc(window.db, "students", studentDocId);
+                    // إضافة إشعار للطالب
+                    let notifications = studentData.notifications || [];
+                    notifications.unshift({
+                        text: `تم تفعيل اشتراكك في مادة "${req.courseTitle}" بنجاح! يمكنك الآن مشاهدة المحتوى.`,
+                        date: new Date().toLocaleString('ar-EG'),
+                        read: false
+                    });
+
                     await window.updateDoc(studentRef, {
-                        subscriptions: subs
+                        subscriptions: subs,
+                        notifications: notifications
                     });
                 }
+
+                // 2. تحديث حالة الطلب إلى approved في Firestore
+                await window.updateDoc(requestRef, { status: 'approved' });
+
+                showToast('✅ تم قبول الطلب وتفعيل الاشتراك بنجاح');
+                loadAllUsersFromFirestore();
+
             } catch (e) {
-                console.error("Error updating student subscription in firestore:", e);
+                console.error('خطأ في قبول الطلب:', e);
+                alert('حدث خطأ أثناء قبول الطلب: ' + e.message);
             }
-
-            adminRequests.splice(index, 1);
-            localStorage.setItem('adminRequests', JSON.stringify(adminRequests));
-            lastRequestsCount = adminRequests.length;
-
-            showToast('تم قبول الطلب وتفعيل الاشتراك بنجاح');
-            loadAdminDashboard();
-            loadAllUsersFromFirestore();
         }
 
-        async function rejectRequest(index) {
-            let adminRequests = JSON.parse(localStorage.getItem('adminRequests')) || [];
-            const req = adminRequests[index];
+        async function rejectRequest(requestDocId) {
+            if (!confirm('هل أنت متأكد من رفض هذا الطلب؟')) return;
 
             try {
-                const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
-                let studentDocId = null;
-                let studentData = null;
+                const requestRef = window.doc(window.db, 'subscription_requests', requestDocId);
+                const reqDoc = await window.getDoc(requestRef);
 
-                querySnapshot.forEach((d) => {
-                    const data = d.data();
-                    if (data.email === req.userEmail) {
-                        studentDocId = d.id;
-                        studentData = data;
-                    }
-                });
+                if (!reqDoc.exists()) {
+                    alert('الطلب غير موجود.');
+                    return;
+                }
 
-                if (studentDocId && studentData) {
+                const req = reqDoc.data();
+
+                // 1. إزالة الاشتراك من الطالب وإضافة إشعار رفض
+                const studentRef = window.doc(window.db, 'students', req.uid);
+                const studentSnap = await window.getDoc(studentRef);
+
+                if (studentSnap.exists()) {
+                    const studentData = studentSnap.data();
                     let subs = studentData.subscriptions || {};
                     delete subs[req.courseId];
 
-                    const studentRef = window.doc(window.db, "students", studentDocId);
+                    let notifications = studentData.notifications || [];
+                    notifications.unshift({
+                        text: `عذراً، تم رفض طلب اشتراكك في مادة "${req.courseTitle}". تواصل مع الإدارة للاستفسار.`,
+                        date: new Date().toLocaleString('ar-EG'),
+                        read: false
+                    });
+
                     await window.updateDoc(studentRef, {
-                        subscriptions: subs
+                        subscriptions: subs,
+                        notifications: notifications
                     });
                 }
+
+                // 2. تحديث حالة الطلب إلى rejected
+                await window.updateDoc(requestRef, { status: 'rejected' });
+
+                showToast('تم رفض الطلب وإبلاغ الطالب');
+                loadAllUsersFromFirestore();
+
             } catch (e) {
-                console.error("Error rejecting student subscription in firestore:", e);
+                console.error('خطأ في رفض الطلب:', e);
+                alert('حدث خطأ أثناء رفض الطلب: ' + e.message);
             }
-
-            adminRequests.splice(index, 1);
-            localStorage.setItem('adminRequests', JSON.stringify(adminRequests));
-            lastRequestsCount = adminRequests.length;
-
-            showToast('تم رفض الطلب وإبلاغ الطالب');
-            loadAdminDashboard();
-            loadAllUsersFromFirestore();
         }
 
         async function deleteUserAccount(docId) {
