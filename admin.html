@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
@@ -796,6 +797,7 @@
                         <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
                         <td class="p-3 text-center space-x-2 space-x-reverse">
                             <button onclick="openEditModal('${user.id}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
+                            <button onclick="sendPasswordReset('${user.email}')" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition"><i class="fa-solid fa-key ml-1"></i>إعادة كلمة المرور</button>
                             <button onclick="deleteUserAccount('${user.id}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
                         </td>
                     </tr>
@@ -975,6 +977,27 @@
             } catch (e) {
                 console.error('خطأ في رفض الطلب:', e);
                 alert('حدث خطأ أثناء رفض الطلب: ' + e.message);
+            }
+        }
+
+        async function sendPasswordReset(email) {
+            if (!email || email === '-') {
+                alert('لا يوجد بريد إلكتروني لهذا الطالب.');
+                return;
+            }
+
+            if (!confirm(`هل تريد إرسال رابط إعادة تعيين كلمة المرور إلى:\n${email}؟`)) return;
+
+            try {
+                await firebase.auth().sendPasswordResetEmail(email);
+                showToast(`✅ تم إرسال رابط إعادة كلمة المرور إلى ${email}`);
+            } catch (error) {
+                console.error('خطأ في إرسال الإيميل:', error);
+                if (error.code === 'auth/user-not-found') {
+                    alert('البريد الإلكتروني غير مسجل في النظام.');
+                } else {
+                    alert('حدث خطأ أثناء الإرسال: ' + error.message);
+                }
             }
         }
 
