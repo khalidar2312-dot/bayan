@@ -1670,6 +1670,12 @@
                     .doc(uid)
                     .set(userData);
 
+                // إشعار الأدمن بطالب جديد
+                await sendAdminNotification(
+                    '🎓 طالب جديد انضم للأكاديمية',
+                    `${fullName} سجّل حساباً جديداً`
+                );
+
 
                 // نسخة محلية للواجهة فقط
                 const localUser = {
@@ -2026,6 +2032,41 @@
 
 
         // =========================
+        // إرسال إشعار للأدمن عبر FCM
+        // =========================
+
+        async function sendAdminNotification(title, body) {
+            try {
+                // جلب FCM token الأدمن من Firestore
+                const adminTokenDoc = await db
+                    .collection('admin_tokens')
+                    .doc('main_admin')
+                    .get();
+
+                if (!adminTokenDoc.exists) {
+                    console.warn('لا يوجد FCM token للأدمن');
+                    return;
+                }
+
+                const adminToken = adminTokenDoc.data().token;
+                if (!adminToken) return;
+
+                // حفظ الإشعار في Firestore عشان الـ Cloud Function تبعته
+                // (بديل مؤقت: نحفظ الإشعار في collection pending_notifications)
+                await db.collection('pending_notifications').add({
+                    token: adminToken,
+                    title: title,
+                    body: body,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    sent: false
+                });
+
+            } catch (error) {
+                console.error('خطأ في إرسال إشعار الأدمن:', error);
+            }
+        }
+
+        // =========================
         // إرسال طلب الاشتراك
         // =========================
 
@@ -2237,15 +2278,12 @@
                     const existingDoc =
                         existingRequests.docs[0];
 
-
                     await db
                         .collection('subscription_requests')
                         .doc(existingDoc.id)
                         .update(requestData);
 
-                }
-
-                else {
+                } else {
 
                     // إنشاء طلب جديد
                     await db
@@ -2253,6 +2291,12 @@
                         .add(requestData);
 
                 }
+
+                // إشعار الأدمن بطلب اشتراك جديد
+                await sendAdminNotification(
+                    '💳 طلب اشتراك جديد',
+                    `${activeUser.fullName || 'طالب'} يطلب الاشتراك في ${courseTitle}`
+                );
 
 
                 // =================================
