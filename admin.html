@@ -85,7 +85,7 @@
         }
     </script>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased">
+<body class="bg-slate-50 text-slate-800 antialiased">
 
     <!-- عنصر الصوت المخصص sound.mp3 -->
     <audio id="notifSound" preload="auto">
@@ -119,207 +119,229 @@
 
     <!-- محتوى لوحة التحكم الشاملة -->
     <div id="adminDashboardContent" class="hidden">
+
         <!-- Header -->
-        <header class="bg-emerald-950 text-white shadow-md">
-            <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-amber-500 text-emerald-950 rounded-xl flex items-center justify-center font-bold text-xl">
+        <header class="bg-gradient-to-l from-emerald-950 to-emerald-900 text-white shadow-xl sticky top-0 z-30 border-b border-emerald-800">
+            <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+                <!-- الشعار والعنوان -->
+                <div class="flex items-center gap-4">
+                    <div class="w-9 h-9 bg-gradient-to-tr from-amber-400 to-amber-500 text-emerald-950 rounded-xl flex items-center justify-center text-base font-black shadow-lg shadow-amber-500/30">
                         <i class="fa-solid fa-gauge"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-extrabold font-kufi">لوحة تحكم أكاديمية بيان</h1>
-                        <p id="currentUserBadge" class="text-xs text-amber-400 font-semibold"></p>
+                        <h1 class="text-base font-black font-kufi tracking-wide">لوحة تحكم أكاديمية بيان</h1>
+                        <p id="currentUserBadge" class="text-[11px] text-amber-300/80 font-medium"></p>
                     </div>
                 </div>
-                
-                <div class="flex items-center gap-3">
-                    <button onclick="testAudio()" class="px-3 py-2 rounded-xl bg-amber-500 text-emerald-950 font-bold text-xs hover:bg-amber-400 transition flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-volume-high"></i> اختبار الصوت
+
+                <!-- أزرار الهيدر -->
+                <div class="flex items-center gap-2">
+                    <button onclick="testAudio()" title="اختبار الصوت" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-amber-500 hover:text-emerald-950 text-white transition-all duration-200 flex items-center justify-center text-sm border border-white/10">
+                        <i class="fa-solid fa-volume-high"></i>
                     </button>
-                    <a href="index.html" class="px-4 py-2 rounded-xl bg-emerald-900 text-amber-300 font-bold text-xs hover:bg-emerald-800 transition">الرئيسية</a>
-                    <button onclick="logoutAdmin()" class="px-3 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition">خروج</button>
+                    <a href="index.html" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition border border-white/10 flex items-center gap-1.5">
+                        <i class="fa-solid fa-house text-amber-400"></i> الرئيسية
+                    </a>
+                    <button onclick="logoutAdmin()" class="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white font-bold text-xs transition border border-red-500/30 flex items-center gap-1.5">
+                        <i class="fa-solid fa-right-from-bracket"></i> خروج
+                    </button>
                 </div>
             </div>
         </header>
 
-        <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
-            
+        <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
             <!-- قسم الإحصائيات السريعة -->
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-slate-400 font-bold">الطلبات المعلقة</p>
-                        <h3 id="statPendingCount" class="text-2xl font-black text-amber-600 mt-1">0</h3>
-                    </div>
-                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-clock"></i>
-                    </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <!-- الطلبات المعلقة -->
+                <div class="relative overflow-hidden bg-gradient-to-br from-amber-500 to-amber-600 p-5 rounded-2xl shadow-lg shadow-amber-500/20 text-white">
+                    <div class="absolute -left-3 -bottom-3 w-16 h-16 bg-white/10 rounded-full"></div>
+                    <div class="absolute -left-1 -bottom-5 w-10 h-10 bg-white/10 rounded-full"></div>
+                    <i class="fa-solid fa-clock text-2xl text-white/60 mb-2 block"></i>
+                    <h3 id="statPendingCount" class="text-3xl font-black">0</h3>
+                    <p class="text-xs font-bold text-white/80 mt-1">الطلبات المعلقة</p>
                 </div>
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-slate-400 font-bold">إجمالي الطلاب (من قاعدة البيانات)</p>
-                        <h3 id="statUsersCount" class="text-2xl font-black text-emerald-900 mt-1">0</h3>
-                    </div>
-                    <div class="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
+                <!-- إجمالي الطلاب -->
+                <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 to-emerald-800 p-5 rounded-2xl shadow-lg shadow-emerald-700/20 text-white">
+                    <div class="absolute -left-3 -bottom-3 w-16 h-16 bg-white/10 rounded-full"></div>
+                    <div class="absolute -left-1 -bottom-5 w-10 h-10 bg-white/10 rounded-full"></div>
+                    <i class="fa-solid fa-users text-2xl text-white/60 mb-2 block"></i>
+                    <h3 id="statUsersCount" class="text-3xl font-black">0</h3>
+                    <p class="text-xs font-bold text-white/80 mt-1">إجمالي الطلاب</p>
                 </div>
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-slate-400 font-bold">الموظفين المعينين</p>
-                        <h3 id="statStaffCount" class="text-2xl font-black text-blue-600 mt-1">0</h3>
-                    </div>
-                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-user-tie"></i>
-                    </div>
+                <!-- الموظفين -->
+                <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 p-5 rounded-2xl shadow-lg shadow-blue-600/20 text-white">
+                    <div class="absolute -left-3 -bottom-3 w-16 h-16 bg-white/10 rounded-full"></div>
+                    <div class="absolute -left-1 -bottom-5 w-10 h-10 bg-white/10 rounded-full"></div>
+                    <i class="fa-solid fa-user-tie text-2xl text-white/60 mb-2 block"></i>
+                    <h3 id="statStaffCount" class="text-3xl font-black">0</h3>
+                    <p class="text-xs font-bold text-white/80 mt-1">الموظفين المعينين</p>
                 </div>
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-slate-400 font-bold">حالة النظام</p>
-                        <h3 class="text-base font-black text-emerald-600 mt-1">يعمل بانتظام (Firebase)</h3>
+                <!-- حالة النظام -->
+                <div class="relative overflow-hidden bg-gradient-to-br from-slate-700 to-slate-800 p-5 rounded-2xl shadow-lg shadow-slate-700/20 text-white">
+                    <div class="absolute -left-3 -bottom-3 w-16 h-16 bg-white/10 rounded-full"></div>
+                    <div class="absolute -left-1 -bottom-5 w-10 h-10 bg-white/10 rounded-full"></div>
+                    <i class="fa-solid fa-server text-2xl text-emerald-400/80 mb-2 block"></i>
+                    <div class="flex items-center gap-1.5 mt-1">
+                        <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse inline-block"></span>
+                        <span class="text-sm font-black">يعمل</span>
                     </div>
-                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-server"></i>
-                    </div>
+                    <p class="text-xs font-bold text-white/70 mt-1">حالة النظام</p>
                 </div>
             </div>
 
             <!-- قسم تغيير الرقم السري -->
-            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-                <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-key text-amber-500"></i> إعدادات الحساب: تغيير الرقم السري
-                </h2>
-                <form onsubmit="changePassword(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">الرقم السري الحالي</label>
-                        <input type="password" id="currentPassInput" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-gradient-to-l from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                    <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-key"></i>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">الرقم السري الجديد</label>
-                        <input type="password" id="newPassInput" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">تأكيد الرقم السري الجديد</label>
-                        <input type="password" id="confirmPassInput" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
-                    </div>
-                    <div class="flex items-end">
-                        <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-800 text-amber-300 font-bold text-xs hover:bg-emerald-900 transition shadow-sm">حفظ الرقم السري</button>
-                    </div>
-                </form>
+                    <h2 class="text-base font-extrabold font-kufi text-slate-800">إعدادات الحساب: تغيير الرقم السري</h2>
+                </div>
+                <div class="p-5">
+                    <form onsubmit="changePassword(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">الرقم السري الحالي</label>
+                            <input type="password" id="currentPassInput" required placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-mono bg-slate-50" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">الرقم السري الجديد</label>
+                            <input type="password" id="newPassInput" required placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-mono bg-slate-50" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">تأكيد الرقم السري الجديد</label>
+                            <input type="password" id="confirmPassInput" required placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 font-mono bg-slate-50" dir="ltr">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-800 text-amber-300 font-bold text-xs hover:bg-emerald-900 transition shadow-sm">حفظ الرقم السري</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <!-- 1. قسم تعيين وإدارة الموظفين الجدد -->
-            <div id="staffManagementSection" class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xl font-extrabold font-kufi text-emerald-950 flex items-center gap-2">
-                        <i class="fa-solid fa-user-plus text-blue-600"></i> تعيين وإدارة موظف جديد
-                    </h2>
+            <div id="staffManagementSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-gradient-to-l from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                    <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h2 class="text-base font-extrabold font-kufi text-slate-800">تعيين وإدارة موظف جديد</h2>
                 </div>
-                
-                <form onsubmit="addNewStaff(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم الموظف</label>
-                        <input type="text" id="staffName" required placeholder="أحمد محمد" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم</label>
-                        <input type="text" id="staffUsername" required placeholder="ahmed22" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور</label>
-                        <input type="password" id="staffPassword" required placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">الدور / الصلاحية</label>
-                        <select id="staffRole" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-emerald-600 bg-white">
-                            <option value="موظف خدمة عملاء">موظف خدمة عملاء</option>
-                            <option value="مساعد مراجعة اشتراكات">مساعد مراجعة اشتراكات</option>
-                            <option value="مشرف أكاديمي">مشرف أكاديمي</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition shadow-sm">إضافة الموظف</button>
-                    </div>
-                </form>
+                <div class="p-5">
+                    <form onsubmit="addNewStaff(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم الموظف</label>
+                            <input type="text" id="staffName" required placeholder="أحمد محمد" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم المستخدم</label>
+                            <input type="text" id="staffUsername" required placeholder="ahmed22" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono bg-white" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">كلمة المرور</label>
+                            <input type="password" id="staffPassword" required placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono bg-white" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">الدور / الصلاحية</label>
+                            <select id="staffRole" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white">
+                                <option value="موظف خدمة عملاء">موظف خدمة عملاء</option>
+                                <option value="مساعد مراجعة اشتراكات">مساعد مراجعة اشتراكات</option>
+                                <option value="مشرف أكاديمي">مشرف أكاديمي</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition shadow-sm">إضافة الموظف</button>
+                        </div>
+                    </form>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-right border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-xs text-slate-500 bg-slate-50">
-                                <th class="p-3">اسم الموظف</th>
-                                <th class="p-3">اسم المستخدم</th>
-                                <th class="p-3">كلمة المرور</th>
-                                <th class="p-3">الدور / الصلاحية</th>
-                                <th class="p-3">تاريخ التعيين</th>
-                                <th class="p-3 text-center">الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="staffTableBody" class="text-xs">
-                            <!-- تُعبأ البيانات تلقائياً -->
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto rounded-xl border border-slate-100">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
+                                    <th class="px-4 py-3 font-bold">اسم الموظف</th>
+                                    <th class="px-4 py-3 font-bold">اسم المستخدم</th>
+                                    <th class="px-4 py-3 font-bold">كلمة المرور</th>
+                                    <th class="px-4 py-3 font-bold">الدور / الصلاحية</th>
+                                    <th class="px-4 py-3 font-bold">تاريخ التعيين</th>
+                                    <th class="px-4 py-3 font-bold text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staffTableBody" class="text-xs divide-y divide-slate-50">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- 2. جدول طلبات الاشتراكات المعلقة -->
-            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-                <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-list-check text-amber-500"></i> طلبات الاشتراكات المعلقة
-                </h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-right border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-xs text-slate-500 bg-slate-50">
-                                <th class="p-3">اسم الطالب</th>
-                                <th class="p-3">رقم الطالب</th>
-                                <th class="p-3">رقم ولي الأمر</th>
-                                <th class="p-3">المادة المطلوبة</th>
-                                <th class="p-3">رقم المحفظة المحول منها</th>
-                                <th class="p-3">التاريخ</th>
-                                <th class="p-3 text-center">الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="requestsTableBody" class="text-xs">
-                            <!-- تُعبأ البيانات تلقائياً -->
-                        </tbody>
-                    </table>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-gradient-to-l from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                    <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <h2 class="text-base font-extrabold font-kufi text-slate-800">طلبات الاشتراكات المعلقة</h2>
+                </div>
+                <div class="p-5">
+                    <div class="overflow-x-auto rounded-xl border border-slate-100">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
+                                    <th class="px-4 py-3 font-bold">اسم الطالب</th>
+                                    <th class="px-4 py-3 font-bold">رقم الطالب</th>
+                                    <th class="px-4 py-3 font-bold">رقم ولي الأمر</th>
+                                    <th class="px-4 py-3 font-bold">المادة المطلوبة</th>
+                                    <th class="px-4 py-3 font-bold">رقم المحفظة المحول منها</th>
+                                    <th class="px-4 py-3 font-bold">التاريخ</th>
+                                    <th class="px-4 py-3 font-bold text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requestsTableBody" class="text-xs divide-y divide-slate-50">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- 3. جدول إدارة جميع الطلاب المسجلين (من Firestore) -->
-            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-                    <h2 class="text-xl font-extrabold font-kufi text-emerald-950 flex items-center gap-2">
-                        <i class="fa-solid fa-user-graduate text-emerald-700"></i> إدارة جميع الطلاب المسجلين (قاعدة البيانات)
-                    </h2>
-                    <!-- حقل البحث -->
-                    <div class="relative w-full sm:w-72">
-                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                        <input
-                            type="text"
-                            id="studentsSearchInput"
-                            oninput="filterStudents(this.value)"
-                            placeholder="ابحث بالاسم أو البريد أو رقم الهاتف..."
-                            class="w-full pr-9 pl-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600 bg-slate-50"
-                        >
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-gradient-to-l from-slate-50 to-white px-6 py-4 border-b border-slate-100">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-sm">
+                                <i class="fa-solid fa-user-graduate"></i>
+                            </div>
+                            <h2 class="text-base font-extrabold font-kufi text-slate-800">إدارة جميع الطلاب المسجلين (قاعدة البيانات)</h2>
+                        </div>
+                        <!-- حقل البحث -->
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input
+                                type="text"
+                                id="studentsSearchInput"
+                                oninput="filterStudents(this.value)"
+                                placeholder="ابحث بالاسم أو البريد أو رقم الهاتف..."
+                                class="w-full pr-8 pl-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 bg-slate-50"
+                            >
+                        </div>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-right border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-xs text-slate-500 bg-slate-50">
-                                <th class="p-3">اسم الطالب</th>
-                                <th class="p-3">البريد الإلكتروني</th>
-                                <th class="p-3">رقم الواتساب</th>
-                                <th class="p-3">رقم ولي الأمر</th>
-                                <th class="p-3">المواد المشترك بها</th>
-                                <th class="p-3 text-center">إدارة الحساب</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody" class="text-xs">
-                            <!-- تُعبأ البيانات تلقائياً من Firestore -->
-                        </tbody>
-                    </table>
+                <div class="p-5">
+                    <div class="overflow-x-auto rounded-xl border border-slate-100">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
+                                    <th class="px-4 py-3 font-bold">اسم الطالب</th>
+                                    <th class="px-4 py-3 font-bold">البريد الإلكتروني</th>
+                                    <th class="px-4 py-3 font-bold">رقم الواتساب</th>
+                                    <th class="px-4 py-3 font-bold">رقم ولي الأمر</th>
+                                    <th class="px-4 py-3 font-bold">المواد المشترك بها</th>
+                                    <th class="px-4 py-3 font-bold text-center">إدارة الحساب</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="text-xs divide-y divide-slate-50">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -646,7 +668,7 @@
             const tbody = document.getElementById('requestsTableBody');
 
             if (snapshot.empty) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-slate-400">لا توجد طلبات اشتراك معلقة حالياً</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-xs">لا توجد طلبات اشتراك معلقة حالياً</td></tr>`;
                 return;
             }
 
@@ -657,16 +679,18 @@
                     ? new Date(req.createdAt.seconds * 1000).toLocaleString('ar-EG')
                     : '-';
                 return `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50">
-                        <td class="p-3 font-bold text-slate-900">${req.userName || '-'}</td>
-                        <td class="p-3 font-mono" dir="ltr">${req.userPhone || '-'}</td>
-                        <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${req.parentPhone || 'غير مسجل'}</td>
-                        <td class="p-3 font-bold text-emerald-900">${req.courseTitle} (${req.coursePrice} ج.م)</td>
-                        <td class="p-3 font-mono text-amber-600" dir="ltr">${req.senderPhone || '-'}</td>
-                        <td class="p-3 text-slate-400">${dateStr}</td>
-                        <td class="p-3 text-center space-x-2 space-x-reverse">
-                            <button onclick="approveRequest('${docId}')" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition">قبول وتفعيل</button>
-                            <button onclick="rejectRequest('${docId}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">رفض</button>
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 font-bold text-slate-800">${req.userName || '-'}</td>
+                        <td class="px-4 py-3 font-mono text-slate-600" dir="ltr">${req.userPhone || '-'}</td>
+                        <td class="px-4 py-3 font-mono text-emerald-700 font-bold" dir="ltr">${req.parentPhone || 'غير مسجل'}</td>
+                        <td class="px-4 py-3 font-bold text-emerald-900">${req.courseTitle} <span class="text-amber-600">(${req.coursePrice} ج.م)</span></td>
+                        <td class="px-4 py-3 font-mono text-slate-600" dir="ltr">${req.senderPhone || '-'}</td>
+                        <td class="px-4 py-3 text-slate-400 text-[11px]">${dateStr}</td>
+                        <td class="px-4 py-3 text-center">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="approveRequest('${docId}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition shadow-sm">قبول وتفعيل</button>
+                                <button onclick="rejectRequest('${docId}')" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">رفض</button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -712,14 +736,14 @@
             }
 
             tbody.innerHTML = staffList.map((staff, index) => `
-                <tr class="border-b border-slate-100 hover:bg-slate-50">
-                    <td class="p-3 font-bold text-slate-900">${staff.name}</td>
-                    <td class="p-3 font-mono text-slate-600" dir="ltr">${staff.username}</td>
-                    <td class="p-3 font-mono text-slate-600" dir="ltr">${staff.password}</td>
-                    <td class="p-3 font-semibold text-blue-700">${staff.role}</td>
-                    <td class="p-3 text-slate-400">${staff.date}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="deleteStaff(${index})" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">إلغاء التعيين</button>
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 font-bold text-slate-800">${staff.name}</td>
+                    <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${staff.username}</td>
+                    <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${staff.password}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-100">${staff.role}</span></td>
+                    <td class="px-4 py-3 text-slate-400 text-[11px]">${staff.date}</td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="deleteStaff(${index})" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">إلغاء التعيين</button>
                     </td>
                 </tr>
             `).join('');
@@ -777,7 +801,7 @@
             const tbody = document.getElementById('usersTableBody');
 
             if (users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد نتائج</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 text-xs">لا يوجد نتائج</td></tr>`;
                 return;
             }
 
@@ -786,19 +810,21 @@
                 const activeSubs = Object.keys(subs)
                     .filter(courseId => subs[courseId] === 'approved')
                     .map(courseId => courseNamesMap[courseId] || courseId)
-                    .join(', ') || 'لا توجد اشتراكات مفعلة';
+                    .join(', ') || '<span class="text-slate-400">لا توجد اشتراكات</span>';
 
                 return `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50">
-                        <td class="p-3 font-bold text-slate-900">${user.fullName || user.name || 'بدون اسم'}</td>
-                        <td class="p-3 font-mono text-slate-600" dir="ltr">${user.email || '-'}</td>
-                        <td class="p-3 font-mono" dir="ltr">${user.phone || '-'}</td>
-                        <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
-                        <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
-                        <td class="p-3 text-center space-x-2 space-x-reverse">
-                            <button onclick="openEditModal('${user.id}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
-                            <button onclick="sendPasswordReset('${user.email}')" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 transition"><i class="fa-solid fa-key ml-1"></i>إعادة كلمة المرور</button>
-                            <button onclick="deleteUserAccount('${user.id}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 font-bold text-slate-800">${user.fullName || user.name || 'بدون اسم'}</td>
+                        <td class="px-4 py-3 font-mono text-slate-500 text-[11px]" dir="ltr">${user.email || '-'}</td>
+                        <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${user.phone || '-'}</td>
+                        <td class="px-4 py-3 font-mono text-emerald-700 font-bold text-[11px]" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
+                        <td class="px-4 py-3 text-emerald-800 font-semibold text-[11px]">${activeSubs}</td>
+                        <td class="px-4 py-3 text-center">
+                            <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                                <button onclick="openEditModal('${user.id}')" class="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 font-bold text-[11px] hover:bg-amber-100 transition border border-amber-100">تعديل</button>
+                                <button onclick="sendPasswordReset('${user.email}')" class="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 font-bold text-[11px] hover:bg-blue-100 transition border border-blue-100"><i class="fa-solid fa-key ml-0.5"></i> إعادة كلمة المرور</button>
+                                <button onclick="deleteUserAccount('${user.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">حذف</button>
+                            </div>
                         </td>
                     </tr>
                 `;
