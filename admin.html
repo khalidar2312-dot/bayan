@@ -299,7 +299,7 @@
                             type="text"
                             id="studentsSearchInput"
                             oninput="filterStudents(this.value)"
-                            placeholder="ابحث بالاسم أو البريد الإلكتروني..."
+                            placeholder="ابحث بالاسم أو البريد أو رقم الهاتف..."
                             class="w-full pr-9 pl-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600 bg-slate-50"
                         >
                     </div>
@@ -814,7 +814,9 @@
             const filtered = allStudentsData.filter(user => {
                 const name = (user.fullName || user.name || '').toLowerCase();
                 const email = (user.email || '').toLowerCase();
-                return name.includes(text) || email.includes(text);
+                const phone = (user.phone || '').toLowerCase();
+                const parentPhone = (user.parentPhone || '').toLowerCase();
+                return name.includes(text) || email.includes(text) || phone.includes(text) || parentPhone.includes(text);
             });
             renderStudentsTable(filtered);
         }
