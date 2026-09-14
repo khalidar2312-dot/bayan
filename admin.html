@@ -991,6 +991,7 @@
             try {
                 await firebase.auth().sendPasswordResetEmail(email);
                 showToast(`✅ تم إرسال رابط إعادة كلمة المرور إلى ${email}`);
+                alert(`✅ تم إرسال الرابط إلى ${email}\n\nتنبيه للطالب:\nلو مش لاقي الإيميل في الـ Inbox، يفتح مجلد Spam/جنك ويدور على إيميل من:\nnoreply@bayan2312.firebaseapp.com`);
             } catch (error) {
                 console.error('خطأ في إرسال الإيميل:', error);
                 if (error.code === 'auth/user-not-found') {
