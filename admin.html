@@ -287,9 +287,22 @@
 
             <!-- 3. جدول إدارة جميع الطلاب المسجلين (من Firestore) -->
             <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-                <h2 class="text-xl font-extrabold font-kufi text-emerald-950 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-user-graduate text-emerald-700"></i> إدارة جميع الطلاب المسجلين (قاعدة البيانات)
-                </h2>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                    <h2 class="text-xl font-extrabold font-kufi text-emerald-950 flex items-center gap-2">
+                        <i class="fa-solid fa-user-graduate text-emerald-700"></i> إدارة جميع الطلاب المسجلين (قاعدة البيانات)
+                    </h2>
+                    <!-- حقل البحث -->
+                    <div class="relative w-full sm:w-72">
+                        <i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input
+                            type="text"
+                            id="studentsSearchInput"
+                            oninput="filterStudents(this.value)"
+                            placeholder="ابحث بالاسم أو البريد الإلكتروني..."
+                            class="w-full pr-9 pl-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-600 bg-slate-50"
+                        >
+                    </div>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-right border-collapse">
                         <thead>
@@ -726,62 +739,82 @@
         // ==========================================
         // التعديل الرئيسي: جلب الطلاب مباشرة من Firestore
         // ==========================================
+        let allStudentsData = []; // متغير عام لحفظ بيانات الطلاب للبحث
+
+        const courseNamesMap = {
+            'fiqh': 'الفقه',
+            'tafseer': 'التفسير',
+            'hadith': 'الحديث',
+            'tawheed': 'التوحيد'
+        };
+
         async function loadAllUsersFromFirestore() {
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">جاري جلب بيانات الطلاب من قاعدة البيانات...</td></tr>`;
 
             try {
-                // افتراض أن مجموعة الطلاب في Firestore اسمها 'students' (يمكنك تغييرها حسب اسم الـ Collection لديك)
                 const querySnapshot = await window.getDocs(window.collection(window.db, "students"));
-                let users = [];
+                allStudentsData = [];
 
                 querySnapshot.forEach((docSnap) => {
-                    users.push({
-                        id: docSnap.id, // معرف الوثيقة في Firestore
+                    allStudentsData.push({
+                        id: docSnap.id,
                         ...docSnap.data()
                     });
                 });
 
-                document.getElementById('statUsersCount').innerText = users.length;
-
-                if (users.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد طلاب مسجلين في قاعدة البيانات حتى الآن</td></tr>`;
-                    return;
-                }
-
-                const courseNamesMap = {
-                    'fiqh': 'الفقه',
-                    'tafseer': 'التفسير',
-                    'hadith': 'الحديث',
-                    'tawheed': 'التوحيد'
-                };
-
-                tbody.innerHTML = users.map(user => {
-                    const subs = user.subscriptions || {};
-                    const activeSubs = Object.keys(subs)
-                        .filter(courseId => subs[courseId] === 'approved')
-                        .map(courseId => courseNamesMap[courseId] || courseId)
-                        .join(', ') || 'لا توجد اشتراكات مفعلة';
-
-                    return `
-                        <tr class="border-b border-slate-100 hover:bg-slate-50">
-                            <td class="p-3 font-bold text-slate-900">${user.fullName || user.name || 'بدون اسم'}</td>
-                            <td class="p-3 font-mono text-slate-600" dir="ltr">${user.email || '-'}</td>
-                            <td class="p-3 font-mono" dir="ltr">${user.phone || '-'}</td>
-                            <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
-                            <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
-                            <td class="p-3 text-center space-x-2 space-x-reverse">
-                                <button onclick="openEditModal('${user.id}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
-                                <button onclick="deleteUserAccount('${user.id}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+                document.getElementById('statUsersCount').innerText = allStudentsData.length;
+                renderStudentsTable(allStudentsData);
 
             } catch (error) {
                 console.error("Error loading students: ", error);
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">حدث خطأ أثناء جلب البيانات من قاعدة البيانات</td></tr>`;
             }
+        }
+
+        function renderStudentsTable(users) {
+            const tbody = document.getElementById('usersTableBody');
+
+            if (users.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد نتائج</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => {
+                const subs = user.subscriptions || {};
+                const activeSubs = Object.keys(subs)
+                    .filter(courseId => subs[courseId] === 'approved')
+                    .map(courseId => courseNamesMap[courseId] || courseId)
+                    .join(', ') || 'لا توجد اشتراكات مفعلة';
+
+                return `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50">
+                        <td class="p-3 font-bold text-slate-900">${user.fullName || user.name || 'بدون اسم'}</td>
+                        <td class="p-3 font-mono text-slate-600" dir="ltr">${user.email || '-'}</td>
+                        <td class="p-3 font-mono" dir="ltr">${user.phone || '-'}</td>
+                        <td class="p-3 font-mono text-emerald-700 font-bold" dir="ltr">${user.parentPhone || 'غير مسجل'}</td>
+                        <td class="p-3 text-emerald-900 font-semibold">${activeSubs}</td>
+                        <td class="p-3 text-center space-x-2 space-x-reverse">
+                            <button onclick="openEditModal('${user.id}')" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold hover:bg-amber-100 transition">تعديل</button>
+                            <button onclick="deleteUserAccount('${user.id}')" class="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition">حذف الحساب</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterStudents(searchText) {
+            const text = searchText.trim().toLowerCase();
+            if (!text) {
+                renderStudentsTable(allStudentsData);
+                return;
+            }
+            const filtered = allStudentsData.filter(user => {
+                const name = (user.fullName || user.name || '').toLowerCase();
+                const email = (user.email || '').toLowerCase();
+                return name.includes(text) || email.includes(text);
+            });
+            renderStudentsTable(filtered);
         }
 
         async function openEditModal(docId) {
