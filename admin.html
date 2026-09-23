@@ -352,6 +352,64 @@
                 </div>
             </div>
 
+            <!-- 4. قسم محادثات الدعم الفني -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-gradient-to-l from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-headset"></i>
+                        </div>
+                        <h2 class="text-base font-extrabold font-kufi text-slate-800">محادثات الدعم الفني</h2>
+                    </div>
+                    <span id="chatUnreadCount" class="hidden px-2.5 py-1 rounded-full bg-red-500 text-white text-xs font-black">0 جديد</span>
+                </div>
+                <div class="flex h-96">
+
+                    <!-- قائمة المحادثات -->
+                    <div class="w-64 border-l border-slate-100 overflow-y-auto flex-shrink-0">
+                        <div id="chatConversationsList" class="divide-y divide-slate-50">
+                            <div class="text-center py-8 text-slate-400 text-xs">لا توجد محادثات حالياً</div>
+                        </div>
+                    </div>
+
+                    <!-- نافذة المحادثة -->
+                    <div class="flex-1 flex flex-col">
+
+                        <!-- header المحادثة المفتوحة -->
+                        <div id="chatHeader" class="px-4 py-3 border-b border-slate-100 bg-slate-50 hidden">
+                            <p id="chatStudentName" class="font-bold text-sm text-slate-800"></p>
+                            <p id="chatStudentEmail" class="text-[11px] text-slate-400"></p>
+                        </div>
+
+                        <!-- placeholder لما مفيش محادثة مفتوحة -->
+                        <div id="chatPlaceholder" class="flex-1 flex items-center justify-center text-slate-300 flex-col gap-2">
+                            <i class="fa-solid fa-comments text-4xl"></i>
+                            <p class="text-xs">اختر محادثة من القائمة</p>
+                        </div>
+
+                        <!-- الرسائل -->
+                        <div id="adminChatMessages" class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50 hidden"></div>
+
+                        <!-- مربع الرد -->
+                        <div id="adminChatInputArea" class="p-3 border-t border-slate-100 bg-white hidden">
+                            <div class="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    id="adminChatInput"
+                                    placeholder="اكتب ردك..."
+                                    class="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50"
+                                    onkeydown="if(event.key==='Enter') sendAdminReply()"
+                                >
+                                <button onclick="sendAdminReply()" class="w-9 h-9 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center transition text-sm flex-shrink-0">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 
@@ -552,6 +610,7 @@
             loadAllUsersFromFirestore();
             startRequestsListener();
             startNotificationsListener();
+            startChatListener();
         }
 
         function startRequestsListener() {
@@ -584,6 +643,167 @@
 
         function startRequestsListenerFallback() {
             // غير مستخدمة — محتفظ بها كـ backup
+        }
+
+        // ================================================
+        // شات الدعم الفني — جانب الأدمن
+        // ================================================
+
+        let currentChatUid = null;
+        let adminChatUnsubscribe = null;
+
+        function startChatListener() {
+            if (!window.db) {
+                setTimeout(startChatListener, 300);
+                return;
+            }
+
+            // مراقبة كل المحادثات
+            db.collection('support_chats')
+                .orderBy('lastMessageTime', 'desc')
+                .onSnapshot(function(snapshot) {
+                    renderConversationsList(snapshot.docs);
+
+                    // حساب الرسائل الجديدة
+                    const unread = snapshot.docs.filter(d => d.data().unreadByAdmin).length;
+                    const badge = document.getElementById('chatUnreadCount');
+                    if (unread > 0) {
+                        badge.classList.remove('hidden');
+                        badge.innerText = unread + ' جديد';
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }, function(err) {
+                    console.error('خطأ في تحميل المحادثات:', err);
+                });
+        }
+
+        function renderConversationsList(docs) {
+            const container = document.getElementById('chatConversationsList');
+
+            if (docs.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs">لا توجد محادثات حالياً</div>`;
+                return;
+            }
+
+            container.innerHTML = docs.map(function(docSnap) {
+                const data = docSnap.data();
+                const uid = docSnap.id;
+                const isUnread = data.unreadByAdmin;
+                const isActive = uid === currentChatUid;
+                const time = data.lastMessageTime
+                    ? new Date(data.lastMessageTime.seconds * 1000).toLocaleTimeString('ar-EG', {hour: '2-digit', minute: '2-digit'})
+                    : '';
+
+                return `
+                    <div onclick="openAdminChat('${uid}', '${(data.studentName||'').replace(/'/g,"\\'")}', '${(data.studentEmail||'').replace(/'/g,"\\'")}' )"
+                        class="px-3 py-3 cursor-pointer transition ${isActive ? 'bg-emerald-50 border-r-2 border-emerald-600' : 'hover:bg-slate-50'}">
+                        <div class="flex items-center justify-between">
+                            <p class="font-bold text-xs text-slate-800 ${isUnread ? 'text-emerald-800' : ''}">${data.studentName || 'طالب'}</p>
+                            <span class="text-[10px] text-slate-400">${time}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 truncate mt-0.5">${data.lastMessage || ''}</p>
+                        ${isUnread ? '<span class="inline-block mt-1 w-2 h-2 bg-red-500 rounded-full"></span>' : ''}
+                    </div>`;
+            }).join('');
+        }
+
+        function openAdminChat(uid, name, email) {
+            currentChatUid = uid;
+
+            // إظهار عناصر المحادثة
+            document.getElementById('chatHeader').classList.remove('hidden');
+            document.getElementById('adminChatMessages').classList.remove('hidden');
+            document.getElementById('adminChatInputArea').classList.remove('hidden');
+            document.getElementById('chatPlaceholder').classList.add('hidden');
+            document.getElementById('chatStudentName').innerText = name || 'طالب';
+            document.getElementById('chatStudentEmail').innerText = email || '';
+
+            // تحديث unreadByAdmin = false
+            db.collection('support_chats').doc(uid).update({ unreadByAdmin: false }).catch(() => {});
+
+            // إلغاء الـ listener القديم
+            if (adminChatUnsubscribe) adminChatUnsubscribe();
+
+            // مراقبة رسائل المحادثة
+            adminChatUnsubscribe = db
+                .collection('support_chats')
+                .doc(uid)
+                .collection('messages')
+                .orderBy('createdAt', 'asc')
+                .onSnapshot(function(snapshot) {
+                    renderAdminMessages(snapshot.docs, name);
+                });
+        }
+
+        function renderAdminMessages(docs, studentName) {
+            const container = document.getElementById('adminChatMessages');
+
+            if (docs.length === 0) {
+                container.innerHTML = `<div class="text-center text-[11px] text-slate-400 py-4">لا توجد رسائل بعد</div>`;
+                return;
+            }
+
+            container.innerHTML = docs.map(function(docSnap) {
+                const msg = docSnap.data();
+                const isAdmin = msg.sender === 'admin';
+                const time = msg.createdAt
+                    ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString('ar-EG', {hour: '2-digit', minute: '2-digit'})
+                    : '';
+
+                if (isAdmin) {
+                    return `
+                        <div class="flex items-end justify-end gap-2">
+                            <div class="max-w-[75%]">
+                                <div class="bg-emerald-800 text-white text-xs px-3 py-2 rounded-2xl rounded-br-sm shadow-sm">${msg.text}</div>
+                                <p class="text-[10px] text-slate-400 mt-0.5 ml-1 text-left">${time}</p>
+                            </div>
+                        </div>`;
+                } else {
+                    return `
+                        <div class="flex items-end gap-2">
+                            <div class="w-6 h-6 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center text-[10px] flex-shrink-0 font-bold">
+                                ${(studentName||'ط')[0]}
+                            </div>
+                            <div class="max-w-[75%]">
+                                <div class="bg-white text-slate-800 text-xs px-3 py-2 rounded-2xl rounded-bl-sm shadow-sm border border-slate-100">${msg.text}</div>
+                                <p class="text-[10px] text-slate-400 mt-0.5 mr-1">${time}</p>
+                            </div>
+                        </div>`;
+                }
+            }).join('');
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendAdminReply() {
+            const input = document.getElementById('adminChatInput');
+            const text = input.value.trim();
+            if (!text || !currentChatUid) return;
+
+            input.value = '';
+
+            try {
+                await db
+                    .collection('support_chats')
+                    .doc(currentChatUid)
+                    .collection('messages')
+                    .add({
+                        text: text,
+                        sender: 'admin',
+                        senderName: 'الدعم الفني',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                await db.collection('support_chats').doc(currentChatUid).update({
+                    lastMessage: 'الدعم: ' + text,
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+                    unreadByAdmin: false
+                });
+
+            } catch (error) {
+                console.error('خطأ في إرسال الرد:', error);
+            }
         }
 
         // ================================================
