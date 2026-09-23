@@ -940,6 +940,67 @@
     </div>
 
 
+    <!-- ================================================ -->
+    <!-- شات الدعم الفني                                  -->
+    <!-- ================================================ -->
+
+    <!-- زر الشات الثابت -->
+    <button
+        id="chatToggleBtn"
+        onclick="toggleChatWidget()"
+        class="fixed bottom-6 right-6 z-50 w-14 h-14 bg-emerald-800 hover:bg-emerald-700 text-white rounded-full shadow-2xl shadow-emerald-900/40 flex items-center justify-center text-xl transition-all duration-300 border-2 border-amber-400/30"
+        title="تواصل مع الدعم">
+        <i class="fa-solid fa-headset"></i>
+        <span id="chatUnreadBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">0</span>
+    </button>
+
+    <!-- نافذة الشات -->
+    <div id="chatWidget" class="hidden fixed bottom-24 right-6 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" style="height: 420px;">
+
+        <!-- Header الشات -->
+        <div class="bg-emerald-800 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-amber-400 text-emerald-950 rounded-full flex items-center justify-center text-sm font-bold">
+                    <i class="fa-solid fa-headset"></i>
+                </div>
+                <div>
+                    <p class="text-white font-bold text-xs">الدعم الفني</p>
+                    <p class="text-emerald-300 text-[10px]">أكاديمية بيان</p>
+                </div>
+            </div>
+            <button onclick="toggleChatWidget()" class="text-white/60 hover:text-white transition text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- رسائل الشات -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50">
+            <div class="text-center text-[11px] text-slate-400 py-2">
+                مرحباً! كيف يمكننا مساعدتك؟ 👋
+            </div>
+        </div>
+
+        <!-- مربع الكتابة -->
+        <div id="chatInputArea" class="p-3 border-t border-slate-100 bg-white">
+            <div id="chatLoginPrompt" class="hidden text-center text-xs text-slate-400 py-2">
+                يرجى <button onclick="openLoginModal()" class="text-emerald-700 font-bold underline">تسجيل الدخول</button> للتواصل مع الدعم
+            </div>
+            <div id="chatInputBox" class="hidden flex items-center gap-2">
+                <input
+                    type="text"
+                    id="chatInput"
+                    placeholder="اكتب رسالتك..."
+                    class="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50"
+                    onkeydown="if(event.key==='Enter') sendChatMessage()"
+                >
+                <button onclick="sendChatMessage()" class="w-9 h-9 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center transition text-sm flex-shrink-0">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
     <!-- Login Modal -->
     <div
         id="loginModal"
@@ -2030,6 +2091,159 @@
 
         }
 
+
+        // =========================
+        // شات الدعم الفني
+        // =========================
+
+        let chatUnsubscribe = null;
+
+        function toggleChatWidget() {
+            const widget = document.getElementById('chatWidget');
+            const isHidden = widget.classList.contains('hidden');
+
+            widget.classList.toggle('hidden');
+
+            if (isHidden) {
+                // لما يفتح الشات
+                const user = currentUserData || getActiveUser();
+                if (user) {
+                    document.getElementById('chatLoginPrompt').classList.add('hidden');
+                    document.getElementById('chatInputBox').classList.remove('hidden');
+                    loadChatMessages(user.uid);
+                } else {
+                    document.getElementById('chatLoginPrompt').classList.remove('hidden');
+                    document.getElementById('chatInputBox').classList.add('hidden');
+                }
+                // إخفاء الـ badge
+                document.getElementById('chatUnreadBadge').classList.add('hidden');
+            } else {
+                // لما يقفل الشات
+                if (chatUnsubscribe) {
+                    chatUnsubscribe();
+                    chatUnsubscribe = null;
+                }
+            }
+        }
+
+        function loadChatMessages(uid) {
+            if (chatUnsubscribe) chatUnsubscribe();
+
+            const messagesRef = db
+                .collection('support_chats')
+                .doc(uid)
+                .collection('messages');
+
+            chatUnsubscribe = messagesRef
+                .orderBy('createdAt', 'asc')
+                .onSnapshot(function(snapshot) {
+                    renderChatMessages(snapshot.docs);
+
+                    // تنبيه لو الشات مقفول وجاء رد من الأدمن
+                    const widget = document.getElementById('chatWidget');
+                    if (widget.classList.contains('hidden')) {
+                        snapshot.docChanges().forEach(function(change) {
+                            if (change.type === 'added' && change.doc.data().sender === 'admin') {
+                                showChatBadge();
+                            }
+                        });
+                    }
+                }, function(error) {
+                    console.error('خطأ في تحميل الرسائل:', error);
+                });
+        }
+
+        function renderChatMessages(docs) {
+            const container = document.getElementById('chatMessages');
+
+            if (docs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-[11px] text-slate-400 py-2">
+                        مرحباً! كيف يمكننا مساعدتك؟ 👋
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = docs.map(function(docSnap) {
+                const msg = docSnap.data();
+                const isAdmin = msg.sender === 'admin';
+                const time = msg.createdAt
+                    ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString('ar-EG', {hour: '2-digit', minute: '2-digit'})
+                    : '';
+
+                if (isAdmin) {
+                    return `
+                        <div class="flex items-end gap-2">
+                            <div class="w-6 h-6 bg-emerald-800 text-amber-400 rounded-full flex items-center justify-center text-[10px] flex-shrink-0">
+                                <i class="fa-solid fa-headset"></i>
+                            </div>
+                            <div class="max-w-[75%]">
+                                <div class="bg-white text-slate-800 text-xs px-3 py-2 rounded-2xl rounded-bl-sm shadow-sm border border-slate-100">${escapeHtml(msg.text)}</div>
+                                <p class="text-[10px] text-slate-400 mt-0.5 mr-1">${time}</p>
+                            </div>
+                        </div>`;
+                } else {
+                    return `
+                        <div class="flex items-end justify-end gap-2">
+                            <div class="max-w-[75%]">
+                                <div class="bg-emerald-800 text-white text-xs px-3 py-2 rounded-2xl rounded-br-sm shadow-sm">${escapeHtml(msg.text)}</div>
+                                <p class="text-[10px] text-slate-400 mt-0.5 ml-1 text-left">${time}</p>
+                            </div>
+                        </div>`;
+                }
+            }).join('');
+
+            // scroll لآخر رسالة
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const user = currentUserData || getActiveUser();
+            if (!user) return;
+
+            input.value = '';
+
+            try {
+                await db
+                    .collection('support_chats')
+                    .doc(user.uid)
+                    .collection('messages')
+                    .add({
+                        text: text,
+                        sender: 'student',
+                        senderName: user.fullName || 'طالب',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                // تحديث معلومات المحادثة
+                await db.collection('support_chats').doc(user.uid).set({
+                    studentName: user.fullName || 'طالب',
+                    studentEmail: user.email || '',
+                    lastMessage: text,
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+                    unreadByAdmin: true,
+                    uid: user.uid
+                }, { merge: true });
+
+                // إشعار الأدمن
+                await sendAdminNotification(
+                    '💬 رسالة دعم جديدة',
+                    `${user.fullName || 'طالب'}: ${text}`
+                );
+
+            } catch (error) {
+                console.error('خطأ في إرسال الرسالة:', error);
+            }
+        }
+
+        function showChatBadge() {
+            const badge = document.getElementById('chatUnreadBadge');
+            badge.classList.remove('hidden');
+        }
 
         // =========================
         // إرسال إشعار للأدمن عبر FCM
