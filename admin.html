@@ -17,7 +17,7 @@
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
         const firebaseConfig = {
@@ -44,6 +44,8 @@
         window.onSnapshot = onSnapshot;
         window.query = query;
         window.where = where;
+        window.addDoc = addDoc;
+        window.serverTimestamp = serverTimestamp;
         window.orderBy = orderBy;
 
         // تهيئة Firebase Messaging
@@ -653,29 +655,34 @@
         let adminChatUnsubscribe = null;
 
         function startChatListener() {
-            if (!window.db) {
+            if (!window.db || !window.collection || !window.onSnapshot) {
                 setTimeout(startChatListener, 300);
                 return;
             }
 
-            // مراقبة كل المحادثات
-            db.collection('support_chats')
-                .orderBy('lastMessageTime', 'desc')
-                .onSnapshot(function(snapshot) {
-                    renderConversationsList(snapshot.docs);
+            const chatsRef = window.collection(window.db, 'support_chats');
 
-                    // حساب الرسائل الجديدة
-                    const unread = snapshot.docs.filter(d => d.data().unreadByAdmin).length;
-                    const badge = document.getElementById('chatUnreadCount');
-                    if (unread > 0) {
-                        badge.classList.remove('hidden');
-                        badge.innerText = unread + ' جديد';
-                    } else {
-                        badge.classList.add('hidden');
-                    }
-                }, function(err) {
-                    console.error('خطأ في تحميل المحادثات:', err);
+            window.onSnapshot(chatsRef, function(snapshot) {
+                // ترتيب محلي حسب lastMessageTime
+                const docs = snapshot.docs.sort(function(a, b) {
+                    const aTime = a.data().lastMessageTime?.seconds || 0;
+                    const bTime = b.data().lastMessageTime?.seconds || 0;
+                    return bTime - aTime;
                 });
+
+                renderConversationsList(docs);
+
+                const unread = docs.filter(d => d.data().unreadByAdmin).length;
+                const badge = document.getElementById('chatUnreadCount');
+                if (unread > 0) {
+                    badge.classList.remove('hidden');
+                    badge.innerText = unread + ' جديد';
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }, function(err) {
+                console.error('خطأ في تحميل المحادثات:', err);
+            });
         }
 
         function renderConversationsList(docs) {
@@ -711,7 +718,6 @@
         function openAdminChat(uid, name, email) {
             currentChatUid = uid;
 
-            // إظهار عناصر المحادثة
             document.getElementById('chatHeader').classList.remove('hidden');
             document.getElementById('adminChatMessages').classList.remove('hidden');
             document.getElementById('adminChatInputArea').classList.remove('hidden');
@@ -720,20 +726,18 @@
             document.getElementById('chatStudentEmail').innerText = email || '';
 
             // تحديث unreadByAdmin = false
-            db.collection('support_chats').doc(uid).update({ unreadByAdmin: false }).catch(() => {});
+            window.updateDoc(window.doc(window.db, 'support_chats', uid), { unreadByAdmin: false }).catch(() => {});
 
             // إلغاء الـ listener القديم
             if (adminChatUnsubscribe) adminChatUnsubscribe();
 
             // مراقبة رسائل المحادثة
-            adminChatUnsubscribe = db
-                .collection('support_chats')
-                .doc(uid)
-                .collection('messages')
-                .orderBy('createdAt', 'asc')
-                .onSnapshot(function(snapshot) {
-                    renderAdminMessages(snapshot.docs, name);
-                });
+            const messagesRef = window.collection(window.db, 'support_chats', uid, 'messages');
+            const messagesQuery = window.query(messagesRef, window.orderBy('createdAt', 'asc'));
+
+            adminChatUnsubscribe = window.onSnapshot(messagesQuery, function(snapshot) {
+                renderAdminMessages(snapshot.docs, name);
+            });
         }
 
         function renderAdminMessages(docs, studentName) {
@@ -784,22 +788,23 @@
             input.value = '';
 
             try {
-                await db
-                    .collection('support_chats')
-                    .doc(currentChatUid)
-                    .collection('messages')
-                    .add({
-                        text: text,
-                        sender: 'admin',
-                        senderName: 'الدعم الفني',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                const messagesRef = window.collection(window.db, 'support_chats', currentChatUid, 'messages');
 
-                await db.collection('support_chats').doc(currentChatUid).update({
-                    lastMessage: 'الدعم: ' + text,
-                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
-                    unreadByAdmin: false
+                await window.addDoc(messagesRef, {
+                    text: text,
+                    sender: 'admin',
+                    senderName: 'الدعم الفني',
+                    createdAt: window.serverTimestamp()
                 });
+
+                await window.updateDoc(
+                    window.doc(window.db, 'support_chats', currentChatUid),
+                    {
+                        lastMessage: 'الدعم: ' + text,
+                        lastMessageTime: window.serverTimestamp(),
+                        unreadByAdmin: false
+                    }
+                );
 
             } catch (error) {
                 console.error('خطأ في إرسال الرد:', error);
