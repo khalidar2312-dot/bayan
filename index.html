@@ -537,7 +537,7 @@
 
                         <button
                             id="btn-tafseer"
-                            onclick="handleCourseClick('tafseer', 'علم التفسير', 400)"
+                            onclick="openCourseModal('tafseer', 'علم التفسير', 400)"
                             class="px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm">
                             اشترك الآن
                         </button>
@@ -580,7 +580,7 @@
 
                         <button
                             id="btn-hadith"
-                            onclick="handleCourseClick('hadith', 'الحديث الشريف', 300)"
+                            onclick="openCourseModal('hadith', 'الحديث الشريف', 300)"
                             class="px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm">
                             اشترك الآن
                         </button>
@@ -623,7 +623,7 @@
 
                         <button
                             id="btn-tawheed"
-                            onclick="handleCourseClick('tawheed', 'علم التوحيد', 300)"
+                            onclick="openCourseModal('tawheed', 'علم التوحيد', 300)"
                             class="px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-sm">
                             اشترك الآن
                         </button>
@@ -997,6 +997,71 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Modal مشترك لاختيار الصف والترم (التفسير / الحديث / التوحيد) -->
+    <div id="courseGradeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4 text-sm">
+
+            <button onclick="closeModal('courseGradeModal')" class="absolute top-4 left-4 text-slate-400 text-xl font-bold">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center mb-5">
+                <div id="courseGradeModalIcon" class="w-12 h-12 bg-emerald-800 text-amber-400 rounded-2xl flex items-center justify-center text-xl mx-auto mb-3">
+                    <i class="fa-solid fa-book-quran"></i>
+                </div>
+                <h3 id="courseGradeModalTitle" class="text-xl font-extrabold font-kufi text-emerald-950"></h3>
+                <p class="text-xs text-slate-400 mt-1">اختر الصف الدراسي والترم</p>
+            </div>
+
+            <!-- اختيار الصف -->
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-600 mb-2">الصف الدراسي</label>
+                <div class="grid grid-cols-1 gap-2">
+                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <input type="radio" name="courseGrade" value="الصف الأول الإعدادي" class="text-emerald-600">
+                        <span class="font-bold text-slate-700 text-xs">الصف الأول الإعدادي</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <input type="radio" name="courseGrade" value="الصف الثاني الإعدادي" class="text-emerald-600">
+                        <span class="font-bold text-slate-700 text-xs">الصف الثاني الإعدادي</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <input type="radio" name="courseGrade" value="الصف الثالث الإعدادي" class="text-emerald-600">
+                        <span class="font-bold text-slate-700 text-xs">الصف الثالث الإعدادي</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <input type="radio" name="courseGrade" value="الصف الأول الثانوي" class="text-emerald-600">
+                        <span class="font-bold text-slate-700 text-xs">الصف الأول الثانوي</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <input type="radio" name="courseGrade" value="الصف الثاني الثانوي" class="text-emerald-600">
+                        <span class="font-bold text-slate-700 text-xs">الصف الثاني الثانوي</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- اختيار الترم -->
+            <div class="mb-5">
+                <label class="block text-xs font-bold text-slate-600 mb-2">الفصل الدراسي</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <input type="radio" name="courseTerm" value="الترم الأول" class="text-emerald-600">
+                        <span class="font-bold text-slate-700 text-xs">الترم الأول</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition">
+                        <input type="radio" name="courseTerm" value="الترم الثاني" class="text-emerald-600">
+                        <span class="font-bold text-slate-700 text-xs">الترم الثاني</span>
+                    </label>
+                </div>
+            </div>
+
+            <button onclick="confirmCourseSelection()" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition shadow-md">
+                متابعة للدفع
+            </button>
+
+        </div>
     </div>
 
     <!-- Modal اختيار الصف والترم — الفقه الميسر -->
@@ -2079,6 +2144,52 @@
         // =========================
         // اختيار الصف والترم — الفقه الميسر
         // =========================
+
+        // متغير لحفظ بيانات المادة المختارة
+        let _selectedCourseData = null;
+
+        function openCourseModal(courseId, courseTitle, price) {
+            const activeUser = currentUserData || getActiveUser();
+            if (!activeUser) {
+                alert('يرجى تسجيل الدخول أو إنشاء حساب أولاً للاشتراك في المواد.');
+                openLoginModal();
+                return;
+            }
+
+            // حفظ بيانات المادة
+            _selectedCourseData = { courseId, courseTitle, price };
+
+            // تحديث عنوان الـ modal
+            document.getElementById('courseGradeModalTitle').innerText = courseTitle;
+
+            // تحديث الأيقونة حسب المادة
+            const iconMap = {
+                'tafseer': 'fa-book-quran',
+                'hadith': 'fa-scroll',
+                'tawheed': 'fa-hands-praying'
+            };
+            document.getElementById('courseGradeModalIcon').innerHTML =
+                `<i class="fa-solid ${iconMap[courseId] || 'fa-book'}"></i>`;
+
+            // إعادة تعيين الاختيارات
+            document.querySelectorAll('input[name="courseGrade"]').forEach(r => r.checked = false);
+            document.querySelectorAll('input[name="courseTerm"]').forEach(r => r.checked = false);
+
+            document.getElementById('courseGradeModal').classList.remove('hidden');
+        }
+
+        function confirmCourseSelection() {
+            const grade = document.querySelector('input[name="courseGrade"]:checked');
+            const term = document.querySelector('input[name="courseTerm"]:checked');
+
+            if (!grade) { alert('يرجى اختيار الصف الدراسي.'); return; }
+            if (!term) { alert('يرجى اختيار الفصل الدراسي.'); return; }
+
+            const { courseId, courseTitle, price } = _selectedCourseData;
+            const fullTitle = `${courseTitle} — ${grade.value} — ${term.value}`;
+            closeModal('courseGradeModal');
+            handleCourseClick(courseId, fullTitle, price);
+        }
 
         function openFiqhModal() {
             const activeUser = currentUserData || getActiveUser();
