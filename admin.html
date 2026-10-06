@@ -672,7 +672,14 @@
 
                 renderConversationsList(docs);
 
+                // تنبيه صوتي لما تيجي رسالة جديدة من طالب
                 const unread = docs.filter(d => d.data().unreadByAdmin).length;
+                const prevUnread = window._prevChatUnread || 0;
+                if (unread > prevUnread) {
+                    triggerAlert();
+                    showToast('💬 رسالة دعم جديدة من طالب!');
+                }
+                window._prevChatUnread = unread;
                 const badge = document.getElementById('chatUnreadCount');
                 if (unread > 0) {
                     badge.classList.remove('hidden');
