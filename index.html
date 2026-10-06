@@ -1487,9 +1487,15 @@
                 if (status === 'approved') {
 
                     btn.innerText = "شاهد المحتوى 🔓";
+                    btn.className = "px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-sm shadow-md";
 
-                    btn.className =
-                        "px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-sm shadow-md";
+                    // الاشتراك المفعّل — نجيب الصف والترم من عنوان الاشتراك
+                    const subData = subscriptions[courseId + '_data'] || {};
+                    btn.onclick = function() {
+                        const grade = subData.grade || '';
+                        const term = subData.term || '';
+                        window.location.href = `content.html?course=${courseId}&grade=${encodeURIComponent(grade)}&term=${encodeURIComponent(term)}`;
+                    };
 
                 }
 
