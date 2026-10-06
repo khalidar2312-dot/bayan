@@ -354,7 +354,105 @@
                 </div>
             </div>
 
-            <!-- 4. قسم محادثات الدعم الفني -->
+            <!-- 4. قسم إدارة محتوى المواد -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="bg-gradient-to-l from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                    <div class="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-photo-film"></i>
+                    </div>
+                    <h2 class="text-base font-extrabold font-kufi text-slate-800">إدارة محتوى المواد (فيديوهات وملفات)</h2>
+                </div>
+                <div class="p-5 space-y-4">
+
+                    <!-- اختيار المادة والصف والترم -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">المادة</label>
+                            <select id="contentCourse" onchange="updateContentKey()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-white">
+                                <option value="fiqh">الفقه الميسر</option>
+                                <option value="tafseer">علم التفسير</option>
+                                <option value="hadith">الحديث الشريف</option>
+                                <option value="tawheed">علم التوحيد</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">الصف الدراسي</label>
+                            <select id="contentGrade" onchange="updateContentKey()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-white">
+                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5">الفصل الدراسي</label>
+                            <select id="contentTerm" onchange="updateContentKey()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-white">
+                                <option value="الترم الأول">الترم الأول</option>
+                                <option value="الترم الثاني">الترم الثاني</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- إضافة فيديو -->
+                    <div class="bg-white rounded-xl border border-slate-100 p-4">
+                        <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-play-circle text-emerald-600"></i> إضافة فيديو
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">عنوان الفيديو</label>
+                                <input type="text" id="videoTitle" placeholder="مثال: الدرس الأول — الطهارة" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">رابط يوتيوب</label>
+                                <input type="url" id="videoUrl" placeholder="https://youtu.be/..." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">المدة (اختياري)</label>
+                                <input type="text" id="videoDuration" placeholder="مثال: 15:30" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500" dir="ltr">
+                            </div>
+                        </div>
+                        <button onclick="addVideo()" class="px-5 py-2 rounded-xl bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition">
+                            <i class="fa-solid fa-plus ml-1"></i> إضافة الفيديو
+                        </button>
+                    </div>
+
+                    <!-- إضافة ملف -->
+                    <div class="bg-white rounded-xl border border-slate-100 p-4">
+                        <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-file-pdf text-red-500"></i> إضافة ملف
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم الملف</label>
+                                <input type="text" id="fileTitle" placeholder="مثال: مراجعة الوحدة الأولى" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">رابط الملف</label>
+                                <input type="url" id="fileUrl" placeholder="https://drive.google.com/..." class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500" dir="ltr">
+                            </div>
+                        </div>
+                        <button onclick="addFile()" class="px-5 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition">
+                            <i class="fa-solid fa-plus ml-1"></i> إضافة الملف
+                        </button>
+                    </div>
+
+                    <!-- المحتوى الحالي -->
+                    <div class="bg-slate-50 rounded-xl border border-slate-100 p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-bold text-slate-700">المحتوى الحالي</h3>
+                            <span id="currentContentLabel" class="text-xs text-slate-400"></span>
+                        </div>
+                        <div id="currentContentList" class="space-y-2 text-xs text-slate-400 text-center py-4">
+                            اختر مادة وصف لعرض المحتوى
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 5. قسم محادثات الدعم الفني -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div class="bg-gradient-to-l from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -613,6 +711,7 @@
             startRequestsListener();
             startNotificationsListener();
             startChatListener();
+            updateContentKey(); // تحميل المحتوى الافتراضي
         }
 
         function startRequestsListener() {
@@ -653,6 +752,157 @@
 
         let currentChatUid = null;
         let adminChatUnsubscribe = null;
+
+        // ================================================
+        // إدارة محتوى المواد
+        // ================================================
+
+        let _currentContentKey = '';
+
+        function updateContentKey() {
+            const course = document.getElementById('contentCourse').value;
+            const grade = document.getElementById('contentGrade').value;
+            const term = document.getElementById('contentTerm').value;
+            _currentContentKey = `${course}__${grade}__${term}`.replace(/\s+/g, '_');
+
+            const label = `${document.getElementById('contentCourse').options[document.getElementById('contentCourse').selectedIndex].text} — ${grade} — ${term}`;
+            document.getElementById('currentContentLabel').innerText = label;
+
+            loadCurrentContent();
+        }
+
+        async function loadCurrentContent() {
+            const container = document.getElementById('currentContentList');
+            if (!_currentContentKey) return;
+
+            container.innerHTML = '<div class="text-center text-slate-400 py-2">جاري التحميل...</div>';
+
+            try {
+                const docSnap = await window.getDoc(window.doc(window.db, 'course_content', _currentContentKey));
+
+                if (!docSnap.exists()) {
+                    container.innerHTML = '<div class="text-center text-slate-400 py-3">لا يوجد محتوى بعد</div>';
+                    return;
+                }
+
+                const data = docSnap.data();
+                const videos = data.videos || [];
+                const files = data.files || [];
+
+                let html = '';
+
+                if (videos.length > 0) {
+                    html += `<p class="font-bold text-slate-600 text-xs mb-2">الفيديوهات (${videos.length})</p>`;
+                    html += videos.map((v, i) => `
+                        <div class="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-play-circle text-emerald-600"></i>
+                                <span class="font-bold text-slate-700">${v.title}</span>
+                            </div>
+                            <button onclick="deleteVideo(${i})" class="text-red-400 hover:text-red-600 text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>`).join('');
+                }
+
+                if (files.length > 0) {
+                    html += `<p class="font-bold text-slate-600 text-xs mb-2 mt-3">الملفات (${files.length})</p>`;
+                    html += files.map((f, i) => `
+                        <div class="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-file-pdf text-red-500"></i>
+                                <span class="font-bold text-slate-700">${f.title}</span>
+                            </div>
+                            <button onclick="deleteFile(${i})" class="text-red-400 hover:text-red-600 text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>`).join('');
+                }
+
+                if (!html) html = '<div class="text-center text-slate-400 py-3">لا يوجد محتوى بعد</div>';
+                container.innerHTML = html;
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="text-center text-red-400 py-3">حدث خطأ في التحميل</div>';
+            }
+        }
+
+        async function addVideo() {
+            const title = document.getElementById('videoTitle').value.trim();
+            const url = document.getElementById('videoUrl').value.trim();
+            const duration = document.getElementById('videoDuration').value.trim();
+
+            if (!title || !url) { alert('يرجى إدخال عنوان الفيديو والرابط.'); return; }
+            if (!_currentContentKey) { updateContentKey(); }
+
+            try {
+                const docRef = window.doc(window.db, 'course_content', _currentContentKey);
+                const docSnap = await window.getDoc(docRef);
+                const current = docSnap.exists() ? (docSnap.data().videos || []) : [];
+
+                current.push({ title, url, duration });
+                await window.setDoc(docRef, { videos: current }, { merge: true });
+
+                document.getElementById('videoTitle').value = '';
+                document.getElementById('videoUrl').value = '';
+                document.getElementById('videoDuration').value = '';
+
+                showToast('✅ تم إضافة الفيديو بنجاح');
+                loadCurrentContent();
+            } catch (e) {
+                console.error(e);
+                alert('حدث خطأ: ' + e.message);
+            }
+        }
+
+        async function addFile() {
+            const title = document.getElementById('fileTitle').value.trim();
+            const url = document.getElementById('fileUrl').value.trim();
+
+            if (!title || !url) { alert('يرجى إدخال اسم الملف والرابط.'); return; }
+            if (!_currentContentKey) { updateContentKey(); }
+
+            try {
+                const docRef = window.doc(window.db, 'course_content', _currentContentKey);
+                const docSnap = await window.getDoc(docRef);
+                const current = docSnap.exists() ? (docSnap.data().files || []) : [];
+
+                current.push({ title, url });
+                await window.setDoc(docRef, { files: current }, { merge: true });
+
+                document.getElementById('fileTitle').value = '';
+                document.getElementById('fileUrl').value = '';
+
+                showToast('✅ تم إضافة الملف بنجاح');
+                loadCurrentContent();
+            } catch (e) {
+                console.error(e);
+                alert('حدث خطأ: ' + e.message);
+            }
+        }
+
+        async function deleteVideo(index) {
+            if (!confirm('هل تريد حذف هذا الفيديو؟')) return;
+            try {
+                const docRef = window.doc(window.db, 'course_content', _currentContentKey);
+                const docSnap = await window.getDoc(docRef);
+                const videos = docSnap.data().videos || [];
+                videos.splice(index, 1);
+                await window.updateDoc(docRef, { videos });
+                showToast('تم حذف الفيديو');
+                loadCurrentContent();
+            } catch (e) { console.error(e); }
+        }
+
+        async function deleteFile(index) {
+            if (!confirm('هل تريد حذف هذا الملف؟')) return;
+            try {
+                const docRef = window.doc(window.db, 'course_content', _currentContentKey);
+                const docSnap = await window.getDoc(docRef);
+                const files = docSnap.data().files || [];
+                files.splice(index, 1);
+                await window.updateDoc(docRef, { files });
+                showToast('تم حذف الملف');
+                loadCurrentContent();
+            } catch (e) { console.error(e); }
+        }
 
         function startChatListener() {
             if (!window.db || !window.collection || !window.onSnapshot) {
@@ -1170,6 +1420,15 @@
                     const studentData = studentSnap.data();
                     let subs = studentData.subscriptions || {};
                     subs[req.courseId] = 'approved';
+
+                    // استخراج الصف والترم من عنوان المادة
+                    // العنوان بيكون: "الفقه الميسر — الصف الأول الإعدادي — الترم الأول"
+                    const titleParts = (req.courseTitle || '').split('—').map(s => s.trim());
+                    subs[req.courseId + '_data'] = {
+                        grade: titleParts[1] || '',
+                        term: titleParts[2] || '',
+                        fullTitle: req.courseTitle
+                    };
 
                     // إضافة إشعار للطالب
                     let notifications = studentData.notifications || [];
