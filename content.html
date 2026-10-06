@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكاديمية بيان | محتوى المادة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBDQ0cP8C5Hv3xAun7iLSD2PSp0x7sP-08",
+            authDomain: "bayan2312.firebaseapp.com",
+            projectId: "bayan2312",
+            storageBucket: "bayan2312.firebasestorage.app",
+            messagingSenderId: "710544079379",
+            appId: "1:710544079379:web:f9478de93d6005b37ddde6"
+        };
+        firebase.initializeApp(firebaseConfig);
+        window.db = firebase.firestore();
+        window.auth = firebase.auth();
+    </script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'], kufi: ['Reem Kufi', 'sans-serif'] },
+                    colors: {
+                        emerald: { 50: '#ecfdf5', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b', 950: '#022c22' },
+                        amber: { 400: '#fbbf24', 500: '#f59e0b' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 antialiased font-sans">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-l from-emerald-950 to-emerald-900 text-white shadow-xl sticky top-0 z-30 border-b border-emerald-800">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition" title="الرئيسية">
+                    <i class="fa-solid fa-arrow-right text-sm"></i>
+                </a>
+                <div>
+                    <h1 id="pageTitle" class="text-sm font-extrabold font-kufi">محتوى المادة</h1>
+                    <p id="pageSubtitle" class="text-[11px] text-amber-300/80"></p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl">
+                    <div class="w-6 h-6 rounded-full bg-emerald-700 text-amber-400 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span id="headerStudentName" class="text-xs font-bold text-white">طالب</span>
+                </div>
+                <button onclick="goBack()" class="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white font-bold text-xs transition border border-red-500/30">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- محتوى الصفحة -->
+    <main class="max-w-6xl mx-auto px-4 py-6">
+
+        <!-- loading -->
+        <div id="loadingState" class="text-center py-20">
+            <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-700 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-slate-400 text-sm">جاري تحميل المحتوى...</p>
+        </div>
+
+        <!-- حالة غير مصرح -->
+        <div id="unauthorizedState" class="hidden text-center py-20">
+            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h2 class="text-xl font-bold font-kufi text-slate-800 mb-2">غير مصرح بالوصول</h2>
+            <p class="text-slate-500 text-sm mb-5">ليس لديك اشتراك مفعّل في هذه المادة.</p>
+            <a href="index.html" class="px-6 py-2.5 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition">العودة للرئيسية</a>
+        </div>
+
+        <!-- المحتوى الفعلي -->
+        <div id="contentState" class="hidden">
+
+            <!-- tabs الفيديو والملفات -->
+            <div class="flex items-center gap-3 mb-6">
+                <button onclick="switchTab('videos')" id="tabVideos"
+                    class="px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm">
+                    <i class="fa-solid fa-play-circle ml-1"></i> الفيديوهات
+                </button>
+                <button onclick="switchTab('files')" id="tabFiles"
+                    class="px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500">
+                    <i class="fa-solid fa-file-pdf ml-1"></i> الملفات
+                </button>
+            </div>
+
+            <!-- قسم الفيديوهات -->
+            <div id="videosSection">
+                <div id="videosList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="text-center py-12 text-slate-400 col-span-2">
+                        <i class="fa-solid fa-video-slash text-3xl mb-3 block opacity-40"></i>
+                        <p class="text-sm">لا توجد فيديوهات متاحة حالياً</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قسم الملفات -->
+            <div id="filesSection" class="hidden">
+                <div id="filesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="text-center py-12 text-slate-400 col-span-3">
+                        <i class="fa-solid fa-folder-open text-3xl mb-3 block opacity-40"></i>
+                        <p class="text-sm">لا توجد ملفات متاحة حالياً</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Modal مشاهدة الفيديو -->
+    <div id="videoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl max-w-3xl w-full mx-4 overflow-hidden shadow-2xl">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                <h3 id="videoModalTitle" class="font-bold text-slate-800 text-sm"></h3>
+                <button onclick="closeVideoModal()" class="text-slate-400 hover:text-slate-600 text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <div class="relative" style="padding-bottom: 56.25%;">
+                    <iframe id="videoModalFrame" class="absolute inset-0 w-full h-full rounded-xl"
+                        src="" frameborder="0" allowfullscreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        const courseNames = {
+            'fiqh': 'الفقه الميسر',
+            'tafseer': 'علم التفسير',
+            'hadith': 'الحديث الشريف',
+            'tawheed': 'علم التوحيد'
+        };
+
+        // جلب بارامترات الـ URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseId = urlParams.get('course') || '';
+        const grade = urlParams.get('grade') || '';
+        const term = urlParams.get('term') || '';
+
+        // مفتاح المحتوى في Firestore
+        const contentKey = `${courseId}__${grade}__${term}`.replace(/\s+/g, '_');
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // تحديث العناوين
+            document.getElementById('pageTitle').innerText = courseNames[courseId] || 'محتوى المادة';
+            document.getElementById('pageSubtitle').innerText = grade && term ? `${grade} — ${term}` : '';
+
+            // التحقق من الطالب
+            auth.onAuthStateChanged(async function(firebaseUser) {
+                if (!firebaseUser) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                document.getElementById('headerStudentName').innerText = firebaseUser.displayName || 'طالب';
+
+                try {
+                    const studentDoc = await db.collection('students').doc(firebaseUser.uid).get();
+                    if (!studentDoc.exists) {
+                        showUnauthorized();
+                        return;
+                    }
+
+                    const studentData = studentDoc.data();
+                    document.getElementById('headerStudentName').innerText = studentData.fullName || 'طالب';
+
+                    const subs = studentData.subscriptions || {};
+
+                    // التحقق من الاشتراك
+                    if (subs[courseId] !== 'approved') {
+                        showUnauthorized();
+                        return;
+                    }
+
+                    // تحميل المحتوى
+                    showContent();
+                    loadContent();
+
+                } catch (error) {
+                    console.error('خطأ:', error);
+                    showUnauthorized();
+                }
+            });
+        });
+
+        function showUnauthorized() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('unauthorizedState').classList.remove('hidden');
+        }
+
+        function showContent() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('contentState').classList.remove('hidden');
+        }
+
+        async function loadContent() {
+            try {
+                const contentDoc = await db.collection('course_content').doc(contentKey).get();
+
+                if (!contentDoc.exists) return;
+
+                const data = contentDoc.data();
+
+                // عرض الفيديوهات
+                if (data.videos && data.videos.length > 0) {
+                    renderVideos(data.videos);
+                }
+
+                // عرض الملفات
+                if (data.files && data.files.length > 0) {
+                    renderFiles(data.files);
+                }
+
+            } catch (error) {
+                console.error('خطأ في تحميل المحتوى:', error);
+            }
+        }
+
+        function renderVideos(videos) {
+            const container = document.getElementById('videosList');
+            container.innerHTML = videos.map(function(v, i) {
+                // استخراج يوتيوب ID
+                const ytId = extractYoutubeId(v.url);
+                const thumb = ytId
+                    ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`
+                    : 'https://via.placeholder.com/320x180?text=Video';
+
+                return `
+                    <div class="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition cursor-pointer"
+                        onclick="openVideo('${v.url}', '${escapeAttr(v.title)}')">
+                        <div class="relative">
+                            <img src="${thumb}" alt="${escapeAttr(v.title)}" class="w-full h-44 object-cover">
+                            <div class="absolute inset-0 bg-slate-950/30 flex items-center justify-center">
+                                <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                                    <i class="fa-solid fa-play text-emerald-800 mr-0.5"></i>
+                                </div>
+                            </div>
+                            <span class="absolute top-2 right-2 bg-slate-900/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
+                                ${v.duration || ''}
+                            </span>
+                        </div>
+                        <div class="p-3">
+                            <h3 class="font-bold text-slate-800 text-sm">${escapeHtml(v.title)}</h3>
+                            ${v.description ? `<p class="text-xs text-slate-400 mt-1">${escapeHtml(v.description)}</p>` : ''}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function renderFiles(files) {
+            const container = document.getElementById('filesList');
+            container.innerHTML = files.map(function(f) {
+                const iconMap = {
+                    'pdf': 'fa-file-pdf text-red-500',
+                    'doc': 'fa-file-word text-blue-500',
+                    'docx': 'fa-file-word text-blue-500',
+                    'ppt': 'fa-file-powerpoint text-orange-500',
+                    'pptx': 'fa-file-powerpoint text-orange-500',
+                };
+                const ext = (f.url || '').split('.').pop().toLowerCase();
+                const iconClass = iconMap[ext] || 'fa-file text-slate-500';
+
+                return `
+                    <a href="${f.url}" target="_blank"
+                        class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-300 transition flex items-center gap-3">
+                        <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                            <i class="fa-solid ${iconClass}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHtml(f.title)}</p>
+                            <p class="text-[11px] text-slate-400 mt-0.5">${f.size || 'اضغط للتحميل'}</p>
+                        </div>
+                        <i class="fa-solid fa-download text-emerald-700 text-sm flex-shrink-0"></i>
+                    </a>`;
+            }).join('');
+        }
+
+        function switchTab(tab) {
+            if (tab === 'videos') {
+                document.getElementById('videosSection').classList.remove('hidden');
+                document.getElementById('filesSection').classList.add('hidden');
+                document.getElementById('tabVideos').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm';
+                document.getElementById('tabFiles').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500';
+            } else {
+                document.getElementById('filesSection').classList.remove('hidden');
+                document.getElementById('videosSection').classList.add('hidden');
+                document.getElementById('tabFiles').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm';
+                document.getElementById('tabVideos').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500';
+            }
+        }
+
+        function openVideo(url, title) {
+            const ytId = extractYoutubeId(url);
+            const embedUrl = ytId
+                ? `https://www.youtube.com/embed/${ytId}?autoplay=1`
+                : url;
+
+            document.getElementById('videoModalTitle').innerText = title;
+            document.getElementById('videoModalFrame').src = embedUrl;
+            document.getElementById('videoModal').classList.remove('hidden');
+        }
+
+        function closeVideoModal() {
+            document.getElementById('videoModalFrame').src = '';
+            document.getElementById('videoModal').classList.add('hidden');
+        }
+
+        function extractYoutubeId(url) {
+            if (!url) return null;
+            const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+            return match ? match[1] : null;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        function escapeAttr(text) {
+            return (text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+    </script>
+
+</body>
+</html>
