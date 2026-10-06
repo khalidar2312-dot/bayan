@@ -560,6 +560,73 @@
         </div>
     </div>
 
+    <!-- Modal صلاحيات الموظف -->
+    <div id="permissionsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative mx-4">
+            <button onclick="closePermissionsModal()" class="absolute top-4 left-4 text-slate-400 text-xl font-bold">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center mb-5">
+                <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mx-auto mb-3">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 class="text-lg font-extrabold font-kufi text-slate-800">صلاحيات الموظف</h3>
+                <p id="permissionsStaffName" class="text-xs text-amber-600 font-bold mt-1"></p>
+            </div>
+
+            <input type="hidden" id="permissionsStaffIndex">
+
+            <div class="space-y-2 mb-5">
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-requests" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-amber-500 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">طلبات الاشتراك</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-students" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-user-graduate text-emerald-600 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">إدارة الطلاب</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-content" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-photo-film text-purple-500 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">المحتوى التعليمي</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-support" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-headset text-blue-500 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">الدعم الفني</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-staff" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-user-gear text-slate-500 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">إدارة الموظفين</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-settings" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-lock text-slate-500 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">الإعدادات</span>
+                    </div>
+                </label>
+            </div>
+
+            <button onclick="savePermissions()" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition shadow-sm">
+                <i class="fa-solid fa-floppy-disk ml-1"></i> حفظ الصلاحيات
+            </button>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-6 left-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl hidden flex items-center gap-3 text-sm font-bold border border-slate-700">
         <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
@@ -706,6 +773,7 @@
 
             initAdminPanel();
             setupPushNotifications();
+            applyStaffPermissions(); // تطبيق صلاحيات الموظف
             showToast(`مرحباً بك، تم تسجيل الدخول بنجاح`);
         }
 
@@ -1328,10 +1396,86 @@
                     <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${staff.username}</td>
                     <td class="px-4 py-3"><span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-100">${staff.role}</span></td>
                     <td class="px-4 py-3 text-center">
-                        <button onclick="deleteStaff(${index})" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">حذف</button>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="openPermissionsModal(${index})" class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[11px] hover:bg-emerald-100 transition border border-emerald-100"><i class="fa-solid fa-shield-halved ml-1"></i>صلاحيات</button>
+                            <button onclick="deleteStaff(${index})" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">حذف</button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        // ================================================
+        // صلاحيات الموظفين
+        // ================================================
+
+        const allTabs = ['requests', 'students', 'content', 'support', 'staff', 'settings'];
+
+        function openPermissionsModal(index) {
+            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            const staff = staffList[index];
+            if (!staff) return;
+
+            document.getElementById('permissionsStaffIndex').value = index;
+            document.getElementById('permissionsStaffName').innerText = staff.name;
+
+            // تحميل الصلاحيات الحالية
+            const perms = staff.permissions || allTabs; // افتراضياً كل الصلاحيات
+            allTabs.forEach(tab => {
+                const cb = document.getElementById('perm-' + tab);
+                if (cb) cb.checked = perms.includes(tab);
+            });
+
+            document.getElementById('permissionsModal').classList.remove('hidden');
+        }
+
+        function closePermissionsModal() {
+            document.getElementById('permissionsModal').classList.add('hidden');
+        }
+
+        function savePermissions() {
+            const index = parseInt(document.getElementById('permissionsStaffIndex').value);
+            let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+
+            const selectedPerms = allTabs.filter(tab => {
+                const cb = document.getElementById('perm-' + tab);
+                return cb && cb.checked;
+            });
+
+            staffList[index].permissions = selectedPerms;
+            localStorage.setItem('adminStaffList', JSON.stringify(staffList));
+
+            closePermissionsModal();
+            showToast('✅ تم حفظ صلاحيات الموظف بنجاح');
+        }
+
+        function applyStaffPermissions() {
+            const role = localStorage.getItem('currentLoggedInRole') || '';
+            const name = localStorage.getItem('currentLoggedInName') || '';
+
+            // الأدمن الرئيسي له كل الصلاحيات
+            if (role === 'مدير النظام (Admin)') return;
+
+            // جلب صلاحيات الموظف
+            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            const staff = staffList.find(s => s.name === name);
+            if (!staff) return;
+
+            const perms = staff.permissions || allTabs;
+
+            // إخفاء الـ tabs وأزرار الـ sidebar اللي مش مصرح بيها
+            allTabs.forEach(tab => {
+                const navBtn = document.getElementById('nav-' + tab);
+                if (!perms.includes(tab)) {
+                    if (navBtn) navBtn.classList.add('hidden');
+                } else {
+                    if (navBtn) navBtn.classList.remove('hidden');
+                }
+            });
+
+            // فتح أول tab مسموح بيه
+            const firstAllowed = allTabs.find(t => perms.includes(t));
+            if (firstAllowed) switchTab(firstAllowed);
         }
 
         function deleteStaff(index) {
