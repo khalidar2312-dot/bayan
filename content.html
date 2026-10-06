@@ -244,15 +244,17 @@
         function renderVideos(videos) {
             const container = document.getElementById('videosList');
             container.innerHTML = videos.map(function(v, i) {
-                // استخراج يوتيوب ID
-                const ytId = extractYoutubeId(v.url);
-                const thumb = ytId
-                    ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`
-                    : 'https://via.placeholder.com/320x180?text=Video';
+
+                const isDrive = v.url && v.url.includes('drive.google.com');
+                const ytId = !isDrive ? extractYoutubeId(v.url) : null;
+
+                let thumb = 'https://placehold.co/320x180/064e3b/fbbf24?text=Video';
+                if (ytId) thumb = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+                if (isDrive) thumb = 'https://placehold.co/320x180/064e3b/fbbf24?text=فيديو';
 
                 return `
                     <div class="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition cursor-pointer"
-                        onclick="openVideo('${v.url}', '${escapeAttr(v.title)}')">
+                        onclick="openVideo('${v.url}', '${escapeAttr(v.title)}', ${isDrive})">
                         <div class="relative">
                             <img src="${thumb}" alt="${escapeAttr(v.title)}" class="w-full h-44 object-cover">
                             <div class="absolute inset-0 bg-slate-950/30 flex items-center justify-center">
@@ -260,9 +262,7 @@
                                     <i class="fa-solid fa-play text-emerald-800 mr-0.5"></i>
                                 </div>
                             </div>
-                            <span class="absolute top-2 right-2 bg-slate-900/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">
-                                ${v.duration || ''}
-                            </span>
+                            ${v.duration ? `<span class="absolute top-2 right-2 bg-slate-900/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">${v.duration}</span>` : ''}
                         </div>
                         <div class="p-3">
                             <h3 class="font-bold text-slate-800 text-sm">${escapeHtml(v.title)}</h3>
@@ -324,11 +324,22 @@
             }
         }
 
-        function openVideo(url, title) {
-            const ytId = extractYoutubeId(url);
-            const embedUrl = ytId
-                ? `https://www.youtube.com/embed/${ytId}?autoplay=1`
-                : url;
+        function openVideo(url, title, isDrive) {
+            let embedUrl;
+
+            if (isDrive) {
+                // Drive video — استخدم preview
+                const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^\/\?]+)/);
+                embedUrl = fileMatch
+                    ? `https://drive.google.com/file/d/${fileMatch[1]}/preview`
+                    : url;
+            } else {
+                // يوتيوب
+                const ytId = extractYoutubeId(url);
+                embedUrl = ytId
+                    ? `https://www.youtube.com/embed/${ytId}?autoplay=1`
+                    : url;
+            }
 
             document.getElementById('videoModalTitle').innerText = title;
             document.getElementById('videoModalFrame').src = embedUrl;
