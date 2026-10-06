@@ -852,9 +852,30 @@
             }
         }
 
+        // تحويل روابط Google Drive تلقائياً
+        function convertDriveUrl(url) {
+            if (!url) return url;
+
+            // رابط عادي: https://drive.google.com/file/d/ID/view
+            const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^\/\?]+)/);
+            if (fileMatch) {
+                return `https://drive.google.com/uc?export=download&id=${fileMatch[1]}`;
+            }
+
+            // رابط open: https://drive.google.com/open?id=ID
+            const openMatch = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+            if (openMatch) {
+                return `https://drive.google.com/uc?export=download&id=${openMatch[1]}`;
+            }
+
+            // لو مش Drive رابط عادي يرجع كما هو
+            return url;
+        }
+
         async function addFile() {
             const title = document.getElementById('fileTitle').value.trim();
-            const url = document.getElementById('fileUrl').value.trim();
+            const rawUrl = document.getElementById('fileUrl').value.trim();
+            const url = convertDriveUrl(rawUrl);
 
             if (!title || !url) { alert('يرجى إدخال اسم الملف والرابط.'); return; }
             if (!_currentContentKey) { updateContentKey(); }
