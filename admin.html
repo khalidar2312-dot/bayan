@@ -826,7 +826,8 @@
 
         async function addVideo() {
             const title = document.getElementById('videoTitle').value.trim();
-            const url = document.getElementById('videoUrl').value.trim();
+            const rawUrl = document.getElementById('videoUrl').value.trim();
+            const url = convertDriveUrl(rawUrl); // تحويل Drive تلقائياً
             const duration = document.getElementById('videoDuration').value.trim();
 
             if (!title || !url) { alert('يرجى إدخال عنوان الفيديو والرابط.'); return; }
