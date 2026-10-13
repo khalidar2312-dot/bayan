@@ -17,7 +17,7 @@
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, signOut, deleteUser, setPersistence, inMemoryPersistence, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, updateEmail, sendPasswordResetEmail, signOut, deleteUser, setPersistence, browserSessionPersistence, inMemoryPersistence, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, runTransaction, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
@@ -36,6 +36,7 @@
         const db = getFirestore(adminApp);
         const adminAuth = getAuth(adminApp);
         const staffCreationAuth = getAuth(staffCreationApp);
+        await setPersistence(adminAuth, browserSessionPersistence);
         await setPersistence(staffCreationAuth, inMemoryPersistence);
 
         // جعل الدوال متاحة عالمياً في النطاق العام (window) لكي تعمل مع أحداث HTML
@@ -46,6 +47,7 @@
         window.signInWithEmailAndPassword = signInWithEmailAndPassword;
         window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
         window.updateProfile = updateProfile;
+        window.updateEmail = updateEmail;
         window.sendPasswordResetEmail = sendPasswordResetEmail;
         window.signOut = signOut;
         window.deleteUser = deleteUser;
@@ -85,6 +87,55 @@
 
         window.ADMIN_AUTH_UID = "C7zCQWk4AWQlzhLoiTNJbGcvzU73";
         let staffProfileUnsubscribe = null;
+        let adminAliasMigrationAttempted = false;
+
+        function internalLoginEmail(username) {
+            return `${username}-${crypto.randomUUID()}@staff.bayan2312.firebaseapp.com`;
+        }
+
+        async function ensureAdminUsername(user) {
+            if (adminAliasMigrationAttempted || !user.email) return;
+            adminAliasMigrationAttempted = true;
+            const aliasRef = window.doc(window.db, 'staff_usernames', 'admin');
+            let aliasCreated = false;
+            let internalEmail = '';
+
+            try {
+                const aliasSnapshot = await window.getDoc(aliasRef);
+                if (aliasSnapshot.exists()) {
+                    const alias = aliasSnapshot.data();
+                    if (alias.uid !== user.uid) {
+                        throw new Error('اسم المستخدم admin مرتبط بحساب آخر. تواصل مع الدعم.');
+                    }
+                    if (alias.authEmail !== user.email) {
+                        await window.updateEmail(user, alias.authEmail);
+                    }
+                    return;
+                }
+
+                internalEmail = internalLoginEmail('admin');
+                await window.setDoc(aliasRef, {
+                    username: 'admin',
+                    uid: user.uid,
+                    authEmail: internalEmail
+                });
+                aliasCreated = true;
+                await window.updateEmail(user, internalEmail);
+                showToast('تم تجهيز اسم دخول المدير: admin. استخدم كلمة المرور الحالية.');
+            } catch (error) {
+                console.error('تعذر تجهيز اسم دخول المدير:', error);
+                if (aliasCreated) {
+                    try {
+                        await window.deleteDoc(aliasRef);
+                    } catch (cleanupError) {
+                        console.error('تعذر إزالة سجل اسم المدير غير المكتمل:', cleanupError);
+                    }
+                }
+                showToast(error.code === 'auth/requires-recent-login'
+                    ? 'سجّل خروج المدير ثم ادخل مرة أخيرة ببريده الحالي لإعداد اسم الدخول admin.'
+                    : `تعذر إعداد اسم دخول المدير: ${error.message}`);
+            }
+        }
 
         document.addEventListener("DOMContentLoaded", function() {
             localStorage.removeItem('adminStaffList');
@@ -105,6 +156,7 @@
                     dashboard.classList.add('hidden');
                     window.currentAdminPermissions = [];
                     window.currentAdminRole = '';
+                    adminAliasMigrationAttempted = false;
                     return;
                 }
 
@@ -112,7 +164,7 @@
                     if (status) status.classList.add('hidden');
                     const isAdmin = user.uid === window.ADMIN_AUTH_UID;
                     let permissions = [];
-                    let displayName = user.email || 'مستخدم الإدارة';
+                    let displayName = isAdmin ? 'admin' : (user.email || 'مستخدم الإدارة');
 
                     if (!isAdmin) {
                         const staffSnapshot = await window.getDoc(window.doc(window.db, 'staff', user.uid));
@@ -147,6 +199,7 @@
                         );
                     } else {
                         permissions = window.ADMIN_TAB_IDS || [];
+                        await ensureAdminUsername(user);
                     }
 
                     window.currentAdminPermissions = permissions;
@@ -206,20 +259,20 @@
                     <i class="fa-solid fa-id-card-clip"></i>
                 </div>
                 <h2 class="text-2xl font-black font-kufi text-emerald-950">بوابة دخول الإدارة والموظفين</h2>
-                <p class="text-xs text-slate-400 mt-1">سجّل الدخول ببريد Firebase وكلمة المرور</p>
+                <p class="text-xs text-slate-400 mt-1">سجّل الدخول باسم المستخدم وكلمة المرور</p>
             </div>
             
             <form onsubmit="handleUnifiedLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني</label>
-                    <input type="email" id="loginUser" required autocomplete="username" placeholder="admin@example.com" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم</label>
+                    <input type="text" id="loginUser" required autocomplete="username" placeholder="admin" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور (Password)</label>
                     <input type="password" id="loginPass" required autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
                 </div>
                 <p id="loginStatus" class="hidden text-xs text-center text-red-600"></p>
-                <p class="text-[11px] text-slate-400 text-center">يجب أن يكون الحساب مديرًا أو موظفًا مضافًا من لوحة الإدارة.</p>
+                <p class="text-[11px] text-slate-400 text-center">اكتب اسم المستخدم وكلمة المرور. أول مرة فقط، يدخل المدير ببريده الحالي للتحويل إلى admin.</p>
                 <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-800 text-amber-300 font-bold hover:bg-emerald-900 transition shadow-lg text-sm">تسجيل الدخول</button>
             </form>
         </div>
@@ -568,15 +621,15 @@
                     </div>
                     <div id="staffManagementSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
                         <form onsubmit="addNewStaff(event)" class="space-y-3 mb-6">
-                            <p class="text-[11px] text-slate-500">سيُنشأ الحساب في Firebase Authentication، وتُحفظ الصلاحيات في Firestore. استخدم بريدًا إلكترونيًا حقيقيًا.</p>
+                            <p class="text-[11px] text-slate-500">الموظف يدخل باسم المستخدم وكلمة المرور فقط؛ لا يحتاج بريدًا إلكترونيًا.</p>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم الموظف</label>
                                     <input type="text" id="staffName" required placeholder="أحمد محمد" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">البريد الإلكتروني</label>
-                                    <input type="email" id="staffEmail" required autocomplete="off" placeholder="employee@example.com" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم المستخدم (3 أحرف على الأقل)</label>
+                                    <input type="text" id="staffUsername" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]{3,30}" autocomplete="off" placeholder="malak" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
@@ -602,7 +655,7 @@
                                 <thead>
                                     <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
                                         <th class="px-4 py-3 font-bold">الموظف</th>
-                                        <th class="px-4 py-3 font-bold">البريد الإلكتروني</th>
+                                        <th class="px-4 py-3 font-bold">اسم المستخدم</th>
                                         <th class="px-4 py-3 font-bold">الدور</th>
                                         <th class="px-4 py-3 font-bold text-center">حذف</th>
                                     </tr>
@@ -1115,23 +1168,42 @@
         // دالة تسجيل الدخول الموحدة
         async function handleUnifiedLogin(event) {
             event.preventDefault();
-            document.getElementById('loginStatus').classList.add('hidden');
-            const email = document.getElementById('loginUser').value.trim();
+            const status = document.getElementById('loginStatus');
+            status.classList.add('hidden');
+            const username = document.getElementById('loginUser').value.trim();
             const password = document.getElementById('loginPass').value;
 
             try {
+                let email = username;
+                if (!username.includes('@')) {
+                    const normalizedUsername = username.toLowerCase();
+                    if (!/^[a-z0-9._-]{3,30}$/.test(normalizedUsername)) {
+                        throw new Error('اسم المستخدم يجب أن يكون من 3 إلى 30 حرفًا إنجليزيًا أو رقمًا.');
+                    }
+                    const aliasSnapshot = await window.getDoc(
+                        window.doc(window.db, 'staff_usernames', normalizedUsername)
+                    );
+                    if (!aliasSnapshot.exists()) {
+                        if (normalizedUsername === 'admin') {
+                            throw new Error('أول مرة فقط: سجّل دخول المدير بالبريد الحالي مرة واحدة لتحويله إلى اسم المستخدم admin.');
+                        }
+                        throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة.');
+                    }
+                    email = aliasSnapshot.data().authEmail;
+                }
                 await window.signInWithEmailAndPassword(window.adminAuth, email, password);
             } catch (error) {
                 console.error('تعذر تسجيل دخول الإدارة:', error);
                 const messages = {
-                    'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-                    'auth/user-not-found': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-                    'auth/wrong-password': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-                    'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+                    'auth/invalid-credential': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+                    'auth/user-not-found': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+                    'auth/wrong-password': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+                    'auth/invalid-email': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
                     'auth/too-many-requests': 'تم إيقاف المحاولات مؤقتًا. حاول مرة أخرى لاحقًا.',
                     'auth/network-request-failed': 'تعذر الاتصال. تحقق من الإنترنت ثم حاول مرة أخرى.'
                 };
-                alert(messages[error.code] || `تعذر تسجيل الدخول: ${error.message}`);
+                status.innerText = messages[error.code] || error.message;
+                status.classList.remove('hidden');
             }
         }
 
@@ -2122,33 +2194,55 @@
         async function addNewStaff(event) {
             event.preventDefault();
             const name = document.getElementById('staffName').value.trim();
-            const email = document.getElementById('staffEmail').value.trim();
+            const username = document.getElementById('staffUsername').value.trim().toLowerCase();
             const password = document.getElementById('staffPassword').value;
             const role = document.getElementById('staffRole').value;
+            if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+                alert('اسم المستخدم يجب أن يكون من 3 إلى 30 حرفًا إنجليزيًا أو رقمًا، ويسمح بالنقطة والشرطة.');
+                return;
+            }
             const permissionsByRole = {
-                'موظف خدمة عملاء': ['support', 'settings'],
-                'مساعد مراجعة اشتراكات': ['requests', 'settings'],
-                'مشرف أكاديمي': ['content', 'quizzes', 'performance', 'settings']
+                'موظف خدمة عملاء': ['support'],
+                'مساعد مراجعة اشتراكات': ['requests'],
+                'مشرف أكاديمي': ['content', 'quizzes', 'performance']
             };
             let createdUser = null;
+            const aliasRef = window.doc(window.db, 'staff_usernames', username);
             try {
+                const existingAlias = await window.getDoc(aliasRef);
+                if (existingAlias.exists()) {
+                    throw new Error('اسم المستخدم مستخدم بالفعل. اختر اسمًا آخر.');
+                }
+                const generatedEmail = internalLoginEmail(username);
                 const credential = await window.createUserWithEmailAndPassword(
                     window.staffCreationAuth,
-                    email,
+                    generatedEmail,
                     password
                 );
                 createdUser = credential.user;
                 await window.updateProfile(createdUser, { displayName: name });
-                await window.setDoc(window.doc(window.db, 'staff', createdUser.uid), {
-                    name,
-                    email: createdUser.email,
-                    role,
-                    permissions: permissionsByRole[role],
-                    active: true,
-                    createdAt: window.serverTimestamp()
+                const staffRef = window.doc(window.db, 'staff', createdUser.uid);
+                await window.runTransaction(window.db, async transaction => {
+                    const currentAlias = await transaction.get(aliasRef);
+                    if (currentAlias.exists()) {
+                        throw new Error('اسم المستخدم مستخدم بالفعل. اختر اسمًا آخر.');
+                    }
+                    transaction.set(staffRef, {
+                        name,
+                        username,
+                        role,
+                        permissions: permissionsByRole[role],
+                        active: true,
+                        createdAt: window.serverTimestamp()
+                    });
+                    transaction.set(aliasRef, {
+                        username,
+                        uid: createdUser.uid,
+                        authEmail: generatedEmail
+                    });
                 });
                 event.target.reset();
-                showToast('تم إنشاء حساب Firebase للموظف. أعطه البريد وكلمة المرور المؤقتة بأمان.');
+                showToast(`تم إنشاء حساب الموظف. اسم الدخول: ${username}`);
                 await loadStaffMembers();
             } catch (error) {
                 console.error('تعذر إنشاء حساب الموظف:', error);
@@ -2160,8 +2254,7 @@
                     }
                 }
                 const messages = {
-                    'auth/email-already-in-use': 'هذا البريد مسجل بالفعل في Firebase Authentication.',
-                    'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+                    'auth/email-already-in-use': 'تعذر إنشاء الحساب الداخلي. حاول باسم مستخدم مختلف.',
                     'auth/weak-password': 'كلمة المرور ضعيفة؛ استخدم 6 أحرف على الأقل.',
                     'permission-denied': 'تعذر حفظ ملف الموظف. تأكد من نشر قواعد Firestore الجديدة وأنك داخل بحساب المدير.'
                 };
@@ -2192,7 +2285,9 @@
                 tbody.innerHTML = staffCache.map(staff => {
                     const uid = escapeStaffText(staff.uid);
                     const name = escapeStaffText(staff.name);
-                    const email = escapeStaffText(staff.email);
+                    const username = staff.username
+                        ? escapeStaffText(staff.username)
+                        : '<span class="text-amber-700">حساب قديم - يحتاج إعادة إضافة</span>';
                     const role = escapeStaffText(staff.role);
                     const date = staff.createdAt && staff.createdAt.toDate
                         ? staff.createdAt.toDate().toLocaleDateString('ar-EG')
@@ -2200,7 +2295,7 @@
                     return `
                         <tr class="hover:bg-slate-50 transition-colors">
                             <td class="px-4 py-3 font-bold text-slate-800">${name}<div class="text-[10px] text-slate-400 font-normal">${date}</div></td>
-                            <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${email}</td>
+                            <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${username}</td>
                             <td class="px-4 py-3"><span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-100">${role}</span></td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1.5">
@@ -2278,13 +2373,27 @@
         }
 
         async function deleteStaff(uid) {
-            if (!confirm("سيتم تعطيل صلاحيات هذا الحساب فورًا. هل تريد المتابعة؟")) return;
+            if (!confirm("سيتم تعطيل صلاحية هذا الحساب في اللوحة. هل تريد المتابعة؟")) return;
             try {
-                await window.updateDoc(window.doc(window.db, 'staff', uid), {
-                    active: false,
-                    updatedAt: window.serverTimestamp()
-                });
-                showToast('تم تعطيل صلاحيات الحساب. لا يستطيع دخول لوحة الإدارة بعد الآن.');
+                const staffRef = window.doc(window.db, 'staff', uid);
+                const staff = staffCache.find(item => item.uid === uid);
+                if (!staff) throw new Error('تعذر العثور على ملف الموظف.');
+                if (staff.username) {
+                    const aliasRef = window.doc(window.db, 'staff_usernames', staff.username);
+                    await window.runTransaction(window.db, async transaction => {
+                        transaction.update(staffRef, {
+                            active: false,
+                            updatedAt: window.serverTimestamp()
+                        });
+                        transaction.delete(aliasRef);
+                    });
+                } else {
+                    await window.updateDoc(staffRef, {
+                        active: false,
+                        updatedAt: window.serverTimestamp()
+                    });
+                }
+                showToast('تم تعطيل الحساب وإزالة اسم المستخدم.');
                 await loadStaffMembers();
             } catch (error) {
                 console.error('تعذر تعطيل حساب الموظف:', error);
