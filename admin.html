@@ -1919,9 +1919,12 @@
                 } else {
                     console.warn('تعذر إضافة إشعار الدعم: بيانات الطالب غير موجودة.', currentChatUid);
                 }
-
+                return true;
             } catch (error) {
                 console.error('خطأ في إرسال الرد:', error);
+                if (!input.value.trim()) input.value = text;
+                alert('تعذر إرسال الرسالة. بقيت في خانة الكتابة؛ تحقق من الاتصال وحاول مرة أخرى.');
+                return false;
             }
         }
 
@@ -2295,6 +2298,9 @@
                 document.getElementById('supportStudentSearchResults').innerHTML = '';
                 switchTab('support');
                 openAdminChat(uid, name, email);
+                const messageInput = document.getElementById('adminChatInput');
+                messageInput.value = `السلام عليكم يا ${name} 🌟\nحابين نطمن عليك، ونشجعك تكمّل دروسك في أكاديمية بيان. لو واجهتك أي مشكلة في الدخول أو محتاج مساعدة، ابعتلنا وإحنا معاك. بالتوفيق يا بطل!`;
+                await sendAdminReply();
             } catch (error) {
                 console.error('تعذر بدء محادثة الدعم مع الطالب:', error);
                 alert('تعذر بدء المحادثة. تحقق من الاتصال وحاول مرة أخرى.');
