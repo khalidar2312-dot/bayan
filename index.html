@@ -643,6 +643,19 @@
 
             </div>
 
+            <section id="studentLearningProgress" class="hidden mt-8 bg-white rounded-3xl border border-emerald-900/10 p-5 shadow-sm">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-emerald-950">تقدمك الدراسي</h3>
+                        <p class="text-[11px] text-slate-400">تابع الدروس التي بدأت مشاهدتها واستكمل آخر درس.</p>
+                    </div>
+                </div>
+                <div id="studentLearningProgressList" class="grid md:grid-cols-2 gap-3"></div>
+            </section>
+
         </div>
 
     </section>
@@ -1468,6 +1481,8 @@
                 } else {
 
                     currentUserData = null;
+                    document.getElementById('studentLearningProgress').classList.add('hidden');
+                    document.getElementById('studentLearningProgressList').innerHTML = '';
                     if (studentNotificationsUnsubscribe) {
                         studentNotificationsUnsubscribe();
                         studentNotificationsUnsubscribe = null;
@@ -1549,11 +1564,108 @@
                 .innerText = user.grade || 'طالب علم';
 
             updateCourseButtons(user);
+            loadStudentLearningProgress(user);
 
             renderNotifications(user);
             subscribeToChatNotifications(user.uid);
             subscribeToStudentNotifications(user.uid);
+        }
 
+        async function loadStudentLearningProgress(user) {
+            const section = document.getElementById('studentLearningProgress');
+            const container = document.getElementById('studentLearningProgressList');
+            const courses = [
+                ['fiqh', 'الفقه الميسر'],
+                ['tafseer', 'علم التفسير'],
+                ['hadith', 'الحديث الشريف'],
+                ['tawheed', 'علم التوحيد']
+            ];
+            const subscriptions = user.subscriptions || {};
+            const enrolledCourses = courses.filter(([courseId]) =>
+                subscriptions[courseId] === 'approved' &&
+                subscriptions[`${courseId}_data`] &&
+                subscriptions[`${courseId}_data`].grade &&
+                subscriptions[`${courseId}_data`].term
+            );
+
+            if (!enrolledCourses.length) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            container.innerHTML = '<p class="text-xs text-slate-400">جاري تحميل تقدمك...</p>';
+
+            try {
+                const studentSnapshot = await db.collection('students').doc(user.uid).get();
+                const studentData = studentSnapshot.exists ? studentSnapshot.data() : {};
+                const progressItems = await Promise.all(enrolledCourses.map(async ([courseId, courseName]) => {
+                    const subscriptionData = subscriptions[`${courseId}_data`];
+                    const contentKey = `${courseId}__${subscriptionData.grade}__${subscriptionData.term}`.replace(/\s+/g, '_');
+                    const contentSnapshot = await db.collection('course_content').doc(contentKey).get();
+                    const content = contentSnapshot.exists ? contentSnapshot.data() : {};
+                    const attendance = studentData.courseProgress &&
+                        studentData.courseProgress[contentKey] &&
+                        studentData.courseProgress[contentKey].attendance || {};
+                    const videos = Array.isArray(content.videos) ? content.videos : [];
+                    const startedUrls = new Set(
+                        Object.values(attendance)
+                            .filter(lesson => lesson && lesson.url)
+                            .map(lesson => lesson.url)
+                    );
+                    const startedCount = videos.filter(video => startedUrls.has(video.url)).length;
+                    const latestLesson = Object.values(attendance)
+                        .filter(lesson => lesson && lesson.url && videos.some(video => video.url === lesson.url))
+                        .sort((first, second) =>
+                            new Date(second.lastOpenedAt || second.firstOpenedAt || 0) -
+                            new Date(first.lastOpenedAt || first.firstOpenedAt || 0)
+                        )[0];
+
+                    return {
+                        courseId,
+                        courseName,
+                        grade: subscriptionData.grade,
+                        term: subscriptionData.term,
+                        total: videos.length,
+                        startedCount,
+                        percentage: videos.length ? Math.round(startedCount / videos.length * 100) : 0,
+                        latestLesson
+                    };
+                }));
+
+                if (!currentUserData || currentUserData.uid !== user.uid) return;
+
+                container.innerHTML = progressItems.map(item => {
+                    const courseUrl = `content.html?course=${item.courseId}&grade=${encodeURIComponent(item.grade)}&term=${encodeURIComponent(item.term)}`;
+                    const targetUrl = item.latestLesson ? `${courseUrl}&resume=1` : courseUrl;
+                    const lessonLabel = item.latestLesson
+                        ? `آخر درس: ${escapeHtml(item.latestLesson.title || 'فيديو المادة')}`
+                        : item.total ? 'ابدأ أول درس في المادة' : 'لا توجد فيديوهات مضافة لهذه المادة بعد';
+                    const buttonLabel = item.latestLesson ? 'استكمل المشاهدة' : 'افتح المادة';
+                    const buttonIcon = item.latestLesson ? 'fa-play' : 'fa-arrow-left';
+
+                    return `
+                        <article class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <h4 class="font-bold text-sm text-slate-800">${item.courseName}</h4>
+                                <span class="text-xs font-extrabold text-emerald-800">${item.percentage}%</span>
+                            </div>
+                            <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-emerald-600 rounded-full transition-all" style="width:${item.percentage}%"></div>
+                            </div>
+                            <div class="flex items-center justify-between gap-2 mt-2">
+                                <p class="text-[11px] text-slate-500">${item.total ? `بدأت ${item.startedCount} من ${item.total} درس` : 'لا توجد دروس بعد'}</p>
+                                <a href="${targetUrl}" class="shrink-0 px-3 py-1.5 rounded-lg bg-emerald-800 text-white text-[11px] font-bold hover:bg-emerald-900 transition">
+                                    <i class="fa-solid ${buttonIcon} ml-1"></i>${buttonLabel}
+                                </a>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-2 truncate">${lessonLabel}</p>
+                        </article>`;
+                }).join('');
+            } catch (error) {
+                console.error('تعذر تحميل تقدم الطالب الدراسي:', error);
+                container.innerHTML = '<p class="text-xs text-rose-600">تعذر تحميل تقدمك الآن. حاول تحديث الصفحة.</p>';
+            }
         }
 
         function subscribeToStudentNotifications(uid) {
