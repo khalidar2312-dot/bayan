@@ -18,7 +18,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
         const firebaseConfig = {
@@ -58,6 +58,7 @@
         window.addDoc = addDoc;
         window.serverTimestamp = serverTimestamp;
         window.orderBy = orderBy;
+        window.runTransaction = runTransaction;
 
         // تهيئة Firebase Messaging
         const firebaseConfigCompat = {
@@ -923,6 +924,7 @@
 
             // إغلاق الـ sidebar على الموبايل
             if (window.innerWidth < 1024) toggleSidebar(false);
+            if (tabName === 'quizzes') loadQuizzes();
             if (tabName === 'performance') loadPerformance();
         }
 
@@ -1295,6 +1297,9 @@
         // إدارة الاختبارات
         // ================================================
 
+        let quizLoadRequestId = 0;
+        let savingQuizQuestion = false;
+
         function getQuizKey() {
             const course = document.getElementById('quizCourse').value;
             const grade = document.getElementById('quizGrade').value;
@@ -1303,8 +1308,10 @@
         }
 
         async function loadQuizzes() {
+            const requestId = ++quizLoadRequestId;
             const key = getQuizKey();
-            const label = `${document.getElementById('quizCourse').options[document.getElementById('quizCourse').selectedIndex].text} — ${document.getElementById('quizGrade').value} — ${document.getElementById('quizTerm').value}`;
+            const courseSelect = document.getElementById('quizCourse');
+            const label = `${courseSelect.options[courseSelect.selectedIndex].text} — ${document.getElementById('quizGrade').value} — ${document.getElementById('quizTerm').value}`;
             document.getElementById('quizLabel').innerText = label;
 
             const container = document.getElementById('quizQuestionsList');
@@ -1312,6 +1319,8 @@
 
             try {
                 const docSnap = await window.getDoc(window.doc(window.db, 'quizzes', key));
+                if (requestId !== quizLoadRequestId) return;
+
                 if (!docSnap.exists() || !(docSnap.data().questions || []).length) {
                     container.innerHTML = '<div class="text-center text-slate-400 py-3">لا توجد أسئلة بعد</div>';
                     return;
@@ -1337,11 +1346,15 @@
                     </div>`).join('');
             } catch(e) {
                 console.error(e);
-                container.innerHTML = '<div class="text-center text-red-400 py-3">حدث خطأ في التحميل</div>';
+                if (requestId === quizLoadRequestId) {
+                    container.innerHTML = '<div class="text-center text-red-400 py-3">تعذر تحميل الأسئلة. تحقق من اتصال Firestore والصلاحيات.</div>';
+                }
             }
         }
 
         async function addQuizQuestion() {
+            if (savingQuizQuestion) return;
+
             const question = document.getElementById('quizQuestion').value.trim();
             const opt1 = document.getElementById('quizOpt1').value.trim();
             const opt2 = document.getElementById('quizOpt2').value.trim();
@@ -1354,23 +1367,34 @@
             }
 
             const key = getQuizKey();
+            const addButton = document.querySelector('#tab-quizzes button[onclick="addQuizQuestion()"]');
+            savingQuizQuestion = true;
+            if (addButton) addButton.disabled = true;
+
             try {
                 const docRef = window.doc(window.db, 'quizzes', key);
-                const docSnap = await window.getDoc(docRef);
-                const questions = docSnap.exists() ? (docSnap.data().questions || []) : [];
-
-                questions.push({ question, options: [opt1, opt2, opt3, opt4], correct });
-                await window.setDoc(docRef, { questions }, { merge: true });
+                await window.runTransaction(window.db, async transaction => {
+                    const docSnap = await transaction.get(docRef);
+                    const questions = docSnap.exists() && Array.isArray(docSnap.data().questions)
+                        ? docSnap.data().questions
+                        : [];
+                    transaction.set(docRef, {
+                        questions: [...questions, { question, options: [opt1, opt2, opt3, opt4], correct }]
+                    }, { merge: true });
+                });
 
                 // تنظيف الحقول
                 ['quizQuestion','quizOpt1','quizOpt2','quizOpt3','quizOpt4'].forEach(id => document.getElementById(id).value = '');
                 document.getElementById('quizCorrect').value = '0';
 
                 showToast('✅ تم إضافة السؤال بنجاح');
-                loadQuizzes();
+                await loadQuizzes();
             } catch(e) {
                 console.error(e);
                 alert('حدث خطأ: ' + e.message);
+            } finally {
+                savingQuizQuestion = false;
+                if (addButton) addButton.disabled = false;
             }
         }
 
@@ -1379,13 +1403,24 @@
             const key = getQuizKey();
             try {
                 const docRef = window.doc(window.db, 'quizzes', key);
-                const docSnap = await window.getDoc(docRef);
-                const questions = docSnap.data().questions || [];
-                questions.splice(index, 1);
-                await window.updateDoc(docRef, { questions });
+                await window.runTransaction(window.db, async transaction => {
+                    const docSnap = await transaction.get(docRef);
+                    if (!docSnap.exists() || !Array.isArray(docSnap.data().questions)) {
+                        throw new Error('لم يتم العثور على قائمة الأسئلة لهذا الاختبار.');
+                    }
+                    const questions = [...docSnap.data().questions];
+                    if (index < 0 || index >= questions.length) {
+                        throw new Error('تغيرت قائمة الأسئلة. حدّث القائمة ثم حاول مرة أخرى.');
+                    }
+                    questions.splice(index, 1);
+                    transaction.set(docRef, { questions }, { merge: true });
+                });
                 showToast('تم حذف السؤال');
-                loadQuizzes();
-            } catch(e) { console.error(e); }
+                await loadQuizzes();
+            } catch(e) {
+                console.error(e);
+                alert('تعذر حذف السؤال: ' + e.message);
+            }
         }
 
         // ================================================
