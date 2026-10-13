@@ -17,6 +17,7 @@
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
@@ -31,9 +32,18 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const adminAuth = getAuth(app);
 
         // جعل الدوال متاحة عالمياً في النطاق العام (window) لكي تعمل مع أحداث HTML
         window.db = db;
+        window.adminAuth = adminAuth;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.sendPasswordResetEmail = sendPasswordResetEmail;
+        window.signOut = signOut;
+        window.EmailAuthProvider = EmailAuthProvider;
+        window.reauthenticateWithCredential = reauthenticateWithCredential;
+        window.updatePassword = updatePassword;
         window.collection = collection;
         window.getDocs = getDocs;
         window.getDoc = getDoc;
@@ -65,13 +75,13 @@
         window.ADMIN_AUTH_UID = "C7zCQWk4AWQlzhLoiTNJbGcvzU73";
 
         document.addEventListener("DOMContentLoaded", function() {
-            firebase.auth().onAuthStateChanged(function(user) {
+            window.onAuthStateChanged(window.adminAuth, function(user) {
                 const isAuthorizedAdmin = user && user.uid === window.ADMIN_AUTH_UID;
                 document.getElementById('loginScreen').classList.toggle('hidden', Boolean(isAuthorizedAdmin));
                 document.getElementById('adminDashboardContent').classList.toggle('hidden', !isAuthorizedAdmin);
 
                 if (!isAuthorizedAdmin) {
-                    if (user) firebase.auth().signOut().catch(error => console.error('تعذر إنهاء جلسة حساب غير مصرح به:', error));
+                    if (user) window.signOut(window.adminAuth).catch(error => console.error('تعذر إنهاء جلسة حساب غير مصرح به:', error));
                     localStorage.removeItem('isAdminLoggedIn');
                     localStorage.removeItem('currentLoggedInRole');
                     localStorage.removeItem('currentLoggedInName');
@@ -940,16 +950,16 @@
                 return;
             }
 
-            const user = firebase.auth().currentUser;
+            const user = window.adminAuth.currentUser;
             if (!user || user.uid !== window.ADMIN_AUTH_UID || !user.email) {
                 alert('يجب تسجيل الدخول بحساب الإدارة في Firebase لتغيير كلمة المرور.');
                 return;
             }
 
             try {
-                const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentInput);
-                await user.reauthenticateWithCredential(credential);
-                await user.updatePassword(newInput);
+                const credential = window.EmailAuthProvider.credential(user.email, currentInput);
+                await window.reauthenticateWithCredential(user, credential);
+                await window.updatePassword(user, newInput);
                 showToast('تم تغيير كلمة مرور حساب الإدارة بنجاح!');
             } catch (error) {
                 console.error('تعذر تغيير كلمة مرور الإدارة:', error);
@@ -971,15 +981,17 @@
             const password = document.getElementById('loginPass').value;
 
             try {
-                const credential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                const credential = await window.signInWithEmailAndPassword(window.adminAuth, email, password);
                 if (credential.user.uid !== window.ADMIN_AUTH_UID) {
-                    await firebase.auth().signOut();
+                    await window.signOut(window.adminAuth);
                     alert('هذا الحساب غير مصرح له بدخول لوحة الإدارة.');
                 }
             } catch (error) {
                 console.error('تعذر تسجيل دخول الإدارة:', error);
                 const messages = {
                     'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+                    'auth/user-not-found': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+                    'auth/wrong-password': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
                     'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
                     'auth/too-many-requests': 'تم إيقاف المحاولات مؤقتًا. حاول مرة أخرى لاحقًا.',
                     'auth/network-request-failed': 'تعذر الاتصال. تحقق من الإنترنت ثم حاول مرة أخرى.'
@@ -1047,7 +1059,7 @@
 
         async function logoutAdmin() {
             try {
-                await firebase.auth().signOut();
+                await window.signOut(window.adminAuth);
             } catch (error) {
                 console.error('تعذر تسجيل الخروج:', error);
                 alert(`تعذر تسجيل الخروج: ${error.message}`);
@@ -2230,7 +2242,7 @@
             if (!confirm(`هل تريد إرسال رابط إعادة تعيين كلمة المرور إلى:\n${email}؟`)) return;
 
             try {
-                await firebase.auth().sendPasswordResetEmail(email);
+                await window.sendPasswordResetEmail(window.adminAuth, email);
                 showToast(`✅ تم إرسال رابط إعادة كلمة المرور إلى ${email}`);
                 alert(`✅ تم إرسال الرابط إلى ${email}\n\nتنبيه للطالب:\nلو مش لاقي الإيميل في الـ Inbox، يفتح مجلد Spam/جنك ويدور على إيميل من:\nnoreply@bayan2312.firebaseapp.com`);
             } catch (error) {
