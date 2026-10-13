@@ -81,7 +81,6 @@
                 document.getElementById('adminDashboardContent').classList.toggle('hidden', !isAuthorizedAdmin);
 
                 if (!isAuthorizedAdmin) {
-                    if (user) window.signOut(window.adminAuth).catch(error => console.error('تعذر إنهاء جلسة حساب غير مصرح به:', error));
                     localStorage.removeItem('isAdminLoggedIn');
                     localStorage.removeItem('currentLoggedInRole');
                     localStorage.removeItem('currentLoggedInName');
@@ -985,7 +984,6 @@
             try {
                 const credential = await window.signInWithEmailAndPassword(window.adminAuth, email, password);
                 if (credential.user.uid !== window.ADMIN_AUTH_UID) {
-                    await window.signOut(window.adminAuth);
                     alert('هذا الحساب غير مصرح له بدخول لوحة الإدارة.');
                 }
             } catch (error) {
