@@ -1186,7 +1186,14 @@
                     ? contentSnapshot.data().videos.length
                     : 0;
 
-                const rows = await Promise.all(studentsSnapshot.docs.map(async studentDoc => {
+                const getTimestampMillis = value => {
+                    if (!value) return 0;
+                    if (typeof value.toMillis === 'function') return value.toMillis();
+                    if (typeof value.seconds === 'number') return value.seconds * 1000;
+                    return Date.parse(value) || 0;
+                };
+
+                const rows = studentsSnapshot.docs.map(studentDoc => {
                     const student = studentDoc.data();
                     const subscriptions = student.subscriptions || {};
                     if (subscriptions[course] !== 'approved') return null;
@@ -1195,15 +1202,15 @@
                     if (subscriptionData.grade && subscriptionData.grade !== grade) return null;
                     if (subscriptionData.term && subscriptionData.term !== term) return null;
 
-                    const progressSnapshot = await window.getDoc(
-                        window.doc(window.db, 'students', studentDoc.id, 'course_progress', contentKey)
-                    );
-                    const progress = progressSnapshot.exists() ? progressSnapshot.data() : {};
+                    const allProgress = student.courseProgress && typeof student.courseProgress === 'object'
+                        ? student.courseProgress
+                        : {};
+                    const progress = allProgress[contentKey] || {};
                     const attendance = progress.attendance && typeof progress.attendance === 'object' ? progress.attendance : {};
                     const attendedCount = Object.keys(attendance).length;
                     const percentage = lessonCount ? Math.min(100, Math.round(attendedCount / lessonCount * 100)) : 0;
                     const latestLesson = Object.values(attendance)
-                        .sort((a, b) => (b.lastOpenedAt?.seconds || 0) - (a.lastOpenedAt?.seconds || 0))[0];
+                        .sort((a, b) => getTimestampMillis(b.lastOpenedAt) - getTimestampMillis(a.lastOpenedAt))[0];
                     const latestAttempt = Array.isArray(progress.quizAttempts) && progress.quizAttempts.length
                         ? progress.quizAttempts[progress.quizAttempts.length - 1]
                         : null;
@@ -1216,12 +1223,10 @@
                         latestLesson: latestLesson?.title || 'لم يفتح درسًا بعد',
                         score: latestAttempt ? `${latestAttempt.score}/${latestAttempt.total} (${latestAttempt.percentage}%)` : 'لا توجد محاولة',
                         attemptDate: latestAttempt?.submittedAt
-                            ? new Date(latestAttempt.submittedAt.seconds
-                                ? latestAttempt.submittedAt.seconds * 1000
-                                : latestAttempt.submittedAt).toLocaleString('ar-EG')
+                            ? new Date(getTimestampMillis(latestAttempt.submittedAt)).toLocaleString('ar-EG')
                             : '-'
                     };
-                }));
+                });
 
                 const enrolledStudents = rows.filter(Boolean);
                 if (!enrolledStudents.length) {
