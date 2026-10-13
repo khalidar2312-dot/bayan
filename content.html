@@ -91,8 +91,8 @@
         <!-- المحتوى الفعلي -->
         <div id="contentState" class="hidden">
 
-            <!-- tabs الفيديو والملفات والاختبار -->
-            <div class="flex items-center gap-3 mb-6 flex-wrap">
+            <!-- tabs الفيديو والملفات -->
+            <div class="flex items-center gap-3 mb-6">
                 <button onclick="switchTab('videos')" id="tabVideos"
                     class="px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm">
                     <i class="fa-solid fa-play-circle ml-1"></i> الفيديوهات
@@ -101,11 +101,6 @@
                     class="px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500">
                     <i class="fa-solid fa-file-pdf ml-1"></i> الملفات
                 </button>
-                <button onclick="switchTab('quiz')" id="tabQuiz"
-                    class="px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500">
-                    <i class="fa-solid fa-pen-to-square ml-1"></i> الاختبار
-                </button>
-                <span id="progressStatus" class="text-xs text-slate-400 mr-auto" aria-live="polite"></span>
             </div>
 
             <!-- قسم الفيديوهات -->
@@ -124,28 +119,6 @@
                     <div class="text-center py-12 text-slate-400 col-span-3">
                         <i class="fa-solid fa-folder-open text-3xl mb-3 block opacity-40"></i>
                         <p class="text-sm">لا توجد ملفات متاحة حالياً</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- قسم الاختبار -->
-            <div id="quizSection" class="hidden">
-                <!-- لو الطالب حل الاختبار قبل كده -->
-                <div id="quizResult" class="hidden text-center bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-                    <div id="quizResultIcon" class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4"></div>
-                    <h3 id="quizResultTitle" class="text-xl font-extrabold font-kufi text-slate-800 mb-2"></h3>
-                    <p id="quizResultScore" class="text-3xl font-black text-emerald-800 mb-1"></p>
-                    <p id="quizResultPercent" class="text-sm text-slate-400 mb-6"></p>
-                    <button onclick="retakeQuiz()" class="px-6 py-2.5 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition">
-                        <i class="fa-solid fa-rotate-right ml-1"></i> إعادة الاختبار
-                    </button>
-                </div>
-
-                <!-- الاختبار -->
-                <div id="quizContainer">
-                    <div class="text-center py-12 text-slate-400">
-                        <i class="fa-solid fa-pen-to-square text-3xl mb-3 block opacity-40"></i>
-                        <p class="text-sm">لا يوجد اختبار متاح حالياً</p>
                     </div>
                 </div>
             </div>
@@ -176,13 +149,6 @@
 
     <script>
 
-        let currentStudentId = null;
-        let courseVideos = [];
-        let courseFiles = [];
-        let completedCourseItems = new Set();
-        let currentQuizQuestions = [];
-        let savingCourseProgress = false;
-
         const courseNames = {
             'fiqh': 'الفقه الميسر',
             'tafseer': 'علم التفسير',
@@ -212,7 +178,6 @@
                 }
 
                 document.getElementById('headerStudentName').innerText = firebaseUser.displayName || 'طالب';
-                currentStudentId = firebaseUser.uid;
 
                 try {
                     const studentDoc = await db.collection('students').doc(firebaseUser.uid).get();
@@ -234,10 +199,6 @@
 
                     // تحميل المحتوى
                     showContent();
-                    loadQuiz().catch(error => {
-                        console.error('خطأ غير متوقع أثناء تحميل الاختبار:', error);
-                        showQuizLoadError(error);
-                    });
                     loadContent();
 
                 } catch (error) {
@@ -258,51 +219,30 @@
         }
 
         async function loadContent() {
-            let loadWarning = '';
-
             try {
                 const contentDoc = await db.collection('course_content').doc(contentKey).get();
-                const data = contentDoc.exists ? contentDoc.data() : {};
-                courseVideos = Array.isArray(data.videos) ? data.videos : [];
-                courseFiles = Array.isArray(data.files) ? data.files : [];
-            } catch (error) {
-                console.error('تعذر تحميل محتوى الدورة:', error);
-                courseVideos = [];
-                courseFiles = [];
-                loadWarning = 'تعذر تحميل محتوى الدورة.';
-            }
 
-            try {
-                const progressDoc = await db.collection('course_progress')
-                    .doc(`${currentStudentId}__${contentKey}`).get();
-                const savedItems = progressDoc.exists ? progressDoc.data().completedItems : [];
-                completedCourseItems = new Set((Array.isArray(savedItems) ? savedItems : []).filter(item => {
-                    if (typeof item !== 'string') return false;
-                    const [type, rawIndex] = item.split(':');
-                    const index = Number(rawIndex);
-                    return Number.isInteger(index) && index >= 0 &&
-                        ((type === 'video' && index < courseVideos.length) ||
-                         (type === 'file' && index < courseFiles.length));
-                }));
-            } catch (error) {
-                console.error('تعذر تحميل تقدم الطالب:', error);
-                completedCourseItems = new Set();
-                loadWarning = loadWarning
-                    ? `${loadWarning} تعذر تحميل بيانات التقدم.`
-                    : 'تعذر تحميل بيانات التقدم.';
-            }
+                if (!contentDoc.exists) return;
 
-            renderVideos(courseVideos);
-            renderFiles(courseFiles);
-            updateProgressStatus(loadWarning);
+                const data = contentDoc.data();
+
+                // عرض الفيديوهات
+                if (data.videos && data.videos.length > 0) {
+                    renderVideos(data.videos);
+                }
+
+                // عرض الملفات
+                if (data.files && data.files.length > 0) {
+                    renderFiles(data.files);
+                }
+
+            } catch (error) {
+                console.error('خطأ في تحميل المحتوى:', error);
+            }
         }
 
         function renderVideos(videos) {
             const container = document.getElementById('videosList');
-            if (!videos.length) {
-                container.innerHTML = '<div class="text-center py-12 text-slate-400 col-span-2"><i class="fa-solid fa-video-slash text-3xl mb-3 block opacity-40"></i><p class="text-sm">لا توجد فيديوهات متاحة حالياً</p></div>';
-                return;
-            }
             container.innerHTML = videos.map(function(v, i) {
 
                 const isDrive = v.url && v.url.includes('drive.google.com');
@@ -327,10 +267,6 @@
                         <div class="p-3">
                             <h3 class="font-bold text-slate-800 text-sm">${escapeHtml(v.title)}</h3>
                             ${v.description ? `<p class="text-xs text-slate-400 mt-1">${escapeHtml(v.description)}</p>` : ''}
-                            <button type="button" onclick="event.stopPropagation(); toggleCourseItem('video', ${i})" class="mt-3 px-3 py-1.5 rounded-lg ${completedCourseItems.has(`video:${i}`) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} text-xs font-bold hover:bg-emerald-100 hover:text-emerald-700 transition">
-                                <i class="fa-solid ${completedCourseItems.has(`video:${i}`) ? 'fa-circle-check' : 'fa-circle'} ml-1"></i>
-                                ${completedCourseItems.has(`video:${i}`) ? 'مكتمل' : 'تحديد كمكتمل'}
-                            </button>
                         </div>
                     </div>`;
             }).join('');
@@ -338,10 +274,6 @@
 
         function renderFiles(files) {
             const container = document.getElementById('filesList');
-            if (!files.length) {
-                container.innerHTML = '<div class="text-center py-12 text-slate-400 col-span-3"><i class="fa-solid fa-folder-open text-3xl mb-3 block opacity-40"></i><p class="text-sm">لا توجد ملفات متاحة حالياً</p></div>';
-                return;
-            }
             container.innerHTML = files.map(function(f, i) {
                 const isDrive = f.url && f.url.includes('drive.google.com');
 
@@ -354,256 +286,42 @@
                                     <i class="fa-solid fa-file-pdf text-red-500 text-lg"></i>
                                     <span class="font-bold text-slate-800 text-sm">${escapeHtml(f.title)}</span>
                                 </div>
-                                <a href="${escapeHtml(f.url.replace('/preview', '/view'))}" target="_blank" rel="noopener noreferrer"
+                                <a href="${f.url.replace('/preview', '/view')}" target="_blank"
                                     class="px-3 py-1.5 rounded-xl bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 transition">
                                     <i class="fa-solid fa-external-link-alt ml-1"></i> فتح في تبويب جديد
                                 </a>
-                                <button type="button" onclick="toggleCourseItem('file', ${i})" class="px-3 py-1.5 rounded-xl ${completedCourseItems.has(`file:${i}`) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} text-xs font-bold">
-                                    ${completedCourseItems.has(`file:${i}`) ? 'مكتمل' : 'تحديد كمكتمل'}
-                                </button>
                             </div>
-                            <iframe src="${escapeHtml(f.url)}" class="w-full" style="height: 500px;" frameborder="0" allowfullscreen></iframe>
+                            <iframe src="${f.url}" class="w-full" style="height: 500px;" frameborder="0" allowfullscreen></iframe>
                         </div>`;
                 } else {
                     return `
-                        <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-300 transition">
-                            <a href="${escapeHtml(f.url)}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                                    <i class="fa-solid fa-file text-slate-500"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-bold text-slate-800 text-sm truncate">${escapeHtml(f.title)}</p>
-                                    <p class="text-[11px] text-slate-400 mt-0.5">اضغط للفتح</p>
-                                </div>
-                                <i class="fa-solid fa-external-link-alt text-emerald-700 text-sm flex-shrink-0"></i>
-                            </a>
-                            <button type="button" onclick="toggleCourseItem('file', ${i})" class="mt-3 px-3 py-1.5 rounded-lg ${completedCourseItems.has(`file:${i}`) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} text-xs font-bold hover:bg-emerald-100 hover:text-emerald-700 transition">
-                                <i class="fa-solid ${completedCourseItems.has(`file:${i}`) ? 'fa-circle-check' : 'fa-circle'} ml-1"></i>
-                                ${completedCourseItems.has(`file:${i}`) ? 'مكتمل' : 'تحديد كمكتمل'}
-                            </button>
-                        </div>`;
+                        <a href="${f.url}" target="_blank"
+                            class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-300 transition flex items-center gap-3">
+                            <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                                <i class="fa-solid fa-file text-slate-500"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-slate-800 text-sm truncate">${escapeHtml(f.title)}</p>
+                                <p class="text-[11px] text-slate-400 mt-0.5">اضغط للفتح</p>
+                            </div>
+                            <i class="fa-solid fa-external-link-alt text-emerald-700 text-sm flex-shrink-0"></i>
+                        </a>`;
                 }
             }).join('');
         }
 
-        async function toggleCourseItem(type, index) {
-            if (!currentStudentId || savingCourseProgress) return;
-            const itemId = `${type}:${index}`;
-            if ((type === 'video' && index >= courseVideos.length) ||
-                (type === 'file' && index >= courseFiles.length)) return;
-
-            savingCourseProgress = true;
-            const wasCompleted = completedCourseItems.has(itemId);
-            if (wasCompleted) completedCourseItems.delete(itemId);
-            else completedCourseItems.add(itemId);
-
-            renderVideos(courseVideos);
-            renderFiles(courseFiles);
-            updateProgressStatus('جارٍ حفظ تقدمك...');
-
-            try {
-                await db.collection('course_progress').doc(`${currentStudentId}__${contentKey}`).set({
-                    studentId: currentStudentId,
-                    courseId: courseId,
-                    grade: grade,
-                    term: term,
-                    completedItems: Array.from(completedCourseItems),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-                updateProgressStatus();
-            } catch (error) {
-                console.error('تعذر حفظ تقدم الطالب:', error);
-                if (wasCompleted) completedCourseItems.add(itemId);
-                else completedCourseItems.delete(itemId);
-                renderVideos(courseVideos);
-                renderFiles(courseFiles);
-                updateProgressStatus('تعذر حفظ تقدمك. تحقق من الاتصال ثم أعد المحاولة.');
-            } finally {
-                savingCourseProgress = false;
-            }
-        }
-
-        function updateProgressStatus(message) {
-            const total = courseVideos.length + courseFiles.length;
-            const completed = completedCourseItems.size;
-            const status = document.getElementById('progressStatus');
-            status.innerText = message || (total
-                ? `إكمال المحتوى: ${completed} من ${total}`
-                : 'لا يوجد محتوى لقياس التقدم بعد');
-            status.classList.toggle('text-red-500', Boolean(message && message.startsWith('تعذر')));
-        }
-
-        function withTimeout(promise, timeoutMs, message) {
-            let timeoutId;
-            const timeout = new Promise((_, reject) => {
-                timeoutId = window.setTimeout(() => {
-                    const error = new Error(message);
-                    error.code = 'timeout';
-                    reject(error);
-                }, timeoutMs);
-            });
-
-            return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
-        }
-
-        function showQuizLoadError(error) {
-            const code = error && error.code ? error.code : 'unknown';
-            document.getElementById('quizContainer').innerHTML = `
-                <div class="text-center py-8 text-red-500">
-                    <p>تعذر تحميل الاختبار (${escapeHtml(code)}).</p>
-                    <button type="button" onclick="loadQuiz()" class="mt-3 px-4 py-2 rounded-lg bg-emerald-800 text-white font-bold text-sm">
-                        إعادة المحاولة
-                    </button>
-                </div>`;
-        }
-
-        async function loadQuiz() {
-            const container = document.getElementById('quizContainer');
-            const result = document.getElementById('quizResult');
-            container.innerHTML = '<div class="text-center py-12 text-slate-400">جاري تحميل الاختبار...</div>';
-            result.classList.add('hidden');
-            container.classList.remove('hidden');
-
-            let quizDoc;
-            try {
-                quizDoc = await withTimeout(
-                    db.collection('quizzes').doc(contentKey).get(),
-                    12000,
-                    'لم ترد قاعدة البيانات في الوقت المحدد عند تحميل الأسئلة.'
-                );
-            } catch (error) {
-                console.error('تعذر قراءة أسئلة الاختبار من quizzes:', error);
-                showQuizLoadError(error);
-                return;
-            }
-
-            currentQuizQuestions = quizDoc.exists && Array.isArray(quizDoc.data().questions)
-                ? quizDoc.data().questions
-                : [];
-            if (!currentQuizQuestions.length) {
-                container.innerHTML = '<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-pen-to-square text-3xl mb-3 block opacity-40"></i><p class="text-sm">لا يوجد اختبار متاح حالياً لهذه المادة والصف والفصل الدراسي</p></div>';
-                return;
-            }
-
-            renderQuizQuestions('جاري التحقق من وجود نتيجة سابقة...', true);
-
-            try {
-                const resultDoc = await withTimeout(
-                    db.collection('quiz_results').doc(`${currentStudentId}__${contentKey}`).get(),
-                    8000,
-                    'لم ترد قاعدة البيانات في الوقت المحدد عند التحقق من النتيجة السابقة.'
-                );
-                if (resultDoc.exists) {
-                    const savedResult = resultDoc.data();
-                    showQuizResult(savedResult.score, savedResult.total, savedResult.submittedAt);
-                    return;
-                }
-                renderQuizQuestions();
-            } catch (error) {
-                console.error('تعذر قراءة نتيجة الاختبار من quiz_results:', error);
-                renderQuizQuestions(`تعذر التحقق من وجود نتيجة سابقة (${escapeHtml(error.code || 'خطأ غير معروف')}). يمكنك حل الاختبار، لكن قد تحتاج صلاحيات Firestore إلى مراجعة قبل حفظ النتيجة.`);
-            }
-        }
-
-        function renderQuizQuestions(warningMessage = '', disableSubmission = false) {
-            const letters = ['أ', 'ب', 'ج', 'د'];
-            document.getElementById('quizContainer').innerHTML = `
-                <form onsubmit="submitQuiz(event)" class="space-y-5">
-                    ${warningMessage ? `<p class="rounded-xl border ${disableSubmission ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-amber-200 bg-amber-50 text-amber-800'} px-4 py-3 text-sm">${warningMessage}</p>` : ''}
-                    ${currentQuizQuestions.map((question, index) => `
-                        <section aria-labelledby="quiz-question-${index}" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-                            <div class="mb-4 flex items-start gap-3 border-b border-slate-100 pb-4">
-                                <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-sm font-extrabold text-emerald-800">${index + 1}</span>
-                                <div class="min-w-0 flex-1">
-                                    <h3 id="quiz-question-${index}" class="break-words text-base font-extrabold leading-8 text-slate-800">${escapeHtml(question.question)}</h3>
-                                    <p class="mt-1 text-xs text-slate-400">اختر إجابة واحدة</p>
-                                </div>
-                            </div>
-                            <fieldset class="space-y-2.5">
-                                <legend class="sr-only">إجابات السؤال ${index + 1}</legend>
-                                ${(Array.isArray(question.options) ? question.options : []).map((option, optionIndex) => `
-                                    <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3 transition hover:border-emerald-300 hover:bg-emerald-50/70 sm:px-4">
-                                        <input type="radio" name="answer-${index}" value="${optionIndex}" required class="h-4 w-4 flex-shrink-0 accent-emerald-700" ${disableSubmission ? 'disabled' : ''}>
-                                        <span class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-white text-xs font-bold text-emerald-800 shadow-sm">${letters[optionIndex] || ''}</span>
-                                        <span class="min-w-0 flex-1 break-words text-sm leading-7 text-slate-700">${escapeHtml(option)}</span>
-                                    </label>`).join('')}
-                            </fieldset>
-                        </section>`).join('')}
-                    <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:gap-4">
-                        <p id="quizSubmitMessage" class="mb-3 text-sm text-red-500 sm:mb-0" aria-live="polite"></p>
-                        <button type="submit" ${disableSubmission ? 'disabled' : ''} class="w-full rounded-xl bg-emerald-800 px-6 py-3 font-bold text-white transition hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-60 sm:w-auto">
-                            <i class="fa-solid fa-paper-plane ml-1"></i> إرسال الإجابات
-                        </button>
-                    </div>
-                </form>`;
-        }
-
-        async function submitQuiz(event) {
-            event.preventDefault();
-            const form = event.currentTarget;
-            if (!form.reportValidity()) return;
-
-            const answers = currentQuizQuestions.map((_, index) =>
-                Number(form.querySelector(`input[name="answer-${index}"]:checked`).value)
-            );
-            const score = currentQuizQuestions.reduce((sum, question, index) =>
-                sum + (Number(question.correct) === answers[index] ? 1 : 0), 0);
-            const total = currentQuizQuestions.length;
-
-            try {
-                await db.collection('quiz_results').doc(`${currentStudentId}__${contentKey}`).set({
-                    studentId: currentStudentId,
-                    courseId: courseId,
-                    grade: grade,
-                    term: term,
-                    score: score,
-                    total: total,
-                    submittedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                showQuizResult(score, total);
-            } catch (error) {
-                console.error('تعذر حفظ نتيجة الاختبار:', error);
-                document.getElementById('quizSubmitMessage').innerText = 'تعذر حفظ النتيجة. تحقق من الاتصال ثم أعد الإرسال.';
-            }
-        }
-
-        function showQuizResult(score, total, submittedAt) {
-            const percentage = total > 0 ? Math.round((Number(score) / Number(total)) * 100) : 0;
-            document.getElementById('quizResultIcon').className = `w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 ${percentage >= 50 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-600'}`;
-            document.getElementById('quizResultIcon').innerHTML = `<i class="fa-solid ${percentage >= 50 ? 'fa-trophy' : 'fa-book-open'}"></i>`;
-            document.getElementById('quizResultTitle').innerText = percentage >= 85
-                ? 'ممتاز! أحسنت'
-                : percentage >= 50 ? 'أحسنت، واصل التقدم' : 'حاول مرة أخرى وراجع المحتوى';
-            document.getElementById('quizResultScore').innerText = `${score} / ${total}`;
-            document.getElementById('quizResultPercent').innerText = `درجتك ${percentage}%${submittedAt ? ` — آخر محاولة: ${formatQuizDate(submittedAt)}` : ''}`;
-            document.getElementById('quizResult').classList.remove('hidden');
-            document.getElementById('quizContainer').classList.add('hidden');
-        }
-
-        function formatQuizDate(value) {
-            const date = typeof value.toDate === 'function' ? value.toDate() : new Date(value);
-            return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('ar-EG');
-        }
-
-        function retakeQuiz() {
-            document.getElementById('quizResult').classList.add('hidden');
-            document.getElementById('quizContainer').classList.remove('hidden');
-            renderQuizQuestions();
-        }
-
         function switchTab(tab) {
-            const tabs = {
-                videos: ['videosSection', 'tabVideos'],
-                files: ['filesSection', 'tabFiles'],
-                quiz: ['quizSection', 'tabQuiz']
-            };
-            Object.entries(tabs).forEach(([name, [sectionId, buttonId]]) => {
-                const active = name === tab;
-                document.getElementById(sectionId).classList.toggle('hidden', !active);
-                document.getElementById(buttonId).className = active
-                    ? 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm'
-                    : 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500';
-            });
+            if (tab === 'videos') {
+                document.getElementById('videosSection').classList.remove('hidden');
+                document.getElementById('filesSection').classList.add('hidden');
+                document.getElementById('tabVideos').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm';
+                document.getElementById('tabFiles').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500';
+            } else {
+                document.getElementById('filesSection').classList.remove('hidden');
+                document.getElementById('videosSection').classList.add('hidden');
+                document.getElementById('tabFiles').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm';
+                document.getElementById('tabVideos').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500';
+            }
         }
 
         function openVideo(url, title, isDrive) {
