@@ -848,6 +848,20 @@
 
             </h3>
 
+            <div class="mb-3 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <p id="notificationCount" class="text-xs text-slate-400"></p>
+                <button
+                    id="clearNotificationsButton"
+                    type="button"
+                    onclick="clearStudentNotifications()"
+                    class="hidden rounded-lg px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50">
+                    <i class="fa-solid fa-trash ml-1"></i>
+                    حذف الكل
+                </button>
+            </div>
+
+            <p id="notificationActionStatus" class="mb-3 hidden text-xs" role="status" aria-live="polite"></p>
+
             <div
                 id="notificationsList"
                 class="space-y-3 max-h-80 overflow-y-auto pr-1">
@@ -1849,49 +1863,35 @@
 
             if (!list || !badge) return;
 
-            let notifications =
+            const rawNotifications =
                 Array.isArray(user.notifications)
                     ? user.notifications
                     : [];
 
 
-            // حذف الإشعارات التالفة
-            notifications =
-                notifications.filter(function (n) {
-
-                    return n &&
-                        n.text &&
-                        !String(n.text).includes('undefined');
-
+            const notifications = rawNotifications
+                .map((notification, originalIndex) => ({ notification, originalIndex }))
+                .filter(({ notification }) =>
+                    notification &&
+                    notification.text &&
+                    !String(notification.text).includes('undefined')
+                )
+                .map(item => ({
+                    ...item,
+                    createdAt: getNotificationTimestamp(item.notification, item.originalIndex)
+                }))
+                .sort((first, second) => {
+                    const firstIsAnnouncement = first.notification.type === 'announcement';
+                    const secondIsAnnouncement = second.notification.type === 'announcement';
+                    if (firstIsAnnouncement !== secondIsAnnouncement) return firstIsAnnouncement ? -1 : 1;
+                    return second.createdAt - first.createdAt || second.originalIndex - first.originalIndex;
                 });
-
-            const fallbackCreatedAt = Date.now();
-            notifications = notifications
-                .map((notification, index) => {
-                    const storedCreatedAt = notification.createdAt;
-                    let createdAt = null;
-                    if (typeof storedCreatedAt === 'number' && Number.isFinite(storedCreatedAt)) {
-                        createdAt = storedCreatedAt;
-                    } else if (storedCreatedAt && typeof storedCreatedAt.toDate === 'function') {
-                        createdAt = storedCreatedAt.toDate().getTime();
-                    } else if (storedCreatedAt instanceof Date) {
-                        createdAt = storedCreatedAt.getTime();
-                    }
-                    if (!Number.isFinite(createdAt)) {
-                        createdAt = notification.type === 'announcement'
-                            ? fallbackCreatedAt - index
-                            : Number.MIN_SAFE_INTEGER + notifications.length - index;
-                    }
-                    return { notification, createdAt };
-                })
-                .sort((first, second) => second.createdAt - first.createdAt)
-                .map(item => item.notification);
 
 
             const unreadCount =
-                notifications.filter(function (n) {
+                notifications.filter(function ({ notification }) {
 
-                    return !n.read;
+                    return !notification.read;
 
                 }).length;
 
@@ -1909,6 +1909,11 @@
             }
 
 
+            const count = document.getElementById('notificationCount');
+            const clearButton = document.getElementById('clearNotificationsButton');
+            if (count) count.innerText = `${notifications.length} إشعار`;
+            if (clearButton) clearButton.classList.toggle('hidden', notifications.length === 0);
+
             if (notifications.length === 0) {
 
                 list.innerHTML =
@@ -1922,25 +1927,141 @@
 
 
             list.innerHTML =
-                notifications.map(function (n) {
+                notifications.map(function ({ notification: n, originalIndex }) {
 
                     return `
-                        <div class="p-3 rounded-2xl ${n.read ? 'bg-slate-50 border-slate-100' : 'bg-emerald-50 border-emerald-200'} border text-xs space-y-1">
-
-                            ${n.title ? `<p class="font-extrabold text-slate-800">${escapeHtml(n.title)}</p>` : ''}
-                            <p class="${n.title ? 'text-slate-600' : 'font-bold text-slate-800'}">
-                                ${escapeHtml(n.text)}
-                            </p>
-
-                            <span class="text-[10px] text-slate-400 block">
-                                ${escapeHtml(n.date || '')}
-                            </span>
-
+                        <article class="rounded-2xl ${n.read ? 'bg-slate-50 border-slate-100' : 'bg-emerald-50 border-emerald-200'} border p-3 text-xs">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0 flex-1 space-y-1">
+                                    ${n.title ? `<p class="font-extrabold text-slate-800">${escapeHtml(n.title)}</p>` : ''}
+                                    <p class="${n.title ? 'text-slate-600' : 'font-bold text-slate-800'} break-words">
+                                        ${escapeHtml(n.text)}
+                                    </p>
+                                    <span class="block text-[10px] text-slate-400">
+                                        ${escapeHtml(n.date || '')}
+                                    </span>
+                                </div>
+                                <button type="button" onclick="deleteStudentNotification(${originalIndex})"
+                                    class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-100 hover:text-red-600"
+                                    aria-label="حذف هذا الإشعار" title="حذف الإشعار">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
 
                 }).join('');
 
+        }
+
+        function getNotificationTimestamp(notification, fallbackIndex) {
+            const storedCreatedAt = notification.createdAt;
+            let timestamp = null;
+
+            if (typeof storedCreatedAt === 'number' && Number.isFinite(storedCreatedAt)) {
+                timestamp = storedCreatedAt;
+            } else if (storedCreatedAt && typeof storedCreatedAt.toDate === 'function') {
+                timestamp = storedCreatedAt.toDate().getTime();
+            } else if (storedCreatedAt instanceof Date) {
+                timestamp = storedCreatedAt.getTime();
+            } else if (typeof storedCreatedAt === 'string') {
+                const parsedDate = new Date(storedCreatedAt);
+                if (!Number.isNaN(parsedDate.getTime())) timestamp = parsedDate.getTime();
+            }
+
+            if (Number.isFinite(timestamp)) return timestamp;
+
+            const idTimestamp = Number(String(notification.id || '').split('-')[0]);
+            if (Number.isFinite(idTimestamp) && idTimestamp > 0) return idTimestamp;
+
+            return notification.type === 'announcement'
+                ? Number.MAX_SAFE_INTEGER - fallbackIndex
+                : Number.MIN_SAFE_INTEGER + fallbackIndex;
+        }
+
+        function showNotificationActionStatus(message, isError = false) {
+            const status = document.getElementById('notificationActionStatus');
+            status.innerText = message;
+            status.className = `mb-3 text-xs ${isError ? 'text-red-600' : 'text-emerald-700'}`;
+            status.classList.remove('hidden');
+        }
+
+        function sameNotification(first, second) {
+            if (first.id && second.id) return first.id === second.id;
+            return first.type === second.type &&
+                first.title === second.title &&
+                first.text === second.text &&
+                first.date === second.date;
+        }
+
+        async function deleteStudentNotification(originalIndex) {
+            const activeUser = currentUserData || getActiveUser();
+            if (!activeUser || !activeUser.uid) return;
+
+            const selectedNotification = activeUser.notifications?.[originalIndex];
+            if (!selectedNotification) {
+                showNotificationActionStatus('لم يتم العثور على الإشعار المطلوب حذفه. حدّث الصفحة وحاول مرة أخرى.', true);
+                return;
+            }
+
+            try {
+                const studentRef = db.collection('students').doc(activeUser.uid);
+                const updatedNotifications = await db.runTransaction(async transaction => {
+                    const studentSnapshot = await transaction.get(studentRef);
+                    if (!studentSnapshot.exists) throw new Error('بيانات الطالب غير موجودة.');
+
+                    const notifications = Array.isArray(studentSnapshot.data().notifications)
+                        ? studentSnapshot.data().notifications
+                        : [];
+                    const targetIndex = notifications.findIndex(notification =>
+                        notification && sameNotification(notification, selectedNotification)
+                    );
+                    if (targetIndex === -1) throw new Error('الإشعار لم يعد موجودًا.');
+
+                    const nextNotifications = [...notifications];
+                    nextNotifications.splice(targetIndex, 1);
+                    transaction.update(studentRef, { notifications: nextNotifications });
+                    return nextNotifications;
+                });
+
+                currentUserData = { ...currentUserData, notifications: updatedNotifications };
+                localStorage.setItem('activeUser', JSON.stringify(currentUserData));
+                renderNotifications(currentUserData);
+                document.getElementById('notificationActionStatus').classList.add('hidden');
+            } catch (error) {
+                console.error('تعذر حذف إشعار الطالب:', error);
+                showNotificationActionStatus(`تعذر حذف الإشعار: ${error.message}`, true);
+            }
+        }
+
+        async function clearStudentNotifications() {
+            const activeUser = currentUserData || getActiveUser();
+            if (!activeUser || !activeUser.uid) return;
+            if (!confirm('هل تريد حذف جميع الإشعارات من حسابك؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+
+            const button = document.getElementById('clearNotificationsButton');
+            button.disabled = true;
+            button.classList.add('opacity-50', 'cursor-wait');
+
+            try {
+                const studentRef = db.collection('students').doc(activeUser.uid);
+                await db.runTransaction(async transaction => {
+                    const studentSnapshot = await transaction.get(studentRef);
+                    if (!studentSnapshot.exists) throw new Error('بيانات الطالب غير موجودة.');
+                    transaction.update(studentRef, { notifications: [] });
+                });
+
+                currentUserData = { ...currentUserData, notifications: [] };
+                localStorage.setItem('activeUser', JSON.stringify(currentUserData));
+                renderNotifications(currentUserData);
+                showNotificationActionStatus('تم حذف جميع الإشعارات.');
+            } catch (error) {
+                console.error('تعذر حذف إشعارات الطالب:', error);
+                showNotificationActionStatus(`تعذر حذف الإشعارات: ${error.message}`, true);
+            } finally {
+                button.disabled = false;
+                button.classList.remove('opacity-50', 'cursor-wait');
+            }
         }
 
 
