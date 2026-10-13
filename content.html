@@ -234,6 +234,10 @@
 
                     // تحميل المحتوى
                     showContent();
+                    loadQuiz().catch(error => {
+                        console.error('خطأ غير متوقع أثناء تحميل الاختبار:', error);
+                        showQuizLoadError(error);
+                    });
                     loadContent();
 
                 } catch (error) {
@@ -291,7 +295,6 @@
             renderVideos(courseVideos);
             renderFiles(courseFiles);
             updateProgressStatus(loadWarning);
-            await loadQuiz();
         }
 
         function renderVideos(videos) {
@@ -443,6 +446,17 @@
             return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
         }
 
+        function showQuizLoadError(error) {
+            const code = error && error.code ? error.code : 'unknown';
+            document.getElementById('quizContainer').innerHTML = `
+                <div class="text-center py-8 text-red-500">
+                    <p>تعذر تحميل الاختبار (${escapeHtml(code)}).</p>
+                    <button type="button" onclick="loadQuiz()" class="mt-3 px-4 py-2 rounded-lg bg-emerald-800 text-white font-bold text-sm">
+                        إعادة المحاولة
+                    </button>
+                </div>`;
+        }
+
         async function loadQuiz() {
             const container = document.getElementById('quizContainer');
             const result = document.getElementById('quizResult');
@@ -459,7 +473,7 @@
                 );
             } catch (error) {
                 console.error('تعذر قراءة أسئلة الاختبار من quizzes:', error);
-                container.innerHTML = `<div class="text-center py-8 text-red-500">تعذر تحميل أسئلة الاختبار (${escapeHtml(error.code || 'خطأ غير معروف')}). تحقق من صلاحية قراءة مجموعة quizzes في Firestore.</div>`;
+                showQuizLoadError(error);
                 return;
             }
 
