@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>أكاديمية بيان | المنصة التعليمية للعلوم الشرعية والأزهرية</title>
+    <title>أكاديمية بيان المنصة التعليمية للعلوم الشرعية والأزهرية| </title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -205,40 +205,6 @@
         </div>
     </header>
 
-    <section id="studentDashboard" class="hidden border-b border-emerald-100 bg-gradient-to-b from-emerald-50 to-white py-8 sm:py-10">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <span class="text-xs font-extrabold text-amber-600">مساحتك التعليمية</span>
-                    <h2 id="studentDashboardGreeting" class="mt-1 text-2xl font-extrabold text-emerald-950 font-kufi">أهلاً بك</h2>
-                    <p class="mt-1 text-sm text-slate-500">تابع تقدمك واستكمل التعلم من مكانك.</p>
-                </div>
-                <button type="button" onclick="loadStudentDashboard(currentUserData)" class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50">
-                    <i class="fa-solid fa-rotate"></i>
-                    تحديث البيانات
-                </button>
-            </div>
-
-            <div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                    <p class="text-xs font-semibold text-slate-500">المواد المفعّلة</p>
-                    <p id="dashboardCourseCount" class="mt-1 text-2xl font-black text-emerald-900">—</p>
-                </div>
-                <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                    <p class="text-xs font-semibold text-slate-500">متوسط إكمال المحتوى</p>
-                    <p id="dashboardCompletion" class="mt-1 text-2xl font-black text-emerald-900">—</p>
-                </div>
-                <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                    <p class="text-xs font-semibold text-slate-500">آخر نتيجة اختبار</p>
-                    <p id="dashboardLatestQuiz" class="mt-1 text-lg font-extrabold text-emerald-900">—</p>
-                    <p id="dashboardLatestQuizCourse" class="mt-0.5 text-xs text-slate-400"></p>
-                </div>
-            </div>
-
-            <div id="studentDashboardNotice" role="status" class="mb-4 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"></div>
-            <div id="studentDashboardCourses" class="grid grid-cols-1 gap-4 md:grid-cols-2"></div>
-        </div>
-    </section>
 
     <!-- Hero Section -->
     <section id="hero" class="relative overflow-hidden py-16 bg-islamic-pattern text-white">
@@ -823,7 +789,6 @@
 
     </footer>
 
-    <audio id="studentNotificationSound" src="sound.mp3" preload="auto"></audio>
 
     <!-- Notification Modal -->
     <div
@@ -847,20 +812,6 @@
                 الإشعارات والتنبيهات
 
             </h3>
-
-            <div class="mb-3 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <p id="notificationCount" class="text-xs text-slate-400"></p>
-                <button
-                    id="clearNotificationsButton"
-                    type="button"
-                    onclick="clearStudentNotifications()"
-                    class="hidden rounded-lg px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50">
-                    <i class="fa-solid fa-trash ml-1"></i>
-                    حذف الكل
-                </button>
-            </div>
-
-            <p id="notificationActionStatus" class="mb-3 hidden text-xs" role="status" aria-live="polite"></p>
 
             <div
                 id="notificationsList"
@@ -1369,17 +1320,6 @@
 
         // المستخدم الحالي
         let currentUserData = null;
-        let studentDashboardRequestId = 0;
-        let studentNotificationsUnsubscribe = null;
-        let studentNotificationsUid = null;
-        let knownStudentAnnouncementIds = new Set();
-        let soundedStudentAnnouncementIds = new Set();
-        const studentDashboardCourses = [
-            { id: 'fiqh', name: 'الفقه الميسر', icon: 'fa-scale-balanced' },
-            { id: 'tafseer', name: 'علم التفسير', icon: 'fa-book-quran' },
-            { id: 'hadith', name: 'الحديث الشريف', icon: 'fa-scroll' },
-            { id: 'tawheed', name: 'علم التوحيد', icon: 'fa-hands-praying' }
-        ];
 
 
         // =========================
@@ -1387,6 +1327,7 @@
         // =========================
 
         document.addEventListener("DOMContentLoaded", function () {
+
             // مراقبة حالة تسجيل الدخول من Firebase
             auth.onAuthStateChanged(async function (firebaseUser) {
 
@@ -1420,9 +1361,6 @@
                             );
 
                             localStorage.removeItem('activeUser');
-                            currentUserData = null;
-                            document.getElementById('studentDashboard').classList.add('hidden');
-                            studentDashboardRequestId++;
 
                         }
 
@@ -1435,26 +1373,15 @@
 
                         const cachedUser = getActiveUser();
 
-                        if (cachedUser && cachedUser.uid === firebaseUser.uid) {
+                        if (cachedUser) {
                             currentUserData = cachedUser;
                             showLoggedInUser(cachedUser);
-                        } else {
-                            currentUserData = null;
-                            document.getElementById('studentDashboard').classList.add('hidden');
-                            studentDashboardRequestId++;
                         }
 
                     }
 
                 } else {
 
-                    if (studentNotificationsUnsubscribe) {
-                        studentNotificationsUnsubscribe();
-                        studentNotificationsUnsubscribe = null;
-                    }
-                    studentNotificationsUid = null;
-                    knownStudentAnnouncementIds.clear();
-                    soundedStudentAnnouncementIds.clear();
                     currentUserData = null;
 
                     localStorage.removeItem('activeUser');
@@ -1466,9 +1393,6 @@
                     document
                         .getElementById('userProfileHeader')
                         .classList.add('hidden');
-
-                    document.getElementById('studentDashboard').classList.add('hidden');
-                    studentDashboardRequestId++;
 
                 }
 
@@ -1532,258 +1456,7 @@
             updateCourseButtons(user);
 
             renderNotifications(user);
-            startStudentNotificationsListener(user);
-            loadStudentDashboard(user);
 
-        }
-
-        function startStudentNotificationsListener(user) {
-            if (!user || !user.uid || studentNotificationsUid === user.uid) return;
-
-            if (studentNotificationsUnsubscribe) studentNotificationsUnsubscribe();
-            studentNotificationsUid = user.uid;
-            knownStudentAnnouncementIds = new Set(
-                (Array.isArray(user.notifications) ? user.notifications : [])
-                    .filter(notification => notification && notification.type === 'announcement' && notification.id)
-                    .map(notification => notification.id)
-            );
-
-            studentNotificationsUnsubscribe = db.collection('students').doc(user.uid).onSnapshot(snapshot => {
-                if (!snapshot.exists || !currentUserData || currentUserData.uid !== user.uid) return;
-
-                const data = snapshot.data();
-                const notifications = Array.isArray(data.notifications) ? data.notifications : [];
-                const newAnnouncements = notifications.filter(notification =>
-                    notification &&
-                    notification.type === 'announcement' &&
-                    notification.id &&
-                    !notification.read &&
-                    !knownStudentAnnouncementIds.has(notification.id)
-                );
-
-                notifications.forEach(notification => {
-                    if (notification && notification.type === 'announcement' && notification.id) {
-                        knownStudentAnnouncementIds.add(notification.id);
-                    }
-                });
-
-                currentUserData = { ...currentUserData, notifications };
-                localStorage.setItem('activeUser', JSON.stringify(currentUserData));
-                renderNotifications(currentUserData);
-
-                newAnnouncements.forEach(notification => {
-                    playStudentNotificationSound(notification.id);
-                });
-            }, error => {
-                console.error('تعذر متابعة إشعارات الطالب مباشرة:', error);
-            });
-        }
-
-        async function playStudentNotificationSound(announcementId) {
-            if (announcementId && soundedStudentAnnouncementIds.has(announcementId)) return;
-
-            const sound = document.getElementById('studentNotificationSound');
-            if (!sound) {
-                console.error('عنصر صوت الإشعارات غير موجود في الصفحة.');
-                return;
-            }
-
-            try {
-                sound.currentTime = 0;
-                await sound.play();
-                if (announcementId) soundedStudentAnnouncementIds.add(announcementId);
-            } catch (error) {
-                console.warn('تعذر تشغيل صوت الإعلان. قد يحتاج المتصفح إلى تفاعل من الطالب أولاً:', error);
-            }
-        }
-
-        async function loadStudentDashboard(user) {
-            if (!user || !user.uid) return;
-
-            const dashboard = document.getElementById('studentDashboard');
-            const coursesContainer = document.getElementById('studentDashboardCourses');
-            const notice = document.getElementById('studentDashboardNotice');
-            const requestId = ++studentDashboardRequestId;
-            const subscriptions = user.subscriptions || {};
-            const activeCourses = studentDashboardCourses.filter(course => subscriptions[course.id] === 'approved');
-
-            dashboard.classList.remove('hidden');
-            document.getElementById('studentDashboardGreeting').innerText = `أهلاً ${user.fullName || 'بك'}`;
-            document.getElementById('dashboardCourseCount').innerText = activeCourses.length;
-            document.getElementById('dashboardCompletion').innerText = 'جارٍ الحساب...';
-            document.getElementById('dashboardLatestQuiz').innerText = 'جارٍ التحميل...';
-            document.getElementById('dashboardLatestQuizCourse').innerText = '';
-            notice.classList.add('hidden');
-
-            if (!activeCourses.length) {
-                document.getElementById('dashboardCompletion').innerText = '—';
-                document.getElementById('dashboardLatestQuiz').innerText = 'لا توجد نتائج بعد';
-                coursesContainer.innerHTML = `
-                    <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm md:col-span-2">
-                        <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-xl text-emerald-800"><i class="fa-solid fa-book-open"></i></div>
-                        <h3 class="font-bold text-slate-800">ابدأ رحلتك التعليمية</h3>
-                        <p class="mt-1 text-sm text-slate-500">لا توجد مواد مفعّلة على حسابك حاليًا. تصفح المواد لمعرفة التفاصيل والاشتراك.</p>
-                        <a href="#courses" class="mt-4 inline-flex rounded-xl bg-emerald-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-900">تصفح المواد</a>
-                    </div>`;
-                return;
-            }
-
-            coursesContainer.innerHTML = activeCourses.map(() => `
-                <div class="animate-pulse rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                    <div class="mb-4 h-4 w-1/3 rounded bg-slate-100"></div>
-                    <div class="h-2 rounded bg-slate-100"></div>
-                    <div class="mt-4 h-10 rounded-xl bg-slate-100"></div>
-                </div>`).join('');
-
-            let hasReadErrors = false;
-            let trackedCompletions = [];
-            let latestQuiz = null;
-
-            const courseCards = await Promise.all(activeCourses.map(async course => {
-                const subscriptionData = subscriptions[`${course.id}_data`] || {};
-                const grade = subscriptionData.grade || '';
-                const term = subscriptionData.term || '';
-                const contentKey = `${course.id}__${grade}__${term}`.replace(/\s+/g, '_');
-                const [contentResult, progressResult, quizResult] = await Promise.allSettled([
-                    db.collection('course_content').doc(contentKey).get(),
-                    db.collection('course_progress').doc(`${user.uid}__${contentKey}`).get(),
-                    db.collection('quiz_results').doc(`${user.uid}__${contentKey}`).get()
-                ]);
-
-                if (requestId !== studentDashboardRequestId) return '';
-
-                const cardErrors = [];
-                let completion = null;
-                let completedCount = 0;
-                let totalItems = 0;
-                let quizSummary = 'لم يتم حل الاختبار بعد';
-
-                if (contentResult.status === 'fulfilled') {
-                    const contentData = contentResult.value.exists ? contentResult.value.data() : {};
-                    const videos = Array.isArray(contentData.videos) ? contentData.videos : [];
-                    const files = Array.isArray(contentData.files) ? contentData.files : [];
-                    totalItems = videos.length + files.length;
-
-                    if (progressResult.status === 'fulfilled') {
-                        const progressData = progressResult.value.exists ? progressResult.value.data() : {};
-                        const savedItems = Array.isArray(progressData.completedItems) ? progressData.completedItems : [];
-                        const validItems = new Set(savedItems.filter(item => {
-                            if (typeof item !== 'string') return false;
-                            const [type, rawIndex] = item.split(':');
-                            const index = Number(rawIndex);
-                            return Number.isInteger(index) && index >= 0 &&
-                                ((type === 'video' && index < videos.length) ||
-                                 (type === 'file' && index < files.length));
-                        }));
-                        completedCount = validItems.size;
-                        if (totalItems > 0) {
-                            completion = Math.min(100, Math.round((completedCount / totalItems) * 100));
-                            trackedCompletions.push(completion);
-                        }
-                    } else {
-                        hasReadErrors = true;
-                        cardErrors.push('تعذر تحميل بيانات التقدم');
-                        console.error(`تعذر تحميل تقدم الطالب لمادة ${course.id}:`, progressResult.reason);
-                    }
-                } else {
-                    hasReadErrors = true;
-                    cardErrors.push('تعذر تحميل المحتوى');
-                    console.error(`تعذر تحميل محتوى مادة ${course.id}:`, contentResult.reason);
-                }
-
-                if (quizResult.status === 'fulfilled') {
-                    if (quizResult.value.exists) {
-                        const quizData = quizResult.value.data();
-                        const score = Number(quizData.score);
-                        const total = Number(quizData.total);
-                        if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
-                            const percentage = Math.round((score / total) * 100);
-                            quizSummary = `${score} / ${total} (${percentage}٪)`;
-                            let submittedAt = null;
-                            if (quizData.submittedAt && typeof quizData.submittedAt.toDate === 'function') {
-                                submittedAt = quizData.submittedAt.toDate();
-                            } else if (quizData.submittedAt) {
-                                const candidateDate = new Date(quizData.submittedAt);
-                                if (!Number.isNaN(candidateDate.getTime())) submittedAt = candidateDate;
-                            }
-                            if (!latestQuiz || (submittedAt && (!latestQuiz.date || submittedAt > latestQuiz.date))) {
-                                latestQuiz = { courseName: course.name, summary: `${score} / ${total}`, percentage, date: submittedAt };
-                            }
-                        } else {
-                            hasReadErrors = true;
-                            cardErrors.push('بيانات نتيجة الاختبار غير مكتملة');
-                        }
-                    }
-                } else {
-                    hasReadErrors = true;
-                    cardErrors.push('تعذر تحميل نتيجة الاختبار');
-                    console.error(`تعذر تحميل نتيجة اختبار مادة ${course.id}:`, quizResult.reason);
-                }
-
-                const courseUrl = `content.html?${new URLSearchParams({ course: course.id, grade, term }).toString()}`;
-                const progressText = cardErrors.length && completion === null
-                    ? 'تعذر حساب التقدم'
-                    : totalItems
-                        ? `${completedCount} من ${totalItems} عناصر مكتملة`
-                        : 'لم يضف محتوى لهذه المادة بعد';
-                const progressBar = completion === null ? '' : `
-                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="نسبة إكمال ${course.name}" aria-valuenow="${completion}" aria-valuemin="0" aria-valuemax="100">
-                        <div class="h-full rounded-full bg-emerald-600 transition-all" style="width: ${completion}%"></div>
-                    </div>`;
-                const errorText = cardErrors.length
-                    ? `<p class="mt-3 text-xs text-amber-700">${escapeHtml([...new Set(cardErrors)].join('، '))}. تحقق من اتصال Firestore وصلاحيات القراءة.</p>`
-                    : '';
-
-                return `
-                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex min-w-0 items-center gap-3">
-                                <span class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-lg text-emerald-800"><i class="fa-solid ${course.icon}"></i></span>
-                                <div class="min-w-0">
-                                    <h3 class="truncate font-extrabold text-emerald-950">${course.name}</h3>
-                                    <p class="mt-0.5 text-xs text-slate-400">${escapeHtml([grade, term].filter(Boolean).join(' — ') || 'بيانات الصف والفصل غير متاحة')}</p>
-                                </div>
-                            </div>
-                            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800">مفعّلة</span>
-                        </div>
-                        <div class="mt-5">
-                            <div class="flex items-center justify-between gap-2 text-xs">
-                                <span class="font-bold text-slate-600">تقدم المحتوى</span>
-                                <span class="text-slate-500">${completion === null ? '' : `${completion}%`}</span>
-                            </div>
-                            ${progressBar}
-                            <p class="mt-1.5 text-xs text-slate-500">${progressText}</p>
-                        </div>
-                        <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                            <div>
-                                <p class="text-[11px] font-semibold text-slate-400">آخر نتيجة اختبار</p>
-                                <p class="mt-0.5 text-sm font-bold text-slate-700">${escapeHtml(quizSummary)}</p>
-                            </div>
-                            <a href="${courseUrl}" class="inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-900">
-                                استكمال <i class="fa-solid fa-arrow-left"></i>
-                            </a>
-                        </div>
-                        ${errorText}
-                    </article>`;
-            }));
-
-            if (requestId !== studentDashboardRequestId) return;
-
-            coursesContainer.innerHTML = courseCards.join('');
-            document.getElementById('dashboardCompletion').innerText = trackedCompletions.length
-                ? `${Math.round(trackedCompletions.reduce((sum, value) => sum + value, 0) / trackedCompletions.length)}٪`
-                : 'لا يوجد محتوى بعد';
-            document.getElementById('dashboardLatestQuiz').innerText = latestQuiz
-                ? `${latestQuiz.summary} (${latestQuiz.percentage}٪)`
-                : 'لم تحل اختبارًا بعد';
-            document.getElementById('dashboardLatestQuizCourse').innerText = latestQuiz
-                ? latestQuiz.courseName
-                : '';
-
-            if (hasReadErrors) {
-                notice.innerText = 'بعض بيانات لوحة الطالب لم تُحمّل. راجع اتصال الإنترنت وصلاحيات Firestore؛ تفاصيل الخطأ متاحة في Console.';
-                notice.classList.remove('hidden');
-            }
         }
 
 
@@ -1863,35 +1536,27 @@
 
             if (!list || !badge) return;
 
-            const rawNotifications =
+            let notifications =
                 Array.isArray(user.notifications)
                     ? user.notifications
                     : [];
 
 
-            const notifications = rawNotifications
-                .map((notification, originalIndex) => ({ notification, originalIndex }))
-                .filter(({ notification }) =>
-                    notification &&
-                    notification.text &&
-                    !String(notification.text).includes('undefined')
-                )
-                .map(item => ({
-                    ...item,
-                    createdAt: getNotificationTimestamp(item.notification, item.originalIndex)
-                }))
-                .sort((first, second) => {
-                    const firstIsAnnouncement = first.notification.type === 'announcement';
-                    const secondIsAnnouncement = second.notification.type === 'announcement';
-                    if (firstIsAnnouncement !== secondIsAnnouncement) return firstIsAnnouncement ? -1 : 1;
-                    return second.createdAt - first.createdAt || second.originalIndex - first.originalIndex;
+            // حذف الإشعارات التالفة
+            notifications =
+                notifications.filter(function (n) {
+
+                    return n &&
+                        n.text &&
+                        !String(n.text).includes('undefined');
+
                 });
 
 
             const unreadCount =
-                notifications.filter(function ({ notification }) {
+                notifications.filter(function (n) {
 
-                    return !notification.read;
+                    return !n.read;
 
                 }).length;
 
@@ -1909,11 +1574,6 @@
             }
 
 
-            const count = document.getElementById('notificationCount');
-            const clearButton = document.getElementById('clearNotificationsButton');
-            if (count) count.innerText = `${notifications.length} إشعار`;
-            if (clearButton) clearButton.classList.toggle('hidden', notifications.length === 0);
-
             if (notifications.length === 0) {
 
                 list.innerHTML =
@@ -1927,141 +1587,24 @@
 
 
             list.innerHTML =
-                notifications.map(function ({ notification: n, originalIndex }) {
+                notifications.map(function (n) {
 
                     return `
-                        <article class="rounded-2xl ${n.read ? 'bg-slate-50 border-slate-100' : 'bg-emerald-50 border-emerald-200'} border p-3 text-xs">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0 flex-1 space-y-1">
-                                    ${n.title ? `<p class="font-extrabold text-slate-800">${escapeHtml(n.title)}</p>` : ''}
-                                    <p class="${n.title ? 'text-slate-600' : 'font-bold text-slate-800'} break-words">
-                                        ${escapeHtml(n.text)}
-                                    </p>
-                                    <span class="block text-[10px] text-slate-400">
-                                        ${escapeHtml(n.date || '')}
-                                    </span>
-                                </div>
-                                <button type="button" onclick="deleteStudentNotification(${originalIndex})"
-                                    class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-100 hover:text-red-600"
-                                    aria-label="حذف هذا الإشعار" title="حذف الإشعار">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+
+                            <p class="font-bold text-slate-800">
+                                ${escapeHtml(n.text)}
+                            </p>
+
+                            <span class="text-[10px] text-slate-400 block">
+                                ${escapeHtml(n.date || '')}
+                            </span>
+
                         </div>
                     `;
 
                 }).join('');
 
-        }
-
-        function getNotificationTimestamp(notification, fallbackIndex) {
-            const storedCreatedAt = notification.createdAt;
-            let timestamp = null;
-
-            if (typeof storedCreatedAt === 'number' && Number.isFinite(storedCreatedAt)) {
-                timestamp = storedCreatedAt;
-            } else if (storedCreatedAt && typeof storedCreatedAt.toDate === 'function') {
-                timestamp = storedCreatedAt.toDate().getTime();
-            } else if (storedCreatedAt instanceof Date) {
-                timestamp = storedCreatedAt.getTime();
-            } else if (typeof storedCreatedAt === 'string') {
-                const parsedDate = new Date(storedCreatedAt);
-                if (!Number.isNaN(parsedDate.getTime())) timestamp = parsedDate.getTime();
-            }
-
-            if (Number.isFinite(timestamp)) return timestamp;
-
-            const idTimestamp = Number(String(notification.id || '').split('-')[0]);
-            if (Number.isFinite(idTimestamp) && idTimestamp > 0) return idTimestamp;
-
-            return notification.type === 'announcement'
-                ? Number.MAX_SAFE_INTEGER - fallbackIndex
-                : Number.MIN_SAFE_INTEGER + fallbackIndex;
-        }
-
-        function showNotificationActionStatus(message, isError = false) {
-            const status = document.getElementById('notificationActionStatus');
-            status.innerText = message;
-            status.className = `mb-3 text-xs ${isError ? 'text-red-600' : 'text-emerald-700'}`;
-            status.classList.remove('hidden');
-        }
-
-        function sameNotification(first, second) {
-            if (first.id && second.id) return first.id === second.id;
-            return first.type === second.type &&
-                first.title === second.title &&
-                first.text === second.text &&
-                first.date === second.date;
-        }
-
-        async function deleteStudentNotification(originalIndex) {
-            const activeUser = currentUserData || getActiveUser();
-            if (!activeUser || !activeUser.uid) return;
-
-            const selectedNotification = activeUser.notifications?.[originalIndex];
-            if (!selectedNotification) {
-                showNotificationActionStatus('لم يتم العثور على الإشعار المطلوب حذفه. حدّث الصفحة وحاول مرة أخرى.', true);
-                return;
-            }
-
-            try {
-                const studentRef = db.collection('students').doc(activeUser.uid);
-                const updatedNotifications = await db.runTransaction(async transaction => {
-                    const studentSnapshot = await transaction.get(studentRef);
-                    if (!studentSnapshot.exists) throw new Error('بيانات الطالب غير موجودة.');
-
-                    const notifications = Array.isArray(studentSnapshot.data().notifications)
-                        ? studentSnapshot.data().notifications
-                        : [];
-                    const targetIndex = notifications.findIndex(notification =>
-                        notification && sameNotification(notification, selectedNotification)
-                    );
-                    if (targetIndex === -1) throw new Error('الإشعار لم يعد موجودًا.');
-
-                    const nextNotifications = [...notifications];
-                    nextNotifications.splice(targetIndex, 1);
-                    transaction.update(studentRef, { notifications: nextNotifications });
-                    return nextNotifications;
-                });
-
-                currentUserData = { ...currentUserData, notifications: updatedNotifications };
-                localStorage.setItem('activeUser', JSON.stringify(currentUserData));
-                renderNotifications(currentUserData);
-                document.getElementById('notificationActionStatus').classList.add('hidden');
-            } catch (error) {
-                console.error('تعذر حذف إشعار الطالب:', error);
-                showNotificationActionStatus(`تعذر حذف الإشعار: ${error.message}`, true);
-            }
-        }
-
-        async function clearStudentNotifications() {
-            const activeUser = currentUserData || getActiveUser();
-            if (!activeUser || !activeUser.uid) return;
-            if (!confirm('هل تريد حذف جميع الإشعارات من حسابك؟ لا يمكن التراجع عن هذا الإجراء.')) return;
-
-            const button = document.getElementById('clearNotificationsButton');
-            button.disabled = true;
-            button.classList.add('opacity-50', 'cursor-wait');
-
-            try {
-                const studentRef = db.collection('students').doc(activeUser.uid);
-                await db.runTransaction(async transaction => {
-                    const studentSnapshot = await transaction.get(studentRef);
-                    if (!studentSnapshot.exists) throw new Error('بيانات الطالب غير موجودة.');
-                    transaction.update(studentRef, { notifications: [] });
-                });
-
-                currentUserData = { ...currentUserData, notifications: [] };
-                localStorage.setItem('activeUser', JSON.stringify(currentUserData));
-                renderNotifications(currentUserData);
-                showNotificationActionStatus('تم حذف جميع الإشعارات.');
-            } catch (error) {
-                console.error('تعذر حذف إشعارات الطالب:', error);
-                showNotificationActionStatus(`تعذر حذف الإشعارات: ${error.message}`, true);
-            } finally {
-                button.disabled = false;
-                button.classList.remove('opacity-50', 'cursor-wait');
-            }
         }
 
 
@@ -2088,20 +1631,6 @@
 
             const modal =
                 document.getElementById('notificationModal');
-
-            if (modal.classList.contains('hidden')) {
-                const activeUser = currentUserData || getActiveUser();
-                const unreadAnnouncement = activeUser && Array.isArray(activeUser.notifications)
-                    ? activeUser.notifications.find(notification =>
-                        notification &&
-                        notification.type === 'announcement' &&
-                        notification.id &&
-                        !notification.read &&
-                        !soundedStudentAnnouncementIds.has(notification.id)
-                    )
-                    : null;
-                if (unreadAnnouncement) playStudentNotificationSound(unreadAnnouncement.id);
-            }
 
             modal.classList.toggle('hidden');
 
@@ -3079,15 +2608,12 @@
 
                 const newNotification = {
 
-                    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                    type: 'subscription',
                     text:
                         `تم استلام طلب اشتراكك في مادة "${courseTitle}" وسيتم التفعيل قريباً.`,
 
                     date:
                         new Date().toLocaleString('ar-EG'),
 
-                    createdAt: Date.now(),
                     read: false
 
                 };
