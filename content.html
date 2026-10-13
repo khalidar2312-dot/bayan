@@ -430,6 +430,19 @@
             status.classList.toggle('text-red-500', Boolean(message && message.startsWith('تعذر')));
         }
 
+        function withTimeout(promise, timeoutMs, message) {
+            let timeoutId;
+            const timeout = new Promise((_, reject) => {
+                timeoutId = window.setTimeout(() => {
+                    const error = new Error(message);
+                    error.code = 'timeout';
+                    reject(error);
+                }, timeoutMs);
+            });
+
+            return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
+        }
+
         async function loadQuiz() {
             const container = document.getElementById('quizContainer');
             const result = document.getElementById('quizResult');
@@ -439,7 +452,11 @@
 
             let quizDoc;
             try {
-                quizDoc = await db.collection('quizzes').doc(contentKey).get();
+                quizDoc = await withTimeout(
+                    db.collection('quizzes').doc(contentKey).get(),
+                    12000,
+                    'لم ترد قاعدة البيانات في الوقت المحدد عند تحميل الأسئلة.'
+                );
             } catch (error) {
                 console.error('تعذر قراءة أسئلة الاختبار من quizzes:', error);
                 container.innerHTML = `<div class="text-center py-8 text-red-500">تعذر تحميل أسئلة الاختبار (${escapeHtml(error.code || 'خطأ غير معروف')}). تحقق من صلاحية قراءة مجموعة quizzes في Firestore.</div>`;
@@ -454,8 +471,14 @@
                 return;
             }
 
+            renderQuizQuestions('جاري التحقق من وجود نتيجة سابقة...', true);
+
             try {
-                const resultDoc = await db.collection('quiz_results').doc(`${currentStudentId}__${contentKey}`).get();
+                const resultDoc = await withTimeout(
+                    db.collection('quiz_results').doc(`${currentStudentId}__${contentKey}`).get(),
+                    8000,
+                    'لم ترد قاعدة البيانات في الوقت المحدد عند التحقق من النتيجة السابقة.'
+                );
                 if (resultDoc.exists()) {
                     const savedResult = resultDoc.data();
                     showQuizResult(savedResult.score, savedResult.total, savedResult.submittedAt);
@@ -464,28 +487,28 @@
                 renderQuizQuestions();
             } catch (error) {
                 console.error('تعذر قراءة نتيجة الاختبار من quiz_results:', error);
-                renderQuizQuestions(`تعذر التحقق من وجود نتيجة سابقة (${escapeHtml(error.code || 'خطأ غير معروف')}). سيظهر الاختبار، لكن قد تحتاج صلاحيات Firestore إلى مراجعة قبل حفظ النتيجة.`);
+                renderQuizQuestions(`تعذر التحقق من وجود نتيجة سابقة (${escapeHtml(error.code || 'خطأ غير معروف')}). يمكنك حل الاختبار، لكن قد تحتاج صلاحيات Firestore إلى مراجعة قبل حفظ النتيجة.`);
             }
         }
 
-        function renderQuizQuestions(warningMessage = '') {
+        function renderQuizQuestions(warningMessage = '', disableSubmission = false) {
             const letters = ['أ', 'ب', 'ج', 'د'];
             document.getElementById('quizContainer').innerHTML = `
                 <form onsubmit="submitQuiz(event)" class="space-y-4">
-                    ${warningMessage ? `<p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">${warningMessage}</p>` : ''}
+                    ${warningMessage ? `<p class="rounded-xl border ${disableSubmission ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-amber-200 bg-amber-50 text-amber-800'} px-4 py-3 text-sm">${warningMessage}</p>` : ''}
                     ${currentQuizQuestions.map((question, index) => `
                         <fieldset class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
                             <legend class="font-bold text-slate-800 text-sm mb-3">${index + 1}. ${escapeHtml(question.question)}</legend>
                             <div class="space-y-2">
                                 ${(Array.isArray(question.options) ? question.options : []).map((option, optionIndex) => `
                                     <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-emerald-50 cursor-pointer">
-                                        <input type="radio" name="answer-${index}" value="${optionIndex}" required class="text-emerald-700">
+                                        <input type="radio" name="answer-${index}" value="${optionIndex}" required class="text-emerald-700" ${disableSubmission ? 'disabled' : ''}>
                                         <span class="text-sm text-slate-700">${letters[optionIndex] || ''}. ${escapeHtml(option)}</span>
                                     </label>`).join('')}
                             </div>
                         </fieldset>`).join('')}
                     <p id="quizSubmitMessage" class="text-sm text-red-500" aria-live="polite"></p>
-                    <button type="submit" class="px-6 py-3 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition">
+                    <button type="submit" ${disableSubmission ? 'disabled' : ''} class="px-6 py-3 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition disabled:cursor-wait disabled:opacity-60">
                         <i class="fa-solid fa-paper-plane ml-1"></i> إرسال الإجابات
                     </button>
                 </form>`;
