@@ -69,6 +69,7 @@
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('adminDashboardContent').classList.remove('hidden');
                 initAdminPanel();
+                applyStaffPermissions();
             }
         });
     </script>
@@ -215,6 +216,16 @@
                         class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
                         <i class="fa-solid fa-lock w-4 text-center"></i>
                         <span>الإعدادات</span>
+                    </button>
+                    <button onclick="switchTab('quizzes')" id="nav-quizzes"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        <i class="fa-solid fa-pen-to-square w-4 text-center"></i>
+                        <span>إدارة الاختبارات</span>
+                    </button>
+                    <button onclick="switchTab('performance')" id="nav-performance"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        <i class="fa-solid fa-chart-line w-4 text-center"></i>
+                        <span>متابعة أداء الطلاب</span>
                     </button>
                 </nav>
 
@@ -524,6 +535,203 @@
                     </div>
                 </div>
 
+                <!-- تاب: إدارة الاختبارات -->
+                <div id="tab-quizzes" class="tab-content hidden">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">إدارة الاختبارات</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">أضف أسئلة اختبار لكل مادة وصف وترم</p>
+                    </div>
+                    <div class="space-y-4">
+
+                        <!-- فلاتر الاختيار -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                            <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                <i class="fa-solid fa-filter text-emerald-600"></i> اختر المادة والصف والترم
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">المادة</label>
+                                    <select id="quizCourse" onchange="loadQuizzes()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                        <option value="fiqh">الفقه الميسر</option>
+                                        <option value="tafseer">علم التفسير</option>
+                                        <option value="hadith">الحديث الشريف</option>
+                                        <option value="tawheed">علم التوحيد</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الصف الدراسي</label>
+                                    <select id="quizGrade" onchange="loadQuizzes()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                        <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                        <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                        <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الفصل الدراسي</label>
+                                    <select id="quizTerm" onchange="loadQuizzes()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                        <option value="الترم الأول">الترم الأول</option>
+                                        <option value="الترم الثاني">الترم الثاني</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- إضافة سؤال جديد -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                            <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                <div class="w-7 h-7 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-plus"></i>
+                                </div>
+                                إضافة سؤال جديد
+                            </h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">نص السؤال</label>
+                                    <input type="text" id="quizQuestion" placeholder="مثال: ما هو حكم الوضوء؟" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1.5">الخيار أ</label>
+                                        <input type="text" id="quizOpt1" placeholder="الخيار الأول" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1.5">الخيار ب</label>
+                                        <input type="text" id="quizOpt2" placeholder="الخيار الثاني" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1.5">الخيار ج</label>
+                                        <input type="text" id="quizOpt3" placeholder="الخيار الثالث" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-500 mb-1.5">الخيار د</label>
+                                        <input type="text" id="quizOpt4" placeholder="الخيار الرابع" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الإجابة الصحيحة</label>
+                                    <select id="quizCorrect" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                        <option value="0">الخيار أ</option>
+                                        <option value="1">الخيار ب</option>
+                                        <option value="2">الخيار ج</option>
+                                        <option value="3">الخيار د</option>
+                                    </select>
+                                </div>
+                                <button onclick="addQuizQuestion()" class="w-full py-2.5 rounded-xl bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition">
+                                    <i class="fa-solid fa-plus ml-1"></i> إضافة السؤال
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- الأسئلة الحالية -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-bold text-slate-700">الأسئلة الحالية</h3>
+                                <span id="quizLabel" class="text-xs text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100"></span>
+                            </div>
+                            <div id="quizQuestionsList" class="space-y-3 text-xs text-slate-400 text-center py-4">
+                                اختر مادة وصف لعرض الأسئلة
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- تاب: متابعة أداء الطلاب -->
+                <div id="tab-performance" class="tab-content hidden">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">متابعة أداء الطلاب</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">تابع تقدم الطلاب في محتوى الدورات ونسب الإكمال ونتائج الاختبارات</p>
+                    </div>
+                    <div class="space-y-4">
+
+                        <!-- فلاتر -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">المادة</label>
+                                    <select id="perfCourse" onchange="loadPerformance()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                        <option value="fiqh">الفقه الميسر</option>
+                                        <option value="tafseer">علم التفسير</option>
+                                        <option value="hadith">الحديث الشريف</option>
+                                        <option value="tawheed">علم التوحيد</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الصف الدراسي</label>
+                                    <select id="perfGrade" onchange="loadPerformance()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                        <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                        <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                        <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الفصل الدراسي</label>
+                                    <select id="perfTerm" onchange="loadPerformance()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                        <option value="الترم الأول">الترم الأول</option>
+                                        <option value="الترم الثاني">الترم الثاني</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- إحصائيات سريعة -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+                                <i class="fa-solid fa-users text-emerald-600 text-xl mb-1 block"></i>
+                                <h3 id="perfStatStudents" class="text-2xl font-black text-slate-800">0</h3>
+                                <p class="text-[11px] text-slate-400 font-bold mt-0.5">طالب مشترك</p>
+                            </div>
+                            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+                                <i class="fa-solid fa-chart-pie text-blue-500 text-xl mb-1 block"></i>
+                                <h3 id="perfStatCompletion" class="text-2xl font-black text-slate-800">0%</h3>
+                                <p class="text-[11px] text-slate-400 font-bold mt-0.5">متوسط إكمال المحتوى</p>
+                            </div>
+                            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+                                <i class="fa-solid fa-pen-to-square text-amber-500 text-xl mb-1 block"></i>
+                                <h3 id="perfStatQuizzes" class="text-2xl font-black text-slate-800">0</h3>
+                                <p class="text-[11px] text-slate-400 font-bold mt-0.5">اختبار محلول</p>
+                            </div>
+                            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+                                <i class="fa-solid fa-circle-check text-green-500 text-xl mb-1 block"></i>
+                                <h3 id="perfStatAvg" class="text-2xl font-black text-slate-800">0%</h3>
+                                <p class="text-[11px] text-slate-400 font-bold mt-0.5">متوسط نتائج الاختبارات</p>
+                            </div>
+                        </div>
+
+                        <!-- جدول أداء الطلاب -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                                <h3 class="text-sm font-bold text-slate-700">تقرير أداء الطلاب التفصيلي</h3>
+                                <button onclick="exportPerformance()" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs hover:bg-emerald-100 transition border border-emerald-100">
+                                    <i class="fa-solid fa-file-export ml-1"></i> تصدير
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-right border-collapse">
+                                    <thead>
+                                        <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
+                                            <th class="px-4 py-3 font-bold">اسم الطالب</th>
+                                            <th class="px-4 py-3 font-bold text-center">نسبة الإكمال</th>
+                                            <th class="px-4 py-3 font-bold text-center">المحتوى المكتمل</th>
+                                            <th class="px-4 py-3 font-bold text-center">نتيجة الاختبار</th>
+                                            <th class="px-4 py-3 font-bold text-center">آخر تحديث</th>
+                                            <th class="px-4 py-3 font-bold text-center">التقييم</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="performanceTableBody" class="text-xs divide-y divide-slate-50">
+                                        <tr><td colspan="6" class="text-center py-8 text-slate-400">اختر مادة وصف لعرض التقارير</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
@@ -576,7 +784,7 @@
 
             <input type="hidden" id="permissionsStaffIndex">
 
-            <div class="space-y-2 mb-5">
+            <div class="space-y-2 mb-5 max-h-[60vh] overflow-y-auto">
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-requests" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
@@ -617,6 +825,20 @@
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-lock text-slate-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">الإعدادات</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-quizzes" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-emerald-600 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">إدارة الاختبارات</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-performance" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-blue-600 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">متابعة أداء الطلاب</span>
                     </div>
                 </label>
             </div>
@@ -667,12 +889,15 @@
                     'support':  ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
                     'staff':    ['bg-slate-100', 'text-slate-800'],
                     'settings': ['bg-slate-100', 'text-slate-800'],
+                    'quizzes':  ['bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100'],
+                    'performance': ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
                 };
                 (colorMap[tabName] || ['bg-slate-100', 'text-slate-800']).forEach(c => navBtn.classList.add(c));
             }
 
             // إغلاق الـ sidebar على الموبايل
             if (window.innerWidth < 1024) toggleSidebar(false);
+            if (tabName === 'performance') loadPerformance();
         }
 
         function toggleSidebar(forceClose) {
@@ -1065,6 +1290,267 @@
             } catch (e) { console.error(e); }
         }
 
+        // ================================================
+        // إدارة الاختبارات
+        // ================================================
+
+        function getQuizKey() {
+            const course = document.getElementById('quizCourse').value;
+            const grade = document.getElementById('quizGrade').value;
+            const term = document.getElementById('quizTerm').value;
+            return `${course}__${grade}__${term}`.replace(/\s+/g, '_');
+        }
+
+        async function loadQuizzes() {
+            const key = getQuizKey();
+            const label = `${document.getElementById('quizCourse').options[document.getElementById('quizCourse').selectedIndex].text} — ${document.getElementById('quizGrade').value} — ${document.getElementById('quizTerm').value}`;
+            document.getElementById('quizLabel').innerText = label;
+
+            const container = document.getElementById('quizQuestionsList');
+            container.innerHTML = '<div class="text-center text-slate-400 py-3">جاري التحميل...</div>';
+
+            try {
+                const docSnap = await window.getDoc(window.doc(window.db, 'quizzes', key));
+                if (!docSnap.exists() || !(docSnap.data().questions || []).length) {
+                    container.innerHTML = '<div class="text-center text-slate-400 py-3">لا توجد أسئلة بعد</div>';
+                    return;
+                }
+
+                const questions = docSnap.data().questions;
+                const letters = ['أ', 'ب', 'ج', 'د'];
+
+                container.innerHTML = questions.map((q, i) => `
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <p class="font-bold text-slate-800 text-xs flex-1">${i+1}. ${q.question}</p>
+                            <button onclick="deleteQuizQuestion(${i})" class="text-red-400 hover:text-red-600 text-xs flex-shrink-0">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            ${q.options.map((opt, j) => `
+                                <div class="text-[11px] px-2 py-1 rounded-lg ${j === q.correct ? 'bg-emerald-100 text-emerald-700 font-bold border border-emerald-200' : 'bg-white text-slate-600 border border-slate-100'}">
+                                    ${letters[j]}. ${opt}
+                                </div>`).join('')}
+                        </div>
+                    </div>`).join('');
+            } catch(e) {
+                console.error(e);
+                container.innerHTML = '<div class="text-center text-red-400 py-3">حدث خطأ في التحميل</div>';
+            }
+        }
+
+        async function addQuizQuestion() {
+            const question = document.getElementById('quizQuestion').value.trim();
+            const opt1 = document.getElementById('quizOpt1').value.trim();
+            const opt2 = document.getElementById('quizOpt2').value.trim();
+            const opt3 = document.getElementById('quizOpt3').value.trim();
+            const opt4 = document.getElementById('quizOpt4').value.trim();
+            const correct = parseInt(document.getElementById('quizCorrect').value);
+
+            if (!question || !opt1 || !opt2 || !opt3 || !opt4) {
+                alert('يرجى إدخال السؤال وجميع الخيارات الأربعة.'); return;
+            }
+
+            const key = getQuizKey();
+            try {
+                const docRef = window.doc(window.db, 'quizzes', key);
+                const docSnap = await window.getDoc(docRef);
+                const questions = docSnap.exists() ? (docSnap.data().questions || []) : [];
+
+                questions.push({ question, options: [opt1, opt2, opt3, opt4], correct });
+                await window.setDoc(docRef, { questions }, { merge: true });
+
+                // تنظيف الحقول
+                ['quizQuestion','quizOpt1','quizOpt2','quizOpt3','quizOpt4'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('quizCorrect').value = '0';
+
+                showToast('✅ تم إضافة السؤال بنجاح');
+                loadQuizzes();
+            } catch(e) {
+                console.error(e);
+                alert('حدث خطأ: ' + e.message);
+            }
+        }
+
+        async function deleteQuizQuestion(index) {
+            if (!confirm('هل تريد حذف هذا السؤال؟')) return;
+            const key = getQuizKey();
+            try {
+                const docRef = window.doc(window.db, 'quizzes', key);
+                const docSnap = await window.getDoc(docRef);
+                const questions = docSnap.data().questions || [];
+                questions.splice(index, 1);
+                await window.updateDoc(docRef, { questions });
+                showToast('تم حذف السؤال');
+                loadQuizzes();
+            } catch(e) { console.error(e); }
+        }
+
+        // ================================================
+        // متابعة أداء الطلاب
+        // ================================================
+
+        async function loadPerformance() {
+            const course = document.getElementById('perfCourse').value;
+            const grade = document.getElementById('perfGrade').value;
+            const term = document.getElementById('perfTerm').value;
+            const key = `${course}__${grade}__${term}`.replace(/\s+/g, '_');
+
+            const tbody = document.getElementById('performanceTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-400">جاري تحميل البيانات...</td></tr>';
+            ['perfStatStudents', 'perfStatQuizzes'].forEach(id => {
+                document.getElementById(id).innerText = '0';
+            });
+            document.getElementById('perfStatCompletion').innerText = '0%';
+            document.getElementById('perfStatAvg').innerText = '0%';
+
+            try {
+                const [studentsSnap, contentSnap] = await Promise.all([
+                    window.getDocs(window.collection(window.db, 'students')),
+                    window.getDoc(window.doc(window.db, 'course_content', key))
+                ]);
+                const students = [];
+                studentsSnap.forEach(d => {
+                    const data = d.data();
+                    const subs = data.subscriptions || {};
+                    const subscriptionData = subs[course + '_data'] || {};
+                    if (subs[course] === 'approved' &&
+                        subscriptionData.grade === grade &&
+                        subscriptionData.term === term) {
+                        students.push({ id: d.id, ...data });
+                    }
+                });
+
+                document.getElementById('perfStatStudents').innerText = students.length;
+
+                if (students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">لا يوجد طلاب مشتركين في هذه المادة والصف والفصل الدراسي</td></tr>';
+                    return;
+                }
+
+                const contentData = contentSnap.exists() ? contentSnap.data() : {};
+                const videos = Array.isArray(contentData.videos) ? contentData.videos : [];
+                const files = Array.isArray(contentData.files) ? contentData.files : [];
+                const totalItems = videos.length + files.length;
+                let totalCompletion = 0;
+                let studentsWithContent = 0;
+                let totalScore = 0;
+                let totalQuizzes = 0;
+
+                const rows = await Promise.all(students.map(async student => {
+                    const [progressSnap, quizSnap] = await Promise.all([
+                        window.getDoc(window.doc(window.db, 'course_progress', `${student.id}__${key}`)),
+                        window.getDoc(window.doc(window.db, 'quiz_results', `${student.id}__${key}`))
+                    ]);
+                    const progress = progressSnap.exists() ? progressSnap.data() : {};
+                    const completedItems = Array.isArray(progress.completedItems) ? progress.completedItems : [];
+                    const validCompletedItems = new Set(completedItems.filter(item => {
+                        if (typeof item !== 'string') return false;
+                        const [type, rawIndex] = item.split(':');
+                        const index = Number(rawIndex);
+                        return Number.isInteger(index) && index >= 0 &&
+                            ((type === 'video' && index < videos.length) ||
+                             (type === 'file' && index < files.length));
+                    }));
+                    const validCompletedCount = validCompletedItems.size;
+                    const completion = totalItems > 0
+                        ? Math.min(100, Math.round((validCompletedCount / totalItems) * 100))
+                        : null;
+                    if (completion !== null) {
+                        totalCompletion += completion;
+                        studentsWithContent++;
+                    }
+
+                    let quizScore = '-';
+                    let quizScoreNum = null;
+                    let quizDate = null;
+                    if (quizSnap.exists()) {
+                        const quiz = quizSnap.data();
+                        const score = Number(quiz.score);
+                        const quizTotal = Number(quiz.total);
+                        if (Number.isFinite(score) && Number.isFinite(quizTotal) && quizTotal > 0) {
+                            quizScoreNum = Math.round((score / quizTotal) * 100);
+                            quizScore = `${score}/${quizTotal} (${quizScoreNum}%)`;
+                            totalScore += quizScoreNum;
+                            totalQuizzes++;
+                        }
+                        quizDate = performanceDateValue(quiz.submittedAt);
+                    }
+
+                    const updatedAt = performanceDateValue(progress.updatedAt);
+                    const lastActivity = updatedAt && quizDate
+                        ? (updatedAt > quizDate ? updatedAt : quizDate)
+                        : updatedAt || quizDate;
+                    let badge = '<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">لا توجد نتيجة</span>';
+                    if (quizScoreNum !== null) {
+                        if (quizScoreNum >= 85) badge = '<span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">ممتاز</span>';
+                        else if (quizScoreNum >= 70) badge = '<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">جيد</span>';
+                        else if (quizScoreNum >= 50) badge = '<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">مقبول</span>';
+                        else badge = '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-bold">يحتاج متابعة</span>';
+                    }
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3 font-bold text-slate-800">${escapePerformanceText(student.fullName || 'بدون اسم')}</td>
+                            <td class="px-4 py-3 text-center font-bold text-blue-700">${completion === null ? '-' : completion + '%'}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">${totalItems > 0 ? `${validCompletedCount}/${totalItems}` : 'لا يوجد محتوى'}</td>
+                            <td class="px-4 py-3 text-center font-mono text-slate-600 text-[11px]">${quizScore}</td>
+                            <td class="px-4 py-3 text-center text-[11px] text-slate-400">${lastActivity ? lastActivity.toLocaleDateString('ar-EG') : '-'}</td>
+                            <td class="px-4 py-3 text-center text-[11px]">${badge}</td>
+                        </tr>`;
+                }));
+
+                tbody.innerHTML = rows.join('');
+
+                document.getElementById('perfStatQuizzes').innerText = totalQuizzes;
+                document.getElementById('perfStatAvg').innerText = totalQuizzes > 0 ? Math.round(totalScore / totalQuizzes) + '%' : '0%';
+                document.getElementById('perfStatCompletion').innerText = studentsWithContent > 0
+                    ? Math.round(totalCompletion / studentsWithContent) + '%'
+                    : '0%';
+            } catch (error) {
+                console.error('Error loading student performance report:', error);
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-400">تعذر تحميل التقرير. تحقق من الاتصال والصلاحيات ثم أعد المحاولة.</td></tr>';
+            }
+        }
+
+        function performanceDateValue(value) {
+            if (!value) return null;
+            const date = typeof value.toDate === 'function' ? value.toDate() : new Date(value);
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        function escapePerformanceText(value) {
+            return String(value).replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
+        }
+
+        function exportPerformance() {
+            const rows = document.querySelectorAll('#performanceTableBody tr');
+            if (!rows.length) return;
+
+            let csv = 'اسم الطالب,نسبة الإكمال,المحتوى المكتمل,نتيجة الاختبار,آخر تحديث,التقييم\n';
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 1) {
+                    csv += Array.from(cells).map(c => `"${c.innerText.trim().replace(/"/g, '""')}"`).join(',') + '\n';
+                }
+            });
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'تقرير_أداء_الطلاب.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
         function startChatListener() {
             if (!window.db || !window.collection || !window.onSnapshot) {
                 setTimeout(startChatListener, 300);
@@ -1232,7 +1718,7 @@
             } catch (error) {
                 console.error('خطأ في إرسال الرد:', error);
             }
-        }
+        }za
 
         // ================================================
         // مراقبة الإشعارات الجديدة وإظهارها للأدمن
@@ -1409,7 +1895,7 @@
         // صلاحيات الموظفين
         // ================================================
 
-        const allTabs = ['requests', 'students', 'content', 'support', 'staff', 'settings'];
+        const allTabs = ['requests', 'students', 'content', 'support', 'staff', 'settings', 'quizzes', 'performance'];
 
         function openPermissionsModal(index) {
             const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
