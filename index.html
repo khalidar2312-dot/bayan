@@ -205,6 +205,40 @@
         </div>
     </header>
 
+    <section id="studentDashboard" class="hidden border-b border-emerald-100 bg-gradient-to-b from-emerald-50 to-white py-8 sm:py-10">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-amber-600">مساحتك التعليمية</span>
+                    <h2 id="studentDashboardGreeting" class="mt-1 text-2xl font-extrabold text-emerald-950 font-kufi">أهلاً بك</h2>
+                    <p class="mt-1 text-sm text-slate-500">تابع تقدمك واستكمل التعلم من مكانك.</p>
+                </div>
+                <button type="button" onclick="loadStudentDashboard(currentUserData)" class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50">
+                    <i class="fa-solid fa-rotate"></i>
+                    تحديث البيانات
+                </button>
+            </div>
+
+            <div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <p class="text-xs font-semibold text-slate-500">المواد المفعّلة</p>
+                    <p id="dashboardCourseCount" class="mt-1 text-2xl font-black text-emerald-900">—</p>
+                </div>
+                <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <p class="text-xs font-semibold text-slate-500">متوسط إكمال المحتوى</p>
+                    <p id="dashboardCompletion" class="mt-1 text-2xl font-black text-emerald-900">—</p>
+                </div>
+                <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <p class="text-xs font-semibold text-slate-500">آخر نتيجة اختبار</p>
+                    <p id="dashboardLatestQuiz" class="mt-1 text-lg font-extrabold text-emerald-900">—</p>
+                    <p id="dashboardLatestQuizCourse" class="mt-0.5 text-xs text-slate-400"></p>
+                </div>
+            </div>
+
+            <div id="studentDashboardNotice" role="status" class="mb-4 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"></div>
+            <div id="studentDashboardCourses" class="grid grid-cols-1 gap-4 md:grid-cols-2"></div>
+        </div>
+    </section>
 
     <!-- Hero Section -->
     <section id="hero" class="relative overflow-hidden py-16 bg-islamic-pattern text-white">
@@ -1320,6 +1354,13 @@
 
         // المستخدم الحالي
         let currentUserData = null;
+        let studentDashboardRequestId = 0;
+        const studentDashboardCourses = [
+            { id: 'fiqh', name: 'الفقه الميسر', icon: 'fa-scale-balanced' },
+            { id: 'tafseer', name: 'علم التفسير', icon: 'fa-book-quran' },
+            { id: 'hadith', name: 'الحديث الشريف', icon: 'fa-scroll' },
+            { id: 'tawheed', name: 'علم التوحيد', icon: 'fa-hands-praying' }
+        ];
 
 
         // =========================
@@ -1361,6 +1402,9 @@
                             );
 
                             localStorage.removeItem('activeUser');
+                            currentUserData = null;
+                            document.getElementById('studentDashboard').classList.add('hidden');
+                            studentDashboardRequestId++;
 
                         }
 
@@ -1373,9 +1417,13 @@
 
                         const cachedUser = getActiveUser();
 
-                        if (cachedUser) {
+                        if (cachedUser && cachedUser.uid === firebaseUser.uid) {
                             currentUserData = cachedUser;
                             showLoggedInUser(cachedUser);
+                        } else {
+                            currentUserData = null;
+                            document.getElementById('studentDashboard').classList.add('hidden');
+                            studentDashboardRequestId++;
                         }
 
                     }
@@ -1393,6 +1441,9 @@
                     document
                         .getElementById('userProfileHeader')
                         .classList.add('hidden');
+
+                    document.getElementById('studentDashboard').classList.add('hidden');
+                    studentDashboardRequestId++;
 
                 }
 
@@ -1456,7 +1507,197 @@
             updateCourseButtons(user);
 
             renderNotifications(user);
+            loadStudentDashboard(user);
 
+        }
+
+        async function loadStudentDashboard(user) {
+            if (!user || !user.uid) return;
+
+            const dashboard = document.getElementById('studentDashboard');
+            const coursesContainer = document.getElementById('studentDashboardCourses');
+            const notice = document.getElementById('studentDashboardNotice');
+            const requestId = ++studentDashboardRequestId;
+            const subscriptions = user.subscriptions || {};
+            const activeCourses = studentDashboardCourses.filter(course => subscriptions[course.id] === 'approved');
+
+            dashboard.classList.remove('hidden');
+            document.getElementById('studentDashboardGreeting').innerText = `أهلاً ${user.fullName || 'بك'}`;
+            document.getElementById('dashboardCourseCount').innerText = activeCourses.length;
+            document.getElementById('dashboardCompletion').innerText = 'جارٍ الحساب...';
+            document.getElementById('dashboardLatestQuiz').innerText = 'جارٍ التحميل...';
+            document.getElementById('dashboardLatestQuizCourse').innerText = '';
+            notice.classList.add('hidden');
+
+            if (!activeCourses.length) {
+                document.getElementById('dashboardCompletion').innerText = '—';
+                document.getElementById('dashboardLatestQuiz').innerText = 'لا توجد نتائج بعد';
+                coursesContainer.innerHTML = `
+                    <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm md:col-span-2">
+                        <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-xl text-emerald-800"><i class="fa-solid fa-book-open"></i></div>
+                        <h3 class="font-bold text-slate-800">ابدأ رحلتك التعليمية</h3>
+                        <p class="mt-1 text-sm text-slate-500">لا توجد مواد مفعّلة على حسابك حاليًا. تصفح المواد لمعرفة التفاصيل والاشتراك.</p>
+                        <a href="#courses" class="mt-4 inline-flex rounded-xl bg-emerald-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-900">تصفح المواد</a>
+                    </div>`;
+                return;
+            }
+
+            coursesContainer.innerHTML = activeCourses.map(() => `
+                <div class="animate-pulse rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <div class="mb-4 h-4 w-1/3 rounded bg-slate-100"></div>
+                    <div class="h-2 rounded bg-slate-100"></div>
+                    <div class="mt-4 h-10 rounded-xl bg-slate-100"></div>
+                </div>`).join('');
+
+            let hasReadErrors = false;
+            let trackedCompletions = [];
+            let latestQuiz = null;
+
+            const courseCards = await Promise.all(activeCourses.map(async course => {
+                const subscriptionData = subscriptions[`${course.id}_data`] || {};
+                const grade = subscriptionData.grade || '';
+                const term = subscriptionData.term || '';
+                const contentKey = `${course.id}__${grade}__${term}`.replace(/\s+/g, '_');
+                const [contentResult, progressResult, quizResult] = await Promise.allSettled([
+                    db.collection('course_content').doc(contentKey).get(),
+                    db.collection('course_progress').doc(`${user.uid}__${contentKey}`).get(),
+                    db.collection('quiz_results').doc(`${user.uid}__${contentKey}`).get()
+                ]);
+
+                if (requestId !== studentDashboardRequestId) return '';
+
+                const cardErrors = [];
+                let completion = null;
+                let completedCount = 0;
+                let totalItems = 0;
+                let quizSummary = 'لم يتم حل الاختبار بعد';
+
+                if (contentResult.status === 'fulfilled') {
+                    const contentData = contentResult.value.exists ? contentResult.value.data() : {};
+                    const videos = Array.isArray(contentData.videos) ? contentData.videos : [];
+                    const files = Array.isArray(contentData.files) ? contentData.files : [];
+                    totalItems = videos.length + files.length;
+
+                    if (progressResult.status === 'fulfilled') {
+                        const progressData = progressResult.value.exists ? progressResult.value.data() : {};
+                        const savedItems = Array.isArray(progressData.completedItems) ? progressData.completedItems : [];
+                        const validItems = new Set(savedItems.filter(item => {
+                            if (typeof item !== 'string') return false;
+                            const [type, rawIndex] = item.split(':');
+                            const index = Number(rawIndex);
+                            return Number.isInteger(index) && index >= 0 &&
+                                ((type === 'video' && index < videos.length) ||
+                                 (type === 'file' && index < files.length));
+                        }));
+                        completedCount = validItems.size;
+                        if (totalItems > 0) {
+                            completion = Math.min(100, Math.round((completedCount / totalItems) * 100));
+                            trackedCompletions.push(completion);
+                        }
+                    } else {
+                        hasReadErrors = true;
+                        cardErrors.push('تعذر تحميل بيانات التقدم');
+                        console.error(`تعذر تحميل تقدم الطالب لمادة ${course.id}:`, progressResult.reason);
+                    }
+                } else {
+                    hasReadErrors = true;
+                    cardErrors.push('تعذر تحميل المحتوى');
+                    console.error(`تعذر تحميل محتوى مادة ${course.id}:`, contentResult.reason);
+                }
+
+                if (quizResult.status === 'fulfilled') {
+                    if (quizResult.value.exists) {
+                        const quizData = quizResult.value.data();
+                        const score = Number(quizData.score);
+                        const total = Number(quizData.total);
+                        if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+                            const percentage = Math.round((score / total) * 100);
+                            quizSummary = `${score} / ${total} (${percentage}٪)`;
+                            let submittedAt = null;
+                            if (quizData.submittedAt && typeof quizData.submittedAt.toDate === 'function') {
+                                submittedAt = quizData.submittedAt.toDate();
+                            } else if (quizData.submittedAt) {
+                                const candidateDate = new Date(quizData.submittedAt);
+                                if (!Number.isNaN(candidateDate.getTime())) submittedAt = candidateDate;
+                            }
+                            if (!latestQuiz || (submittedAt && (!latestQuiz.date || submittedAt > latestQuiz.date))) {
+                                latestQuiz = { courseName: course.name, summary: `${score} / ${total}`, percentage, date: submittedAt };
+                            }
+                        } else {
+                            hasReadErrors = true;
+                            cardErrors.push('بيانات نتيجة الاختبار غير مكتملة');
+                        }
+                    }
+                } else {
+                    hasReadErrors = true;
+                    cardErrors.push('تعذر تحميل نتيجة الاختبار');
+                    console.error(`تعذر تحميل نتيجة اختبار مادة ${course.id}:`, quizResult.reason);
+                }
+
+                const courseUrl = `content.html?${new URLSearchParams({ course: course.id, grade, term }).toString()}`;
+                const progressText = cardErrors.length && completion === null
+                    ? 'تعذر حساب التقدم'
+                    : totalItems
+                        ? `${completedCount} من ${totalItems} عناصر مكتملة`
+                        : 'لم يضف محتوى لهذه المادة بعد';
+                const progressBar = completion === null ? '' : `
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label="نسبة إكمال ${course.name}" aria-valuenow="${completion}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="h-full rounded-full bg-emerald-600 transition-all" style="width: ${completion}%"></div>
+                    </div>`;
+                const errorText = cardErrors.length
+                    ? `<p class="mt-3 text-xs text-amber-700">${escapeHtml([...new Set(cardErrors)].join('، '))}. تحقق من اتصال Firestore وصلاحيات القراءة.</p>`
+                    : '';
+
+                return `
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <span class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-lg text-emerald-800"><i class="fa-solid ${course.icon}"></i></span>
+                                <div class="min-w-0">
+                                    <h3 class="truncate font-extrabold text-emerald-950">${course.name}</h3>
+                                    <p class="mt-0.5 text-xs text-slate-400">${escapeHtml([grade, term].filter(Boolean).join(' — ') || 'بيانات الصف والفصل غير متاحة')}</p>
+                                </div>
+                            </div>
+                            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800">مفعّلة</span>
+                        </div>
+                        <div class="mt-5">
+                            <div class="flex items-center justify-between gap-2 text-xs">
+                                <span class="font-bold text-slate-600">تقدم المحتوى</span>
+                                <span class="text-slate-500">${completion === null ? '' : `${completion}%`}</span>
+                            </div>
+                            ${progressBar}
+                            <p class="mt-1.5 text-xs text-slate-500">${progressText}</p>
+                        </div>
+                        <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                            <div>
+                                <p class="text-[11px] font-semibold text-slate-400">آخر نتيجة اختبار</p>
+                                <p class="mt-0.5 text-sm font-bold text-slate-700">${escapeHtml(quizSummary)}</p>
+                            </div>
+                            <a href="${courseUrl}" class="inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-900">
+                                استكمال <i class="fa-solid fa-arrow-left"></i>
+                            </a>
+                        </div>
+                        ${errorText}
+                    </article>`;
+            }));
+
+            if (requestId !== studentDashboardRequestId) return;
+
+            coursesContainer.innerHTML = courseCards.join('');
+            document.getElementById('dashboardCompletion').innerText = trackedCompletions.length
+                ? `${Math.round(trackedCompletions.reduce((sum, value) => sum + value, 0) / trackedCompletions.length)}٪`
+                : 'لا يوجد محتوى بعد';
+            document.getElementById('dashboardLatestQuiz').innerText = latestQuiz
+                ? `${latestQuiz.summary} (${latestQuiz.percentage}٪)`
+                : 'لم تحل اختبارًا بعد';
+            document.getElementById('dashboardLatestQuizCourse').innerText = latestQuiz
+                ? latestQuiz.courseName
+                : '';
+
+            if (hasReadErrors) {
+                notice.innerText = 'بعض بيانات لوحة الطالب لم تُحمّل. راجع اتصال الإنترنت وصلاحيات Firestore؛ تفاصيل الخطأ متاحة في Console.';
+                notice.classList.remove('hidden');
+            }
         }
 
 
