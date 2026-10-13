@@ -1340,6 +1340,7 @@
 
         // المستخدم الحالي
         let currentUserData = null;
+        let studentNotificationsUnsubscribe = null;
 
 
         // =========================
@@ -1403,6 +1404,10 @@
                 } else {
 
                     currentUserData = null;
+                    if (studentNotificationsUnsubscribe) {
+                        studentNotificationsUnsubscribe();
+                        studentNotificationsUnsubscribe = null;
+                    }
                     if (chatStatusUnsubscribe) {
                         chatStatusUnsubscribe();
                         chatStatusUnsubscribe = null;
@@ -1483,6 +1488,36 @@
 
             renderNotifications(user);
             subscribeToChatNotifications(user.uid);
+            subscribeToStudentNotifications(user.uid);
+
+        }
+
+        function subscribeToStudentNotifications(uid) {
+
+            if (!uid) return;
+
+            if (studentNotificationsUnsubscribe) {
+                studentNotificationsUnsubscribe();
+            }
+
+            studentNotificationsUnsubscribe = db
+                .collection('students')
+                .doc(uid)
+                .onSnapshot(function (studentSnapshot) {
+
+                    if (!studentSnapshot.exists || !currentUserData || currentUserData.uid !== uid) return;
+
+                    currentUserData = {
+                        ...currentUserData,
+                        notifications: studentSnapshot.data().notifications || []
+                    };
+
+                    localStorage.setItem('activeUser', JSON.stringify(currentUserData));
+                    renderNotifications(currentUserData);
+
+                }, function (error) {
+                    console.error('خطأ في مراقبة إشعارات الطالب:', error);
+                });
 
         }
 
