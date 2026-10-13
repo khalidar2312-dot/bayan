@@ -2293,6 +2293,7 @@
                 );
                 document.getElementById('supportStudentSearch').value = '';
                 document.getElementById('supportStudentSearchResults').innerHTML = '';
+                switchTab('support');
                 openAdminChat(uid, name, email);
             } catch (error) {
                 console.error('تعذر بدء محادثة الدعم مع الطالب:', error);
