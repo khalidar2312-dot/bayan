@@ -17,7 +17,7 @@
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, signOut, deleteUser, setPersistence, inMemoryPersistence, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, runTransaction, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
@@ -32,16 +32,23 @@
 
         const app = initializeApp(firebaseConfig);
         const adminApp = initializeApp(firebaseConfig, "bayan-admin-auth");
+        const staffCreationApp = initializeApp(firebaseConfig, "bayan-staff-creation");
         const db = getFirestore(adminApp);
         const adminAuth = getAuth(adminApp);
+        const staffCreationAuth = getAuth(staffCreationApp);
+        await setPersistence(staffCreationAuth, inMemoryPersistence);
 
         // جعل الدوال متاحة عالمياً في النطاق العام (window) لكي تعمل مع أحداث HTML
         window.db = db;
         window.adminAuth = adminAuth;
+        window.staffCreationAuth = staffCreationAuth;
         window.onAuthStateChanged = onAuthStateChanged;
         window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.updateProfile = updateProfile;
         window.sendPasswordResetEmail = sendPasswordResetEmail;
         window.signOut = signOut;
+        window.deleteUser = deleteUser;
         window.EmailAuthProvider = EmailAuthProvider;
         window.reauthenticateWithCredential = reauthenticateWithCredential;
         window.updatePassword = updatePassword;
@@ -77,25 +84,95 @@
         window.messagingInstance = firebase.messaging();
 
         window.ADMIN_AUTH_UID = "C7zCQWk4AWQlzhLoiTNJbGcvzU73";
+        let staffProfileUnsubscribe = null;
 
         document.addEventListener("DOMContentLoaded", function() {
-            window.onAuthStateChanged(window.adminAuth, function(user) {
-                const isAuthorizedAdmin = user && user.uid === window.ADMIN_AUTH_UID;
-                document.getElementById('loginScreen').classList.toggle('hidden', Boolean(isAuthorizedAdmin));
-                document.getElementById('adminDashboardContent').classList.toggle('hidden', !isAuthorizedAdmin);
+            localStorage.removeItem('adminStaffList');
+            localStorage.removeItem('isAdminLoggedIn');
+            localStorage.removeItem('currentLoggedInRole');
+            localStorage.removeItem('currentLoggedInName');
+            window.onAuthStateChanged(window.adminAuth, async function(user) {
+                if (staffProfileUnsubscribe) {
+                    staffProfileUnsubscribe();
+                    staffProfileUnsubscribe = null;
+                }
+                const loginScreen = document.getElementById('loginScreen');
+                const dashboard = document.getElementById('adminDashboardContent');
+                const status = document.getElementById('loginStatus');
 
-                if (!isAuthorizedAdmin) {
-                    localStorage.removeItem('isAdminLoggedIn');
-                    localStorage.removeItem('currentLoggedInRole');
-                    localStorage.removeItem('currentLoggedInName');
+                if (!user) {
+                    loginScreen.classList.remove('hidden');
+                    dashboard.classList.add('hidden');
+                    window.currentAdminPermissions = [];
+                    window.currentAdminRole = '';
                     return;
                 }
 
-                localStorage.setItem('currentLoggedInRole', 'مدير النظام (Admin)');
-                localStorage.setItem('currentLoggedInName', user.email || 'المسؤول الرئيسي');
-                document.getElementById('currentUserBadge').innerText = `المستخدم الحالي: ${user.email}`;
-                initAdminPanel();
-                setupPushNotifications();
+                try {
+                    if (status) status.classList.add('hidden');
+                    const isAdmin = user.uid === window.ADMIN_AUTH_UID;
+                    let permissions = [];
+                    let displayName = user.email || 'مستخدم الإدارة';
+
+                    if (!isAdmin) {
+                        const staffSnapshot = await window.getDoc(window.doc(window.db, 'staff', user.uid));
+                        const staffData = staffSnapshot.exists() ? staffSnapshot.data() : null;
+                        if (!staffData || staffData.active !== true || !Array.isArray(staffData.permissions)) {
+                            throw new Error('حساب الموظف غير نشط أو لم يتم إعداد صلاحياته.');
+                        }
+                        permissions = staffData.permissions;
+                        displayName = staffData.name || user.displayName || user.email || 'موظف';
+                        staffProfileUnsubscribe = window.onSnapshot(
+                            window.doc(window.db, 'staff', user.uid),
+                            async snapshot => {
+                                const updatedStaff = snapshot.exists() ? snapshot.data() : null;
+                                if (!updatedStaff || updatedStaff.active !== true) {
+                                    alert('تم تعطيل صلاحية هذا الحساب في لوحة الإدارة.');
+                                    await window.signOut(window.adminAuth);
+                                    return;
+                                }
+                                window.currentAdminPermissions = updatedStaff.permissions || [];
+                                applyStaffPermissions();
+                                const activeTab = document.querySelector('.tab-content:not(.hidden)');
+                                const activeTabName = activeTab && activeTab.id.replace('tab-', '');
+                                if (activeTabName && !window.currentAdminPermissions.includes(activeTabName)) {
+                                    const firstAllowed = allTabs.find(tab => window.currentAdminPermissions.includes(tab));
+                                    if (firstAllowed) switchTab(firstAllowed);
+                                }
+                            },
+                            async error => {
+                                console.error('تعذر متابعة صلاحيات الموظف:', error);
+                                await window.signOut(window.adminAuth);
+                            }
+                        );
+                    } else {
+                        permissions = window.ADMIN_TAB_IDS || [];
+                    }
+
+                    window.currentAdminPermissions = permissions;
+                    window.currentAdminRole = isAdmin ? 'مدير النظام (Admin)' : 'موظف';
+                    loginScreen.classList.add('hidden');
+                    dashboard.classList.remove('hidden');
+                    document.getElementById('currentUserBadge').innerText = `المستخدم الحالي: ${displayName}`;
+                    applyStaffPermissions();
+                    initAdminPanel();
+                    if (isAdmin) setupPushNotifications();
+                } catch (error) {
+                    console.error('تعذر التحقق من صلاحيات حساب الإدارة:', error);
+                    window.currentAdminPermissions = [];
+                    window.currentAdminRole = '';
+                    dashboard.classList.add('hidden');
+                    loginScreen.classList.remove('hidden');
+                    if (status) {
+                        status.innerText = error.code === 'permission-denied'
+                            ? 'تعذر قراءة صلاحيات الموظف. تحقق من نشر قواعد Firestore الجديدة.'
+                            : error.message;
+                        status.classList.remove('hidden');
+                    }
+                    if (user.uid !== window.ADMIN_AUTH_UID) {
+                        await window.signOut(window.adminAuth);
+                    }
+                }
             });
         });
     </script>
@@ -129,19 +206,20 @@
                     <i class="fa-solid fa-id-card-clip"></i>
                 </div>
                 <h2 class="text-2xl font-black font-kufi text-emerald-950">بوابة دخول الإدارة والموظفين</h2>
-                <p class="text-xs text-slate-400 mt-1">يرجى إدخال بيانات الحساب للتوجه للوحة التحكم</p>
+                <p class="text-xs text-slate-400 mt-1">سجّل الدخول ببريد Firebase وكلمة المرور</p>
             </div>
             
             <form onsubmit="handleUnifiedLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني لحساب الإدارة</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني</label>
                     <input type="email" id="loginUser" required autocomplete="username" placeholder="admin@example.com" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور (Password)</label>
                     <input type="password" id="loginPass" required autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
                 </div>
-                <p class="text-[11px] text-slate-400 text-center">استخدم بريد وكلمة مرور حساب الإدارة المسجلين في Firebase.</p>
+                <p id="loginStatus" class="hidden text-xs text-center text-red-600"></p>
+                <p class="text-[11px] text-slate-400 text-center">يجب أن يكون الحساب مديرًا أو موظفًا مضافًا من لوحة الإدارة.</p>
                 <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-800 text-amber-300 font-bold hover:bg-emerald-900 transition shadow-lg text-sm">تسجيل الدخول</button>
             </form>
         </div>
@@ -490,20 +568,21 @@
                     </div>
                     <div id="staffManagementSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
                         <form onsubmit="addNewStaff(event)" class="space-y-3 mb-6">
+                            <p class="text-[11px] text-slate-500">سيُنشأ الحساب في Firebase Authentication، وتُحفظ الصلاحيات في Firestore. استخدم بريدًا إلكترونيًا حقيقيًا.</p>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم الموظف</label>
                                     <input type="text" id="staffName" required placeholder="أحمد محمد" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم المستخدم</label>
-                                    <input type="text" id="staffUsername" required placeholder="ahmed22" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">البريد الإلكتروني</label>
+                                    <input type="email" id="staffEmail" required autocomplete="off" placeholder="employee@example.com" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">كلمة المرور</label>
-                                    <input type="password" id="staffPassword" required placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">كلمة مرور مؤقتة (6 أحرف على الأقل)</label>
+                                    <input type="password" id="staffPassword" required minlength="6" autocomplete="new-password" placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1.5">الدور / الصلاحية</label>
@@ -523,7 +602,7 @@
                                 <thead>
                                     <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
                                         <th class="px-4 py-3 font-bold">الموظف</th>
-                                        <th class="px-4 py-3 font-bold">المستخدم</th>
+                                        <th class="px-4 py-3 font-bold">البريد الإلكتروني</th>
                                         <th class="px-4 py-3 font-bold">الدور</th>
                                         <th class="px-4 py-3 font-bold text-center">حذف</th>
                                     </tr>
@@ -856,7 +935,7 @@
                 <p id="permissionsStaffName" class="text-xs text-amber-600 font-bold mt-1"></p>
             </div>
 
-            <input type="hidden" id="permissionsStaffIndex">
+            <input type="hidden" id="permissionsStaffUid">
 
             <div class="space-y-2 mb-5 max-h-[60vh] overflow-y-auto">
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
@@ -885,13 +964,6 @@
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-headset text-blue-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">الدعم الفني</span>
-                    </div>
-                </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
-                    <input type="checkbox" id="perm-staff" class="w-4 h-4 text-emerald-600 rounded">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-user-gear text-slate-500 w-4 text-center"></i>
-                        <span class="font-bold text-slate-700 text-xs">إدارة الموظفين</span>
                     </div>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
@@ -946,6 +1018,10 @@
         // ================================================
 
         function switchTab(tabName) {
+            if (window.currentAdminRole && !(window.currentAdminPermissions || []).includes(tabName)) {
+                showToast('ليست لديك صلاحية لفتح هذا القسم');
+                return;
+            }
             // إخفاء كل الـ tabs
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             // إخفاء active state من كل الأزرار
@@ -1039,14 +1115,12 @@
         // دالة تسجيل الدخول الموحدة
         async function handleUnifiedLogin(event) {
             event.preventDefault();
+            document.getElementById('loginStatus').classList.add('hidden');
             const email = document.getElementById('loginUser').value.trim();
             const password = document.getElementById('loginPass').value;
 
             try {
-                const credential = await window.signInWithEmailAndPassword(window.adminAuth, email, password);
-                if (credential.user.uid !== window.ADMIN_AUTH_UID) {
-                    alert('هذا الحساب غير مصرح له بدخول لوحة الإدارة.');
-                }
+                await window.signInWithEmailAndPassword(window.adminAuth, email, password);
             } catch (error) {
                 console.error('تعذر تسجيل دخول الإدارة:', error);
                 const messages = {
@@ -1128,12 +1202,17 @@
         }
 
         function initAdminPanel() {
-            loadStaffMembers();
-            loadAllUsersFromFirestore();
-            startRequestsListener();
-            startNotificationsListener();
-            startChatListener();
-            updateContentKey(); // تحميل المحتوى الافتراضي
+            const permissions = window.currentAdminPermissions || [];
+            if (window.currentAdminRole === 'مدير النظام (Admin)') loadStaffMembers();
+            if (permissions.includes('students') || permissions.includes('performance') || permissions.includes('announcements')) {
+                loadAllUsersFromFirestore();
+            }
+            if (permissions.includes('requests')) startRequestsListener();
+            if (window.currentAdminRole === 'مدير النظام (Admin)') startNotificationsListener();
+            if (permissions.includes('support')) startChatListener();
+            if (permissions.includes('content')) updateContentKey();
+            const firstAllowed = allTabs.find(tab => permissions.includes(tab));
+            if (firstAllowed) switchTab(firstAllowed);
         }
 
         function startRequestsListener() {
@@ -1988,6 +2067,13 @@
             loadStaffMembers();
         }
 
+        function refreshStudentListIfAllowed() {
+            const permissions = window.currentAdminPermissions || [];
+            if (permissions.includes('students') || permissions.includes('performance') || permissions.includes('announcements')) {
+                loadAllUsersFromFirestore();
+            }
+        }
+
         function renderRequestsTable(snapshot) {
             const tbody = document.getElementById('requestsTableBody');
 
@@ -2021,75 +2107,130 @@
             }).join('');
         }
 
-        function addNewStaff(event) {
-            event.preventDefault();
-            const name = document.getElementById('staffName').value.trim();
-            const username = document.getElementById('staffUsername').value.trim();
-            const password = document.getElementById('staffPassword').value.trim();
-            const role = document.getElementById('staffRole').value;
+        let staffCache = [];
 
-            let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-            
-            staffList.push({
-                name,
-                username,
-                password,
-                role,
-                date: new Date().toLocaleDateString('ar-EG')
-            });
-
-            localStorage.setItem('adminStaffList', JSON.stringify(staffList));
-            
-            document.getElementById('staffName').value = '';
-            document.getElementById('staffUsername').value = '';
-            document.getElementById('staffPassword').value = '';
-            
-            showToast("تم تعيين وإضافة الموظف بنجاح وأصبح بإمكانه الدخول الآن");
-            loadStaffMembers();
+        function escapeStaffText(value) {
+            return String(value || '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
         }
 
-        function loadStaffMembers() {
-            const tbody = document.getElementById('staffTableBody');
-            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-            
-            document.getElementById('statStaffCount').innerText = staffList.length;
-
-            if (staffList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد موظفين معينين حتى الآن</td></tr>`;
-                return;
+        async function addNewStaff(event) {
+            event.preventDefault();
+            const name = document.getElementById('staffName').value.trim();
+            const email = document.getElementById('staffEmail').value.trim();
+            const password = document.getElementById('staffPassword').value;
+            const role = document.getElementById('staffRole').value;
+            const permissionsByRole = {
+                'موظف خدمة عملاء': ['support', 'settings'],
+                'مساعد مراجعة اشتراكات': ['requests', 'settings'],
+                'مشرف أكاديمي': ['content', 'quizzes', 'performance', 'settings']
+            };
+            let createdUser = null;
+            try {
+                const credential = await window.createUserWithEmailAndPassword(
+                    window.staffCreationAuth,
+                    email,
+                    password
+                );
+                createdUser = credential.user;
+                await window.updateProfile(createdUser, { displayName: name });
+                await window.setDoc(window.doc(window.db, 'staff', createdUser.uid), {
+                    name,
+                    email: createdUser.email,
+                    role,
+                    permissions: permissionsByRole[role],
+                    active: true,
+                    createdAt: window.serverTimestamp()
+                });
+                event.target.reset();
+                showToast('تم إنشاء حساب Firebase للموظف. أعطه البريد وكلمة المرور المؤقتة بأمان.');
+                await loadStaffMembers();
+            } catch (error) {
+                console.error('تعذر إنشاء حساب الموظف:', error);
+                if (createdUser) {
+                    try {
+                        await window.deleteUser(createdUser);
+                    } catch (cleanupError) {
+                        console.error('تعذر حذف حساب الموظف الذي لم تكتمل إضافته:', cleanupError);
+                    }
+                }
+                const messages = {
+                    'auth/email-already-in-use': 'هذا البريد مسجل بالفعل في Firebase Authentication.',
+                    'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+                    'auth/weak-password': 'كلمة المرور ضعيفة؛ استخدم 6 أحرف على الأقل.',
+                    'permission-denied': 'تعذر حفظ ملف الموظف. تأكد من نشر قواعد Firestore الجديدة وأنك داخل بحساب المدير.'
+                };
+                alert(messages[error.code] || `تعذر إنشاء حساب الموظف: ${error.message}`);
+            } finally {
+                if (window.staffCreationAuth.currentUser) {
+                    try {
+                        await window.signOut(window.staffCreationAuth);
+                    } catch (error) {
+                        console.error('تعذر إنهاء جلسة إنشاء الموظف المؤقتة:', error);
+                    }
+                }
             }
+        }
 
-            tbody.innerHTML = staffList.map((staff, index) => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="px-4 py-3 font-bold text-slate-800">${staff.name}<div class="text-[10px] text-slate-400 font-normal">${staff.date}</div></td>
-                    <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${staff.username}</td>
-                    <td class="px-4 py-3"><span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-100">${staff.role}</span></td>
-                    <td class="px-4 py-3 text-center">
-                        <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="openPermissionsModal(${index})" class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[11px] hover:bg-emerald-100 transition border border-emerald-100"><i class="fa-solid fa-shield-halved ml-1"></i>صلاحيات</button>
-                            <button onclick="deleteStaff(${index})" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">حذف</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+        async function loadStaffMembers() {
+            const tbody = document.getElementById('staffTableBody');
+            try {
+                const snapshot = await window.getDocs(window.collection(window.db, 'staff'));
+                staffCache = snapshot.docs
+                    .map(staffDoc => ({ uid: staffDoc.id, ...staffDoc.data() }))
+                    .filter(staff => staff.active === true);
+                document.getElementById('statStaffCount').innerText = staffCache.length;
+                if (staffCache.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">لا يوجد موظفون حتى الآن</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = staffCache.map(staff => {
+                    const uid = escapeStaffText(staff.uid);
+                    const name = escapeStaffText(staff.name);
+                    const email = escapeStaffText(staff.email);
+                    const role = escapeStaffText(staff.role);
+                    const date = staff.createdAt && staff.createdAt.toDate
+                        ? staff.createdAt.toDate().toLocaleDateString('ar-EG')
+                        : '';
+                    return `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3 font-bold text-slate-800">${name}<div class="text-[10px] text-slate-400 font-normal">${date}</div></td>
+                            <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${email}</td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-100">${role}</span></td>
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button onclick="openPermissionsModal('${uid}')" class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[11px] hover:bg-emerald-100 transition border border-emerald-100"><i class="fa-solid fa-shield-halved ml-1"></i>صلاحيات</button>
+                                    <button onclick="deleteStaff('${uid}')" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">تعطيل الحساب</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('تعذر تحميل حسابات الموظفين:', error);
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-600">تعذر تحميل الموظفين: ${escapeStaffText(error.message)}</td></tr>`;
+            }
         }
 
         // ================================================
         // صلاحيات الموظفين
         // ================================================
 
-        const allTabs = ['requests', 'students', 'content', 'support', 'staff', 'settings', 'quizzes', 'performance', 'announcements'];
+        const allTabs = ['requests', 'students', 'content', 'support', 'settings', 'quizzes', 'performance', 'announcements'];
+        window.ADMIN_TAB_IDS = ['requests', 'students', 'content', 'support', 'staff', 'settings', 'quizzes', 'performance', 'announcements'];
 
-        function openPermissionsModal(index) {
-            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-            const staff = staffList[index];
+        function openPermissionsModal(uid) {
+            const staff = staffCache.find(item => item.uid === uid);
             if (!staff) return;
 
-            document.getElementById('permissionsStaffIndex').value = index;
+            document.getElementById('permissionsStaffUid').value = uid;
             document.getElementById('permissionsStaffName').innerText = staff.name;
-
-            // تحميل الصلاحيات الحالية
-            const perms = staff.permissions || allTabs; // افتراضياً كل الصلاحيات
+            const perms = staff.permissions || [];
             allTabs.forEach(tab => {
                 const cb = document.getElementById('perm-' + tab);
                 if (cb) cb.checked = perms.includes(tab);
@@ -2102,58 +2243,52 @@
             document.getElementById('permissionsModal').classList.add('hidden');
         }
 
-        function savePermissions() {
-            const index = parseInt(document.getElementById('permissionsStaffIndex').value);
-            let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-
+        async function savePermissions() {
+            const uid = document.getElementById('permissionsStaffUid').value;
             const selectedPerms = allTabs.filter(tab => {
                 const cb = document.getElementById('perm-' + tab);
                 return cb && cb.checked;
             });
-
-            staffList[index].permissions = selectedPerms;
-            localStorage.setItem('adminStaffList', JSON.stringify(staffList));
-
-            closePermissionsModal();
-            showToast('✅ تم حفظ صلاحيات الموظف بنجاح');
+            if (!selectedPerms.length) {
+                alert('اختر صلاحية واحدة على الأقل للموظف.');
+                return;
+            }
+            try {
+                await window.updateDoc(window.doc(window.db, 'staff', uid), {
+                    permissions: selectedPerms,
+                    updatedAt: window.serverTimestamp()
+                });
+                closePermissionsModal();
+                showToast('تم تحديث الصلاحيات. ستُطبّق فورًا على عمليات Firestore.');
+                await loadStaffMembers();
+            } catch (error) {
+                console.error('تعذر تحديث صلاحيات الموظف:', error);
+                alert(`تعذر تحديث صلاحيات الموظف: ${error.message}`);
+            }
         }
 
         function applyStaffPermissions() {
-            const role = localStorage.getItem('currentLoggedInRole') || '';
-            const name = localStorage.getItem('currentLoggedInName') || '';
-
-            // الأدمن الرئيسي له كل الصلاحيات
-            if (role === 'مدير النظام (Admin)') return;
-
-            // جلب صلاحيات الموظف
-            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-            const staff = staffList.find(s => s.name === name);
-            if (!staff) return;
-
-            const perms = staff.permissions || allTabs;
-
-            // إخفاء الـ tabs وأزرار الـ sidebar اللي مش مصرح بيها
+            const perms = window.currentAdminPermissions || [];
             allTabs.forEach(tab => {
                 const navBtn = document.getElementById('nav-' + tab);
-                if (!perms.includes(tab)) {
-                    if (navBtn) navBtn.classList.add('hidden');
-                } else {
-                    if (navBtn) navBtn.classList.remove('hidden');
-                }
+                if (navBtn) navBtn.classList.toggle('hidden', !perms.includes(tab));
             });
-
-            // فتح أول tab مسموح بيه
-            const firstAllowed = allTabs.find(t => perms.includes(t));
-            if (firstAllowed) switchTab(firstAllowed);
+            const staffNav = document.getElementById('nav-staff');
+            if (staffNav) staffNav.classList.toggle('hidden', window.currentAdminRole !== 'مدير النظام (Admin)');
         }
 
-        function deleteStaff(index) {
-            if (confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
-                let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-                staffList.splice(index, 1);
-                localStorage.setItem('adminStaffList', JSON.stringify(staffList));
-                showToast("تم إزالة الموظف بنجاح");
-                loadStaffMembers();
+        async function deleteStaff(uid) {
+            if (!confirm("سيتم تعطيل صلاحيات هذا الحساب فورًا. هل تريد المتابعة؟")) return;
+            try {
+                await window.updateDoc(window.doc(window.db, 'staff', uid), {
+                    active: false,
+                    updatedAt: window.serverTimestamp()
+                });
+                showToast('تم تعطيل صلاحيات الحساب. لا يستطيع دخول لوحة الإدارة بعد الآن.');
+                await loadStaffMembers();
+            } catch (error) {
+                console.error('تعذر تعطيل حساب الموظف:', error);
+                alert(`تعذر تعطيل حساب الموظف: ${error.message}`);
             }
         }
 
@@ -2367,7 +2502,7 @@
                 await window.updateDoc(requestRef, { status: 'approved' });
 
                 showToast('✅ تم قبول الطلب وتفعيل الاشتراك بنجاح');
-                loadAllUsersFromFirestore();
+                refreshStudentListIfAllowed();
 
             } catch (e) {
                 console.error('خطأ في قبول الطلب:', e);
@@ -2418,7 +2553,7 @@
                 await window.updateDoc(requestRef, { status: 'rejected' });
 
                 showToast('تم رفض الطلب وإبلاغ الطالب');
-                loadAllUsersFromFirestore();
+                refreshStudentListIfAllowed();
 
             } catch (e) {
                 console.error('خطأ في رفض الطلب:', e);
