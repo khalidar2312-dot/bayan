@@ -795,37 +795,48 @@
         id="notificationModal"
         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden">
 
-        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl relative mx-4 overflow-hidden">
 
-            <button
-                onclick="clearAllNotifications()"
-                class="absolute top-4 right-4 text-red-500 hover:text-red-600 text-lg font-bold"
-                title="حذف كل الإشعارات">
+            <div class="flex items-center justify-between gap-3 px-5 py-4 sm:px-6 border-b border-slate-100 bg-gradient-to-l from-emerald-50/80 to-white">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-11 h-11 shrink-0 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-base sm:text-lg font-extrabold font-kufi text-slate-900">
+                            الإشعارات والتنبيهات
+                        </h3>
+                        <p id="notifTotalCount" class="text-[11px] text-slate-500 mt-0.5">0 إشعار</p>
+                    </div>
+                </div>
 
-                <i class="fa-solid fa-trash-can"></i>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button
+                        id="clearNotificationsButton"
+                        type="button"
+                        onclick="clearAllNotifications()"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-bold"
+                        title="حذف كل الإشعارات"
+                        aria-label="حذف كل الإشعارات">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>مسح الكل</span>
+                    </button>
+                    <button
+                        type="button"
+                        onclick="toggleNotificationModal()"
+                        class="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition flex items-center justify-center"
+                        title="إغلاق"
+                        aria-label="إغلاق الإشعارات">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
 
-            </button>
-
-            <button
-                onclick="toggleNotificationModal()"
-                class="absolute top-4 left-4 text-slate-400 hover:text-slate-600 text-xl font-bold">
-
-                <i class="fa-solid fa-xmark"></i>
-
-            </button>
-
-            <h3 class="text-xl font-extrabold font-kufi text-slate-900 mb-4 flex items-center gap-2">
-
-                <i class="fa-solid fa-bell text-amber-500"></i>
-
-                الإشعارات والتنبيهات
-
-            </h3>
-
-            <div
-                id="notificationsList"
-                class="space-y-3 max-h-80 overflow-y-auto pr-1">
-
+            <div class="p-5 sm:p-6">
+                <div
+                    id="notificationsList"
+                    class="space-y-3 max-h-[min(60vh,24rem)] overflow-y-auto pr-1">
+                </div>
             </div>
 
         </div>
@@ -1545,6 +1556,12 @@
 
             if (!list || !badge) return;
 
+            const totalCount =
+                document.getElementById('notifTotalCount');
+
+            const clearButton =
+                document.getElementById('clearNotificationsButton');
+
             let notifications =
                 Array.isArray(user.notifications)
                     ? user.notifications
@@ -1560,6 +1577,15 @@
                         !String(n.text).includes('undefined');
 
                 });
+
+            if (totalCount) {
+                totalCount.innerText =
+                    `${notifications.length} ${notifications.length === 1 ? 'إشعار' : 'إشعارات'}`;
+            }
+
+            if (clearButton) {
+                clearButton.disabled = notifications.length === 0;
+            }
 
 
             const unreadCount =
@@ -1586,9 +1612,13 @@
             if (notifications.length === 0) {
 
                 list.innerHTML =
-                    `<p class="text-center text-slate-400 text-xs py-4">
-                        لا توجد إشعارات حالياً
-                    </p>`;
+                    `<div class="flex flex-col items-center justify-center text-center py-10 px-4">
+                        <div class="w-16 h-16 rounded-3xl bg-slate-50 text-slate-300 flex items-center justify-center mb-3">
+                            <i class="fa-solid fa-bell-slash text-2xl"></i>
+                        </div>
+                        <p class="text-sm font-bold text-slate-600">كل شيء هادئ هنا</p>
+                        <p class="text-xs text-slate-400 mt-1">لا توجد إشعارات حالياً</p>
+                    </div>`;
 
                 return;
 
@@ -1599,25 +1629,31 @@
                 notifications.map(function (n, index) {
 
                     return `
-                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-2">
+                        <div class="group p-4 rounded-2xl bg-white border border-slate-100 hover:border-emerald-200 hover:shadow-sm transition text-xs">
 
-                            <div class="flex items-start justify-between gap-2">
-                                <p class="font-bold text-slate-800 flex-1">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-start gap-3 min-w-0">
+                                    <span class="w-8 h-8 shrink-0 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mt-0.5">
+                                        <i class="fa-solid fa-bell text-[11px]"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-slate-800 leading-6">
                                     ${escapeHtml(n.text)}
-                                </p>
+                                        </p>
+                                        <span class="text-[10px] text-slate-400 block mt-1">
+                                            ${escapeHtml(n.date || '')}
+                                        </span>
+                                    </div>
+                                </div>
 
                                 <button
                                     type="button"
                                     onclick="deleteNotification(${index})"
-                                    class="text-red-500 hover:text-red-600 transition"
+                                    class="w-8 h-8 shrink-0 rounded-lg text-slate-300 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center"
                                     title="حذف الإشعار">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
                             </div>
-
-                            <span class="text-[10px] text-slate-400 block">
-                                ${escapeHtml(n.date || '')}
-                            </span>
 
                         </div>
                     `;
