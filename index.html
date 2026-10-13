@@ -167,6 +167,15 @@
 
                     </button>
 
+                    <button
+                        type="button"
+                        onclick="openStudentSettings()"
+                        class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                        title="إعدادات الحساب"
+                        aria-label="إعدادات الحساب">
+                        <i class="fa-solid fa-gear text-lg"></i>
+                    </button>
+
                     <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-2xl">
 
                         <div class="w-8 h-8 rounded-full bg-emerald-800 text-amber-400 flex items-center justify-center font-bold text-sm">
@@ -841,6 +850,61 @@
 
         </div>
 
+    </div>
+
+    <!-- Student account settings -->
+    <div
+        id="studentSettingsModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4">
+            <button
+                type="button"
+                onclick="closeStudentSettings()"
+                class="absolute top-4 left-4 w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                title="إغلاق"
+                aria-label="إغلاق الإعدادات">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="text-center mb-5">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <h3 class="text-xl font-extrabold font-kufi text-slate-900">إعدادات الحساب</h3>
+                <p class="text-xs text-slate-400 mt-1">تغيير كلمة مرور الطالب</p>
+            </div>
+
+            <form id="changeStudentPasswordForm" onsubmit="changeStudentPassword(event)" class="space-y-3">
+                <div>
+                    <label for="currentStudentPassword" class="block text-xs font-bold text-slate-600 mb-1.5">كلمة المرور الحالية</label>
+                    <input id="currentStudentPassword" type="password" autocomplete="current-password" required
+                        class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600" dir="ltr">
+                </div>
+                <div>
+                    <label for="newStudentPassword" class="block text-xs font-bold text-slate-600 mb-1.5">كلمة المرور الجديدة</label>
+                    <input id="newStudentPassword" type="password" autocomplete="new-password" minlength="6" required
+                        class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600" dir="ltr">
+                </div>
+                <div>
+                    <label for="confirmStudentPassword" class="block text-xs font-bold text-slate-600 mb-1.5">تأكيد كلمة المرور الجديدة</label>
+                    <input id="confirmStudentPassword" type="password" autocomplete="new-password" minlength="6" required
+                        class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600" dir="ltr">
+                </div>
+                <p id="studentPasswordMessage" class="hidden text-xs rounded-xl px-3 py-2"></p>
+                <button id="changeStudentPasswordButton" type="submit"
+                    class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition">
+                    حفظ كلمة المرور الجديدة
+                </button>
+            </form>
+
+            <div class="border-t border-slate-100 mt-5 pt-4 text-center">
+                <p class="text-[11px] text-slate-500 mb-2">لا تتذكر كلمة المرور الحالية؟</p>
+                <button type="button" onclick="sendStudentPasswordReset()"
+                    class="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline">
+                    إرسال رابط إعادة التعيين إلى بريدي
+                </button>
+            </div>
+        </div>
     </div>
 
 
@@ -1773,6 +1837,101 @@
 
             return div.innerHTML;
 
+        }
+
+        function openStudentSettings() {
+            const user = auth.currentUser;
+            const message = document.getElementById('studentPasswordMessage');
+            document.getElementById('studentSettingsModal').classList.remove('hidden');
+            message.classList.add('hidden');
+            message.innerText = '';
+
+            if (!user) {
+                setStudentPasswordMessage('انتهت جلسة الدخول. سجّل الدخول مرة أخرى لإدارة كلمة المرور.', false);
+            }
+        }
+
+        function closeStudentSettings() {
+            document.getElementById('studentSettingsModal').classList.add('hidden');
+            document.getElementById('changeStudentPasswordForm')?.reset();
+        }
+
+        function setStudentPasswordMessage(text, success) {
+            const message = document.getElementById('studentPasswordMessage');
+            message.innerText = text;
+            message.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-emerald-50', 'text-emerald-700');
+            message.classList.add(success ? 'bg-emerald-50' : 'bg-red-50', success ? 'text-emerald-700' : 'text-red-700');
+        }
+
+        async function changeStudentPassword(event) {
+            event.preventDefault();
+
+            const user = auth.currentUser;
+            const currentPassword = document.getElementById('currentStudentPassword').value;
+            const newPassword = document.getElementById('newStudentPassword').value;
+            const confirmPassword = document.getElementById('confirmStudentPassword').value;
+            const submitButton = document.getElementById('changeStudentPasswordButton');
+
+            if (!user || !user.email) {
+                setStudentPasswordMessage('تعذر التحقق من الحساب. سجّل الخروج ثم الدخول مرة أخرى.', false);
+                return;
+            }
+            if (newPassword.length < 6) {
+                setStudentPasswordMessage('كلمة المرور الجديدة يجب أن تكون 6 أحرف أو أكثر.', false);
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                setStudentPasswordMessage('كلمة المرور الجديدة وتأكيدها غير متطابقين.', false);
+                return;
+            }
+            if (newPassword === currentPassword) {
+                setStudentPasswordMessage('اختر كلمة مرور مختلفة عن الحالية.', false);
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.innerText = 'جارٍ تحديث كلمة المرور...';
+
+            try {
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+                await user.reauthenticateWithCredential(credential);
+                await user.updatePassword(newPassword);
+
+                document.getElementById('changeStudentPasswordForm').reset();
+                setStudentPasswordMessage('تم تغيير كلمة المرور بنجاح.', true);
+            } catch (error) {
+                console.error('تعذر تغيير كلمة مرور الطالب:', error);
+                const messages = {
+                    'auth/wrong-password': 'كلمة المرور الحالية غير صحيحة.',
+                    'auth/invalid-credential': 'كلمة المرور الحالية غير صحيحة.',
+                    'auth/weak-password': 'كلمة المرور الجديدة ضعيفة. استخدم 6 أحرف أو أكثر.',
+                    'auth/requires-recent-login': 'لأمان حسابك، سجّل الخروج ثم الدخول مرة أخرى وحاول.',
+                    'auth/too-many-requests': 'محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.',
+                    'auth/network-request-failed': 'تعذر الاتصال بالإنترنت. تحقق من الاتصال وحاول مرة أخرى.'
+                };
+                setStudentPasswordMessage(messages[error.code] || `تعذر تغيير كلمة المرور: ${error.message || 'خطأ غير معروف'}`, false);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerText = 'حفظ كلمة المرور الجديدة';
+            }
+        }
+
+        async function sendStudentPasswordReset() {
+            const user = auth.currentUser;
+            const email = user?.email || currentUserData?.email;
+
+            if (!email) {
+                setStudentPasswordMessage('لا يوجد بريد إلكتروني مسجل لهذا الحساب.', false);
+                return;
+            }
+
+            try {
+                await auth.sendPasswordResetEmail(email);
+                setStudentPasswordMessage(`أرسلنا رابط إعادة تعيين كلمة المرور إلى ${email}. افحص البريد الوارد ومجلد الرسائل غير المرغوب فيها.`, true);
+            } catch (error) {
+                console.error('تعذر إرسال رابط إعادة تعيين كلمة المرور:', error);
+                setStudentPasswordMessage(`تعذر إرسال رابط إعادة التعيين: ${error.message || 'خطأ غير معروف'}`, false);
+            }
         }
 
 
