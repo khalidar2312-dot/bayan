@@ -477,7 +477,7 @@
                 return;
             }
 
-            currentQuizQuestions = quizDoc.exists() && Array.isArray(quizDoc.data().questions)
+            currentQuizQuestions = quizDoc.exists && Array.isArray(quizDoc.data().questions)
                 ? quizDoc.data().questions
                 : [];
             if (!currentQuizQuestions.length) {
@@ -493,7 +493,7 @@
                     8000,
                     'لم ترد قاعدة البيانات في الوقت المحدد عند التحقق من النتيجة السابقة.'
                 );
-                if (resultDoc.exists()) {
+                if (resultDoc.exists) {
                     const savedResult = resultDoc.data();
                     showQuizResult(savedResult.score, savedResult.total, savedResult.submittedAt);
                     return;
