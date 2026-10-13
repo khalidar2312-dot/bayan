@@ -259,14 +259,7 @@
 
         async function loadContent() {
             try {
-                const [contentResult, assessmentResult] = await Promise.allSettled([
-                    db.collection('course_content').doc(contentKey).get(),
-                    db.collection('course_assessments').doc(contentKey).get()
-                ]);
-
-                if (contentResult.status === 'rejected') throw contentResult.reason;
-
-                const contentDoc = contentResult.value;
+                const contentDoc = await db.collection('course_content').doc(contentKey).get();
                 if (contentDoc.exists) {
                     const data = contentDoc.data();
 
@@ -279,16 +272,8 @@
                     }
                 }
 
-                if (assessmentResult.status === 'rejected') {
-                    console.error('تعذر تحميل اختبار المادة:', assessmentResult.reason);
-                    document.getElementById('quizAvailability').innerText = 'تعذر تحميل الاختبار. تحقق من الاتصال والصلاحيات.';
-                    document.getElementById('startQuizButton').disabled = true;
-                    return;
-                }
-
-                const assessmentDoc = assessmentResult.value;
-                currentQuizQuestions = assessmentDoc.exists && Array.isArray(assessmentDoc.data().questions)
-                    ? assessmentDoc.data().questions
+                currentQuizQuestions = contentDoc.exists && Array.isArray(contentDoc.data().quizQuestions)
+                    ? contentDoc.data().quizQuestions
                     : [];
                 const availability = document.getElementById('quizAvailability');
                 const startButton = document.getElementById('startQuizButton');
