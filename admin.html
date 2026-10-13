@@ -202,6 +202,11 @@
                         <i class="fa-solid fa-chart-line w-4 text-center"></i>
                         <span>متابعة أداء الطلاب</span>
                     </button>
+                    <button onclick="switchTab('inactive-students')" id="nav-inactive-students"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        <i class="fa-solid fa-user-clock w-4 text-center"></i>
+                        <span>الطلاب غير النشطين</span>
+                    </button>
                     <button onclick="switchTab('content')" id="nav-content"
                         class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
                         <i class="fa-solid fa-photo-film w-4 text-center"></i>
@@ -347,6 +352,38 @@
                                 </tr></thead>
                                 <tbody id="performanceTableBody" class="text-xs divide-y divide-slate-50">
                                     <tr><td colspan="6" class="text-center py-8 text-slate-400">اختر المادة والصف والترم لعرض التقرير</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تاب: الطلاب غير النشطين -->
+                <div id="tab-inactive-students" class="tab-content hidden">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-extrabold font-kufi text-slate-800">متابعة الطلاب غير النشطين</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">طلاب لم يفتحوا درسًا خلال آخر 7 أيام أو لم يبدأوا المشاهدة</p>
+                        </div>
+                        <button onclick="loadInactiveStudents()" class="shrink-0 px-3 py-2 rounded-xl bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 transition">
+                            <i class="fa-solid fa-rotate ml-1"></i> تحديث
+                        </button>
+                    </div>
+                    <div id="inactiveStudentsSummary" class="mb-3 text-xs text-slate-500"></div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-right border-collapse">
+                                <thead>
+                                    <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
+                                        <th class="px-4 py-3 font-bold">الطالب</th>
+                                        <th class="px-4 py-3 font-bold">المادة</th>
+                                        <th class="px-4 py-3 font-bold">آخر درس</th>
+                                        <th class="px-4 py-3 font-bold">آخر نشاط</th>
+                                        <th class="px-4 py-3 font-bold text-center">التواصل</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inactiveStudentsTableBody" class="text-xs divide-y divide-slate-50">
+                                    <tr><td colspan="5" class="text-center py-8 text-slate-400">اضغط تحديث لعرض الطلاب غير النشطين</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -869,6 +906,13 @@
                     </div>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-inactive-students" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-user-clock text-amber-600 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">الطلاب غير النشطين</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-content" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-photo-film text-purple-500 w-4 text-center"></i>
@@ -958,6 +1002,7 @@
                     'requests': ['bg-amber-50', 'text-amber-700', 'border', 'border-amber-100'],
                     'students': ['bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100'],
                     'performance': ['bg-cyan-50', 'text-cyan-700', 'border', 'border-cyan-100'],
+                    'inactive-students': ['bg-amber-50', 'text-amber-700', 'border', 'border-amber-100'],
                     'content':  ['bg-purple-50', 'text-purple-700', 'border', 'border-purple-100'],
                     'quizzes':   ['bg-indigo-50', 'text-indigo-700', 'border', 'border-indigo-100'],
                     'support':  ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
@@ -972,6 +1017,7 @@
             if (window.innerWidth < 1024) toggleSidebar(false);
 
             if (tabName === 'performance') loadPerformanceReport();
+            if (tabName === 'inactive-students') loadInactiveStudents();
         }
 
         function toggleSidebar(forceClose) {
@@ -1403,6 +1449,134 @@
             } catch (error) {
                 console.error('خطأ في تحميل تقرير أداء الطلاب:', error);
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-red-500">تعذر تحميل التقرير. تحقق من الاتصال وصلاحيات Firestore.</td></tr>';
+            }
+        }
+
+        function getActivityTimestampMillis(value) {
+            if (!value) return 0;
+            if (typeof value.toMillis === 'function') return value.toMillis();
+            if (typeof value.seconds === 'number') return value.seconds * 1000;
+            return Date.parse(value) || 0;
+        }
+
+        async function loadInactiveStudents() {
+            const tbody = document.getElementById('inactiveStudentsTableBody');
+            const summary = document.getElementById('inactiveStudentsSummary');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-400">جاري تحميل بيانات الطلاب...</td></tr>';
+            summary.innerText = '';
+
+            const courseNames = {
+                fiqh: 'الفقه الميسر',
+                tafseer: 'علم التفسير',
+                hadith: 'الحديث الشريف',
+                tawheed: 'علم التوحيد'
+            };
+            const courses = Object.keys(courseNames);
+            const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+            try {
+                const studentsSnapshot = await window.getDocs(window.collection(window.db, 'students'));
+                const students = studentsSnapshot.docs.map(studentDoc => ({
+                    id: studentDoc.id,
+                    ...studentDoc.data()
+                }));
+                allStudentsData = students;
+                supportStudentSearchDataLoaded = true;
+
+                const inactiveStudents = students.flatMap(student => {
+                    const subscriptions = student.subscriptions || {};
+                    const approvedCourses = courses.filter(courseId => subscriptions[courseId] === 'approved');
+                    if (!approvedCourses.length) return [];
+
+                    const allProgress = student.courseProgress && typeof student.courseProgress === 'object'
+                        ? student.courseProgress
+                        : {};
+                    const activityByCourse = approvedCourses.map(courseId => {
+                        const subscriptionData = subscriptions[`${courseId}_data`] || {};
+                        const contentKey = subscriptionData.grade && subscriptionData.term
+                            ? `${courseId}__${subscriptionData.grade}__${subscriptionData.term}`.replace(/\s+/g, '_')
+                            : '';
+                        const attendance = contentKey && allProgress[contentKey] && allProgress[contentKey].attendance
+                            ? allProgress[contentKey].attendance
+                            : {};
+                        const latestLesson = Object.values(attendance)
+                            .filter(lesson => lesson && typeof lesson === 'object')
+                            .map(lesson => ({
+                                ...lesson,
+                                timestamp: getActivityTimestampMillis(lesson.lastOpenedAt || lesson.firstOpenedAt)
+                            }))
+                            .sort((first, second) => second.timestamp - first.timestamp)[0];
+
+                        return {
+                            courseId,
+                            grade: subscriptionData.grade || '',
+                            term: subscriptionData.term || '',
+                            latestLesson: latestLesson || null
+                        };
+                    });
+                    const latestActivity = activityByCourse
+                        .filter(item => item.latestLesson && item.latestLesson.timestamp > 0)
+                        .sort((first, second) => second.latestLesson.timestamp - first.latestLesson.timestamp)[0];
+
+                    if (latestActivity && latestActivity.latestLesson.timestamp >= cutoff) return [];
+
+                    const reportCourse = latestActivity || activityByCourse[0];
+                    return [{
+                        id: student.id,
+                        name: student.fullName || student.name || 'طالب بدون اسم',
+                        email: student.email || '',
+                        courseId: reportCourse.courseId,
+                        courseName: courseNames[reportCourse.courseId],
+                        grade: reportCourse.grade,
+                        term: reportCourse.term,
+                        lessonTitle: latestActivity
+                            ? latestActivity.latestLesson.title || 'درس بدون عنوان'
+                            : 'لم يبدأ مشاهدة أي درس',
+                        lastActivity: latestActivity ? latestActivity.latestLesson.timestamp : 0
+                    }];
+                }).sort((first, second) => second.lastActivity - first.lastActivity);
+
+                summary.innerText = `عدد الطلاب غير النشطين: ${inactiveStudents.length} (لم يفتحوا درسًا خلال آخر 7 أيام أو لم يبدأوا المشاهدة).`;
+                if (!inactiveStudents.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-emerald-700">ممتاز! لا يوجد طلاب غير نشطين حاليًا.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = inactiveStudents.map(student => {
+                    const lastActivityText = student.lastActivity
+                        ? new Date(student.lastActivity).toLocaleString('ar-EG')
+                        : 'لا يوجد نشاط مسجل';
+                    const subscriptionText = student.grade && student.term
+                        ? `${student.grade} — ${student.term}`
+                        : 'بيانات الصف أو الترم غير مكتملة';
+
+                    return `
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3">
+                                <p class="font-bold text-slate-800">${escapeQuizHtml(student.name)}</p>
+                                <p class="text-[10px] text-slate-400">${escapeQuizHtml(student.email)}</p>
+                            </td>
+                            <td class="px-4 py-3">
+                                <p class="font-bold text-slate-700">${student.courseName}</p>
+                                <p class="text-[10px] text-slate-400">${escapeQuizHtml(subscriptionText)}</p>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600">${escapeQuizHtml(student.lessonTitle)}</td>
+                            <td class="px-4 py-3 text-slate-500">${escapeQuizHtml(lastActivityText)}</td>
+                            <td class="px-4 py-3 text-center">
+                                <button type="button" data-student-uid="${escapeQuizHtml(student.id)}"
+                                    class="inactive-student-chat px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] hover:bg-blue-100 transition">
+                                    <i class="fa-solid fa-comment-dots ml-1"></i> ابدأ دردشة
+                                </button>
+                            </td>
+                        </tr>`;
+                }).join('');
+
+                tbody.querySelectorAll('.inactive-student-chat').forEach(button => {
+                    button.addEventListener('click', () => startAdminChatWithStudent(button.dataset.studentUid));
+                });
+            } catch (error) {
+                console.error('تعذر تحميل قائمة الطلاب غير النشطين:', error);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-500">تعذر تحميل القائمة. تحقق من الاتصال والصلاحيات ثم حاول التحديث.</td></tr>';
             }
         }
 
@@ -1926,7 +2100,7 @@
         // صلاحيات الموظفين
         // ================================================
 
-        const allTabs = ['requests', 'students', 'performance', 'content', 'quizzes', 'support', 'announcements', 'staff', 'settings'];
+        const allTabs = ['requests', 'students', 'performance', 'inactive-students', 'content', 'quizzes', 'support', 'announcements', 'staff', 'settings'];
 
         function openPermissionsModal(index) {
             const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
