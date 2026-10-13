@@ -135,6 +135,19 @@
                 </div>
             </section>
 
+            <section id="studentAssignmentsSection" class="hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                        <i class="fa-solid fa-file-pen"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">واجبات المادة</h2>
+                        <p class="text-[11px] text-slate-400 mt-0.5">اكتب إجابتك وأرسلها للمدرس للمراجعة</p>
+                    </div>
+                </div>
+                <div id="studentAssignmentsList" class="space-y-3"></div>
+            </section>
+
             <!-- tabs الفيديو والملفات -->
             <div class="flex items-center gap-3 mb-6">
                 <button onclick="switchTab('videos')" id="tabVideos"
@@ -213,6 +226,8 @@
         let currentQuizQuestions = [];
         let currentVideos = [];
         let currentAttendance = {};
+        let currentAssignments = [];
+        let currentAssignmentSubmissions = {};
 
         document.addEventListener('DOMContentLoaded', function() {
             // تحديث العناوين
@@ -295,6 +310,11 @@
                 const courseProgress = savedProgress[contentKey] || {};
                 currentAttendance = courseProgress.attendance || {};
                 updateLessonProgress();
+                currentAssignmentSubmissions = courseProgress.assignmentSubmissions || {};
+                currentAssignments = contentDoc.exists() && Array.isArray(contentDoc.data().assignments)
+                    ? contentDoc.data().assignments
+                    : [];
+                renderStudentAssignments();
 
                 if (shouldResume) {
                     const lastLesson = Object.values(currentAttendance)
@@ -344,6 +364,98 @@
                 total ? `بدأت مشاهدة ${startedCount} من ${total} درس` : 'لا توجد دروس فيديو في هذه المادة بعد';
             document.getElementById('lessonProgressPercent').innerText = `${percentage}%`;
             document.getElementById('lessonProgressBar').style.width = `${percentage}%`;
+        }
+
+        function renderStudentAssignments() {
+            const section = document.getElementById('studentAssignmentsSection');
+            const container = document.getElementById('studentAssignmentsList');
+            if (!currentAssignments.length) {
+                section.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+
+            section.classList.remove('hidden');
+            container.innerHTML = currentAssignments.map((assignment, index) => {
+                const submission = currentAssignmentSubmissions[assignment.id];
+                const graded = submission && submission.status === 'graded';
+                const overdue = assignment.dueDate &&
+                    new Date(`${assignment.dueDate}T23:59:59`).getTime() < Date.now();
+                const dueDate = assignment.dueDate
+                    ? new Date(`${assignment.dueDate}T00:00:00`).toLocaleDateString('ar-EG')
+                    : 'بدون موعد محدد';
+
+                return `
+                    <article class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                        <div class="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-800">${escapeHtml(assignment.title)}</h3>
+                                <p class="text-[11px] text-slate-500 mt-1 whitespace-pre-wrap">${escapeHtml(assignment.instructions)}</p>
+                            </div>
+                            <span class="shrink-0 text-[10px] font-bold ${overdue && !graded ? 'text-rose-600' : 'text-slate-400'}">موعد التسليم: ${dueDate}</span>
+                        </div>
+                        ${graded ? `
+                            <div class="mt-3 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                                <p class="text-xs font-bold text-emerald-800">تم تصحيح إجابتك: ${Number(submission.grade)} من 100</p>
+                                ${submission.feedback ? `<p class="text-xs text-emerald-900 mt-1 whitespace-pre-wrap">${escapeHtml(submission.feedback)}</p>` : ''}
+                                <p class="text-[10px] text-slate-500 mt-2">إجابتك: ${escapeHtml(submission.answer)}</p>
+                            </div>
+                        ` : `
+                            <form data-assignment-form data-assignment-id="${escapeHtml(assignment.id)}" class="mt-3 space-y-2">
+                                <textarea data-assignment-answer maxlength="5000" rows="4" required ${overdue ? 'disabled' : ''}
+                                    placeholder="${overdue ? 'انتهى موعد تسليم هذا الواجب' : 'اكتب إجابتك هنا...'}"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:border-emerald-500 resize-y disabled:bg-slate-100">${escapeHtml(submission && submission.answer || '')}</textarea>
+                                ${submission ? '<p class="text-[10px] text-amber-700">تم إرسال إجابتك، ويمكنك تعديلها قبل التصحيح.</p>' : ''}
+                                <button type="submit" ${overdue ? 'disabled' : ''}
+                                    class="px-4 py-2 rounded-lg bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 disabled:bg-slate-300 disabled:cursor-not-allowed">
+                                    <i class="fa-solid fa-paper-plane ml-1"></i>${submission ? 'تحديث الإجابة' : 'إرسال الإجابة'}
+                                </button>
+                            </form>
+                        `}
+                    </article>`;
+            }).join('');
+
+            container.querySelectorAll('[data-assignment-form]').forEach(form => {
+                form.addEventListener('submit', submitAssignment);
+            });
+        }
+
+        async function submitAssignment(event) {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const assignmentId = form.dataset.assignmentId;
+            const assignment = currentAssignments.find(item => item.id === assignmentId);
+            const answer = form.querySelector('[data-assignment-answer]').value.trim();
+            if (!currentStudentUid || !assignment || !answer) return;
+
+            const existingSubmission = currentAssignmentSubmissions[assignmentId];
+            if (existingSubmission && existingSubmission.status === 'graded') {
+                alert('تم تصحيح هذا الواجب بالفعل ولا يمكن تعديل الإجابة.');
+                return;
+            }
+            if (assignment.dueDate && new Date(`${assignment.dueDate}T23:59:59`).getTime() < Date.now()) {
+                alert('انتهى موعد تسليم هذا الواجب.');
+                return;
+            }
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            const submission = {
+                answer,
+                status: 'pending',
+                submittedAt: new Date().toISOString()
+            };
+            try {
+                await db.collection('students').doc(currentStudentUid).update({
+                    [`courseProgress.${contentKey}.assignmentSubmissions.${assignmentId}`]: submission
+                });
+                currentAssignmentSubmissions[assignmentId] = submission;
+                renderStudentAssignments();
+            } catch (error) {
+                console.error('تعذر إرسال إجابة الواجب:', error);
+                alert(`تعذر إرسال الإجابة: ${error.code || error.message || 'تحقق من الاتصال وحاول مرة أخرى.'}`);
+                submitButton.disabled = false;
+            }
         }
 
         function renderVideos(videos) {
