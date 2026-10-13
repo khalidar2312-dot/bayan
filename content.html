@@ -91,6 +91,37 @@
         <!-- المحتوى الفعلي -->
         <div id="contentState" class="hidden">
 
+            <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                        <i class="fa-solid fa-clipboard-question"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">اختبار المادة</h2>
+                        <p id="quizAvailability" class="text-[11px] text-slate-400 mt-0.5">جاري التحقق من توفر الاختبار...</p>
+                    </div>
+                </div>
+                <button id="startQuizButton" onclick="startQuiz()" disabled class="px-4 py-2.5 rounded-xl bg-indigo-700 text-white text-xs font-bold hover:bg-indigo-800 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    <i class="fa-solid fa-play ml-1"></i> ابدأ الاختبار
+                </button>
+            </section>
+
+            <section id="quizPanel" class="hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <h2 class="font-bold text-slate-800">اختبار المادة</h2>
+                    <button onclick="closeQuiz()" class="text-slate-400 hover:text-slate-700" title="إغلاق الاختبار">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <form id="quizForm" onsubmit="submitQuiz(event)" class="space-y-4">
+                    <div id="quizQuestions" class="space-y-4"></div>
+                    <button type="submit" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900">
+                        تسليم الاختبار
+                    </button>
+                </form>
+                <div id="quizResult" class="hidden mt-4 p-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-bold"></div>
+            </section>
+
             <!-- tabs الفيديو والملفات -->
             <div class="flex items-center gap-3 mb-6">
                 <button onclick="switchTab('videos')" id="tabVideos"
@@ -164,6 +195,8 @@
 
         // مفتاح المحتوى في Firestore
         const contentKey = `${courseId}__${grade}__${term}`.replace(/\s+/g, '_');
+        let currentStudentUid = null;
+        let currentQuizQuestions = [];
 
         document.addEventListener('DOMContentLoaded', function() {
             // تحديث العناوين
@@ -187,12 +220,18 @@
                     }
 
                     const studentData = studentDoc.data();
+                    currentStudentUid = firebaseUser.uid;
                     document.getElementById('headerStudentName').innerText = studentData.fullName || 'طالب';
 
                     const subs = studentData.subscriptions || {};
+                    const subscriptionData = subs[`${courseId}_data`] || {};
 
                     // التحقق من الاشتراك
-                    if (subs[courseId] !== 'approved') {
+                    if (
+                        subs[courseId] !== 'approved' ||
+                        (subscriptionData.grade && subscriptionData.grade !== grade) ||
+                        (subscriptionData.term && subscriptionData.term !== term)
+                    ) {
                         showUnauthorized();
                         return;
                     }
@@ -220,24 +259,51 @@
 
         async function loadContent() {
             try {
-                const contentDoc = await db.collection('course_content').doc(contentKey).get();
+                const [contentResult, assessmentResult] = await Promise.allSettled([
+                    db.collection('course_content').doc(contentKey).get(),
+                    db.collection('course_assessments').doc(contentKey).get()
+                ]);
 
-                if (!contentDoc.exists) return;
+                if (contentResult.status === 'rejected') throw contentResult.reason;
 
-                const data = contentDoc.data();
+                const contentDoc = contentResult.value;
+                if (contentDoc.exists) {
+                    const data = contentDoc.data();
 
-                // عرض الفيديوهات
-                if (data.videos && data.videos.length > 0) {
-                    renderVideos(data.videos);
+                    if (Array.isArray(data.videos) && data.videos.length > 0) {
+                        renderVideos(data.videos);
+                    }
+
+                    if (Array.isArray(data.files) && data.files.length > 0) {
+                        renderFiles(data.files);
+                    }
                 }
 
-                // عرض الملفات
-                if (data.files && data.files.length > 0) {
-                    renderFiles(data.files);
+                if (assessmentResult.status === 'rejected') {
+                    console.error('تعذر تحميل اختبار المادة:', assessmentResult.reason);
+                    document.getElementById('quizAvailability').innerText = 'تعذر تحميل الاختبار. تحقق من الاتصال والصلاحيات.';
+                    document.getElementById('startQuizButton').disabled = true;
+                    return;
+                }
+
+                const assessmentDoc = assessmentResult.value;
+                currentQuizQuestions = assessmentDoc.exists && Array.isArray(assessmentDoc.data().questions)
+                    ? assessmentDoc.data().questions
+                    : [];
+                const availability = document.getElementById('quizAvailability');
+                const startButton = document.getElementById('startQuizButton');
+
+                if (currentQuizQuestions.length) {
+                    availability.innerText = `${currentQuizQuestions.length} سؤال اختيار من متعدد`;
+                    startButton.disabled = false;
+                } else {
+                    availability.innerText = 'لا يوجد اختبار متاح لهذه المادة حاليًا';
+                    startButton.disabled = true;
                 }
 
             } catch (error) {
                 console.error('خطأ في تحميل المحتوى:', error);
+                document.getElementById('quizAvailability').innerText = 'تعذر تحميل الاختبار. حاول تحديث الصفحة.';
             }
         }
 
@@ -325,6 +391,8 @@
         }
 
         function openVideo(url, title, isDrive) {
+            recordLessonAttendance(url, title);
+
             let embedUrl;
 
             if (isDrive) {
@@ -349,6 +417,116 @@
         function closeVideoModal() {
             document.getElementById('videoModalFrame').src = '';
             document.getElementById('videoModal').classList.add('hidden');
+        }
+
+        function makeLessonId(url) {
+            let hash = 0;
+            for (let index = 0; index < url.length; index++) {
+                hash = (hash * 31 + url.charCodeAt(index)) | 0;
+            }
+            return `lesson_${Math.abs(hash)}`;
+        }
+
+        async function recordLessonAttendance(url, title) {
+            if (!currentStudentUid || !url) return;
+
+            try {
+                const progressRef = db
+                    .collection('students')
+                    .doc(currentStudentUid)
+                    .collection('course_progress')
+                    .doc(contentKey);
+                const progressSnapshot = await progressRef.get();
+                const progress = progressSnapshot.exists ? progressSnapshot.data() : {};
+                const attendance = progress.attendance && typeof progress.attendance === 'object'
+                    ? progress.attendance
+                    : {};
+                const lessonId = makeLessonId(url);
+                const existing = attendance[lessonId] || {};
+
+                attendance[lessonId] = {
+                    title,
+                    url,
+                    firstOpenedAt: existing.firstOpenedAt || firebase.firestore.FieldValue.serverTimestamp(),
+                    lastOpenedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    openCount: (existing.openCount || 0) + 1
+                };
+
+                await progressRef.set({ attendance }, { merge: true });
+            } catch (error) {
+                console.error('تعذر تسجيل حضور الدرس:', error);
+            }
+        }
+
+        function startQuiz() {
+            if (!currentQuizQuestions.length) return;
+
+            const questionsContainer = document.getElementById('quizQuestions');
+            document.getElementById('quizForm').reset();
+            questionsContainer.innerHTML = currentQuizQuestions.map((question, questionIndex) => `
+                <fieldset class="p-4 rounded-xl border border-slate-100">
+                    <legend class="font-bold text-sm text-slate-800 px-1">${questionIndex + 1}. ${escapeHtml(question.prompt)}</legend>
+                    <div class="space-y-2 mt-2">
+                        ${(question.options || []).map((option, optionIndex) => `
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer text-xs text-slate-700">
+                                <input type="radio" name="quiz-answer-${questionIndex}" value="${optionIndex}" required class="text-emerald-700">
+                                <span>${escapeHtml(option)}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </fieldset>
+            `).join('');
+
+            document.getElementById('quizResult').classList.add('hidden');
+            document.getElementById('quizForm').querySelector('button[type="submit"]').disabled = false;
+            document.getElementById('quizPanel').classList.remove('hidden');
+            document.getElementById('quizPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function closeQuiz() {
+            document.getElementById('quizPanel').classList.add('hidden');
+        }
+
+        async function submitQuiz(event) {
+            event.preventDefault();
+            if (!currentStudentUid || !currentQuizQuestions.length) return;
+
+            const answers = currentQuizQuestions.map((_, questionIndex) => {
+                const selected = document.querySelector(`input[name="quiz-answer-${questionIndex}"]:checked`);
+                return selected ? Number(selected.value) : -1;
+            });
+            if (answers.some(answer => answer < 0)) {
+                alert('أجب عن جميع الأسئلة قبل تسليم الاختبار.');
+                return;
+            }
+
+            const score = currentQuizQuestions.reduce((total, question, index) =>
+                total + (answers[index] === Number(question.correctIndex) ? 1 : 0), 0);
+            const attempt = {
+                score,
+                total: currentQuizQuestions.length,
+                percentage: Math.round(score / currentQuizQuestions.length * 100),
+                submittedAt: new Date().toISOString()
+            };
+
+            try {
+                await db
+                    .collection('students')
+                    .doc(currentStudentUid)
+                    .collection('course_progress')
+                    .doc(contentKey)
+                    .set({
+                        quizAttempts: firebase.firestore.FieldValue.arrayUnion(attempt)
+                    }, { merge: true });
+
+                const result = document.getElementById('quizResult');
+                result.innerText = `نتيجتك: ${score} من ${currentQuizQuestions.length} (${attempt.percentage}%)`;
+                result.classList.remove('hidden');
+                document.getElementById('quizForm').querySelector('button[type="submit"]').disabled = true;
+            } catch (error) {
+                console.error('تعذر حفظ نتيجة الاختبار:', error);
+                alert('تم حساب النتيجة لكن تعذر حفظها. تحقق من الاتصال وحاول مرة أخرى.');
+            }
         }
 
         function extractYoutubeId(url) {
