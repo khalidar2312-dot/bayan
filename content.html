@@ -421,17 +421,26 @@
             const result = document.getElementById('quizResult');
             container.innerHTML = '<div class="text-center py-12 text-slate-400">جاري تحميل الاختبار...</div>';
             result.classList.add('hidden');
+            container.classList.remove('hidden');
+
+            let quizDoc;
+            try {
+                quizDoc = await db.collection('quizzes').doc(contentKey).get();
+            } catch (error) {
+                console.error('تعذر قراءة أسئلة الاختبار من quizzes:', error);
+                container.innerHTML = `<div class="text-center py-8 text-red-500">تعذر تحميل أسئلة الاختبار (${escapeHtml(error.code || 'خطأ غير معروف')}). تحقق من صلاحية قراءة مجموعة quizzes في Firestore.</div>`;
+                return;
+            }
+
+            currentQuizQuestions = quizDoc.exists() && Array.isArray(quizDoc.data().questions)
+                ? quizDoc.data().questions
+                : [];
+            if (!currentQuizQuestions.length) {
+                container.innerHTML = '<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-pen-to-square text-3xl mb-3 block opacity-40"></i><p class="text-sm">لا يوجد اختبار متاح حالياً لهذه المادة والصف والفصل الدراسي</p></div>';
+                return;
+            }
 
             try {
-                const quizDoc = await db.collection('quizzes').doc(contentKey).get();
-                currentQuizQuestions = quizDoc.exists && Array.isArray(quizDoc.data().questions)
-                    ? quizDoc.data().questions
-                    : [];
-                if (!currentQuizQuestions.length) {
-                    container.innerHTML = '<div class="text-center py-12 text-slate-400"><i class="fa-solid fa-pen-to-square text-3xl mb-3 block opacity-40"></i><p class="text-sm">لا يوجد اختبار متاح حالياً</p></div>';
-                    return;
-                }
-
                 const resultDoc = await db.collection('quiz_results').doc(`${currentStudentId}__${contentKey}`).get();
                 if (resultDoc.exists()) {
                     const savedResult = resultDoc.data();
@@ -440,15 +449,16 @@
                 }
                 renderQuizQuestions();
             } catch (error) {
-                console.error('تعذر تحميل الاختبار:', error);
-                container.innerHTML = '<div class="text-center py-8 text-red-500">تعذر تحميل الاختبار. تحقق من الاتصال والصلاحيات ثم أعد المحاولة.</div>';
+                console.error('تعذر قراءة نتيجة الاختبار من quiz_results:', error);
+                renderQuizQuestions(`تعذر التحقق من وجود نتيجة سابقة (${escapeHtml(error.code || 'خطأ غير معروف')}). سيظهر الاختبار، لكن قد تحتاج صلاحيات Firestore إلى مراجعة قبل حفظ النتيجة.`);
             }
         }
 
-        function renderQuizQuestions() {
+        function renderQuizQuestions(warningMessage = '') {
             const letters = ['أ', 'ب', 'ج', 'د'];
             document.getElementById('quizContainer').innerHTML = `
                 <form onsubmit="submitQuiz(event)" class="space-y-4">
+                    ${warningMessage ? `<p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">${warningMessage}</p>` : ''}
                     ${currentQuizQuestions.map((question, index) => `
                         <fieldset class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
                             <legend class="font-bold text-slate-800 text-sm mb-3">${index + 1}. ${escapeHtml(question.question)}</legend>
