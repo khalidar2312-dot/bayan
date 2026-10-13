@@ -823,6 +823,7 @@
 
     </footer>
 
+    <audio id="studentNotificationSound" src="sound.mp3" preload="auto"></audio>
 
     <!-- Notification Modal -->
     <div
@@ -1355,6 +1356,10 @@
         // المستخدم الحالي
         let currentUserData = null;
         let studentDashboardRequestId = 0;
+        let studentNotificationsUnsubscribe = null;
+        let studentNotificationsUid = null;
+        let knownStudentAnnouncementIds = new Set();
+        let soundedStudentAnnouncementIds = new Set();
         const studentDashboardCourses = [
             { id: 'fiqh', name: 'الفقه الميسر', icon: 'fa-scale-balanced' },
             { id: 'tafseer', name: 'علم التفسير', icon: 'fa-book-quran' },
@@ -1368,7 +1373,6 @@
         // =========================
 
         document.addEventListener("DOMContentLoaded", function () {
-
             // مراقبة حالة تسجيل الدخول من Firebase
             auth.onAuthStateChanged(async function (firebaseUser) {
 
@@ -1430,6 +1434,13 @@
 
                 } else {
 
+                    if (studentNotificationsUnsubscribe) {
+                        studentNotificationsUnsubscribe();
+                        studentNotificationsUnsubscribe = null;
+                    }
+                    studentNotificationsUid = null;
+                    knownStudentAnnouncementIds.clear();
+                    soundedStudentAnnouncementIds.clear();
                     currentUserData = null;
 
                     localStorage.removeItem('activeUser');
@@ -1507,8 +1518,69 @@
             updateCourseButtons(user);
 
             renderNotifications(user);
+            startStudentNotificationsListener(user);
             loadStudentDashboard(user);
 
+        }
+
+        function startStudentNotificationsListener(user) {
+            if (!user || !user.uid || studentNotificationsUid === user.uid) return;
+
+            if (studentNotificationsUnsubscribe) studentNotificationsUnsubscribe();
+            studentNotificationsUid = user.uid;
+            knownStudentAnnouncementIds = new Set(
+                (Array.isArray(user.notifications) ? user.notifications : [])
+                    .filter(notification => notification && notification.type === 'announcement' && notification.id)
+                    .map(notification => notification.id)
+            );
+
+            studentNotificationsUnsubscribe = db.collection('students').doc(user.uid).onSnapshot(snapshot => {
+                if (!snapshot.exists || !currentUserData || currentUserData.uid !== user.uid) return;
+
+                const data = snapshot.data();
+                const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+                const newAnnouncements = notifications.filter(notification =>
+                    notification &&
+                    notification.type === 'announcement' &&
+                    notification.id &&
+                    !notification.read &&
+                    !knownStudentAnnouncementIds.has(notification.id)
+                );
+
+                notifications.forEach(notification => {
+                    if (notification && notification.type === 'announcement' && notification.id) {
+                        knownStudentAnnouncementIds.add(notification.id);
+                    }
+                });
+
+                currentUserData = { ...currentUserData, notifications };
+                localStorage.setItem('activeUser', JSON.stringify(currentUserData));
+                renderNotifications(currentUserData);
+
+                newAnnouncements.forEach(notification => {
+                    playStudentNotificationSound(notification.id);
+                });
+            }, error => {
+                console.error('تعذر متابعة إشعارات الطالب مباشرة:', error);
+            });
+        }
+
+        async function playStudentNotificationSound(announcementId) {
+            if (announcementId && soundedStudentAnnouncementIds.has(announcementId)) return;
+
+            const sound = document.getElementById('studentNotificationSound');
+            if (!sound) {
+                console.error('عنصر صوت الإشعارات غير موجود في الصفحة.');
+                return;
+            }
+
+            try {
+                sound.currentTime = 0;
+                await sound.play();
+                if (announcementId) soundedStudentAnnouncementIds.add(announcementId);
+            } catch (error) {
+                console.warn('تعذر تشغيل صوت الإعلان. قد يحتاج المتصفح إلى تفاعل من الطالب أولاً:', error);
+            }
         }
 
         async function loadStudentDashboard(user) {
@@ -1793,6 +1865,28 @@
 
                 });
 
+            const fallbackCreatedAt = Date.now();
+            notifications = notifications
+                .map((notification, index) => {
+                    const storedCreatedAt = notification.createdAt;
+                    let createdAt = null;
+                    if (typeof storedCreatedAt === 'number' && Number.isFinite(storedCreatedAt)) {
+                        createdAt = storedCreatedAt;
+                    } else if (storedCreatedAt && typeof storedCreatedAt.toDate === 'function') {
+                        createdAt = storedCreatedAt.toDate().getTime();
+                    } else if (storedCreatedAt instanceof Date) {
+                        createdAt = storedCreatedAt.getTime();
+                    }
+                    if (!Number.isFinite(createdAt)) {
+                        createdAt = notification.type === 'announcement'
+                            ? fallbackCreatedAt - index
+                            : Number.MIN_SAFE_INTEGER + notifications.length - index;
+                    }
+                    return { notification, createdAt };
+                })
+                .sort((first, second) => second.createdAt - first.createdAt)
+                .map(item => item.notification);
+
 
             const unreadCount =
                 notifications.filter(function (n) {
@@ -1873,6 +1967,20 @@
 
             const modal =
                 document.getElementById('notificationModal');
+
+            if (modal.classList.contains('hidden')) {
+                const activeUser = currentUserData || getActiveUser();
+                const unreadAnnouncement = activeUser && Array.isArray(activeUser.notifications)
+                    ? activeUser.notifications.find(notification =>
+                        notification &&
+                        notification.type === 'announcement' &&
+                        notification.id &&
+                        !notification.read &&
+                        !soundedStudentAnnouncementIds.has(notification.id)
+                    )
+                    : null;
+                if (unreadAnnouncement) playStudentNotificationSound(unreadAnnouncement.id);
+            }
 
             modal.classList.toggle('hidden');
 
@@ -2850,12 +2958,15 @@
 
                 const newNotification = {
 
+                    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    type: 'subscription',
                     text:
                         `تم استلام طلب اشتراكك في مادة "${courseTitle}" وسيتم التفعيل قريباً.`,
 
                     date:
                         new Date().toLocaleString('ar-EG'),
 
+                    createdAt: Date.now(),
                     read: false
 
                 };
