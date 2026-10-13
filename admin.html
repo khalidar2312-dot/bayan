@@ -62,15 +62,28 @@
         }
         window.messagingInstance = firebase.messaging();
 
-        // بدء تحميل لوحة التحكم المرتبطة بـ Firestore بمجرد توفر الفايربيس
+        window.ADMIN_AUTH_UID = "C7zCQWk4AWQlzhLoiTNJbGcvzU73";
+
         document.addEventListener("DOMContentLoaded", function() {
-            const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
-            if (isLoggedIn === 'true') {
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('adminDashboardContent').classList.remove('hidden');
+            firebase.auth().onAuthStateChanged(function(user) {
+                const isAuthorizedAdmin = user && user.uid === window.ADMIN_AUTH_UID;
+                document.getElementById('loginScreen').classList.toggle('hidden', Boolean(isAuthorizedAdmin));
+                document.getElementById('adminDashboardContent').classList.toggle('hidden', !isAuthorizedAdmin);
+
+                if (!isAuthorizedAdmin) {
+                    if (user) firebase.auth().signOut().catch(error => console.error('تعذر إنهاء جلسة حساب غير مصرح به:', error));
+                    localStorage.removeItem('isAdminLoggedIn');
+                    localStorage.removeItem('currentLoggedInRole');
+                    localStorage.removeItem('currentLoggedInName');
+                    return;
+                }
+
+                localStorage.setItem('currentLoggedInRole', 'مدير النظام (Admin)');
+                localStorage.setItem('currentLoggedInName', user.email || 'المسؤول الرئيسي');
+                document.getElementById('currentUserBadge').innerText = `المستخدم الحالي: ${user.email}`;
                 initAdminPanel();
-                applyStaffPermissions();
-            }
+                setupPushNotifications();
+            });
         });
     </script>
 
@@ -108,13 +121,14 @@
             
             <form onsubmit="handleUnifiedLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم (Username)</label>
-                    <input type="text" id="loginUser" required placeholder="admin أو اسم الموظف" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني لحساب الإدارة</label>
+                    <input type="email" id="loginUser" required autocomplete="username" placeholder="admin@example.com" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور (Password)</label>
-                    <input type="password" id="loginPass" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    <input type="password" id="loginPass" required autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
                 </div>
+                <p class="text-[11px] text-slate-400 text-center">استخدم بريد وكلمة مرور حساب الإدارة المسجلين في Firebase.</p>
                 <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-800 text-amber-300 font-bold hover:bg-emerald-900 transition shadow-lg text-sm">تسجيل الدخول</button>
             </form>
         </div>
@@ -915,40 +929,34 @@
         }
 
         // دالة تغيير الرقم السري
-        function changePassword(event) {
+        async function changePassword(event) {
             event.preventDefault();
             const currentInput = document.getElementById('currentPassInput').value.trim();
             const newInput = document.getElementById('newPassInput').value.trim();
             const confirmInput = document.getElementById('confirmPassInput').value.trim();
-
-            const loggedInUser = localStorage.getItem('currentLoggedInName');
-            const loggedInRole = localStorage.getItem('currentLoggedInRole');
 
             if (newInput !== confirmInput) {
                 alert('الرقم السري الجديد وتأكيده غير متطابقين!');
                 return;
             }
 
-            if (loggedInRole === 'مدير النظام (Admin)') {
-                const savedAdminPass = localStorage.getItem('adminCustomPassword') || '1522001';
-                if (currentInput !== savedAdminPass) {
-                    alert('الرقم السري الحالي غير صحيح!');
-                    return;
-                }
-                localStorage.setItem('adminCustomPassword', newInput);
-                showToast('تم تغيير كلمة مرور الأدمن بنجاح!');
-            } else {
-                let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-                let staffIndex = staffList.findIndex(s => s.name === loggedInUser);
-                if (staffIndex !== -1) {
-                    if (staffList[staffIndex].password !== currentInput) {
-                        alert('الرقم السري الحالي غير صحيح!');
-                        return;
-                    }
-                    staffList[staffIndex].password = newInput;
-                    localStorage.setItem('adminStaffList', JSON.stringify(staffList));
-                    showToast('تم تغيير كلمة المرور الخاصة بك بنجاح!');
-                }
+            const user = firebase.auth().currentUser;
+            if (!user || user.uid !== window.ADMIN_AUTH_UID || !user.email) {
+                alert('يجب تسجيل الدخول بحساب الإدارة في Firebase لتغيير كلمة المرور.');
+                return;
+            }
+
+            try {
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentInput);
+                await user.reauthenticateWithCredential(credential);
+                await user.updatePassword(newInput);
+                showToast('تم تغيير كلمة مرور حساب الإدارة بنجاح!');
+            } catch (error) {
+                console.error('تعذر تغيير كلمة مرور الإدارة:', error);
+                alert(error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
+                    ? 'كلمة المرور الحالية غير صحيحة.'
+                    : `تعذر تغيير كلمة المرور: ${error.message}`);
+                return;
             }
 
             document.getElementById('currentPassInput').value = '';
@@ -957,49 +965,27 @@
         }
 
         // دالة تسجيل الدخول الموحدة
-        function handleUnifiedLogin(event) {
+        async function handleUnifiedLogin(event) {
             event.preventDefault();
-            const user = document.getElementById('loginUser').value.trim();
-            const pass = document.getElementById('loginPass').value.trim();
+            const email = document.getElementById('loginUser').value.trim();
+            const password = document.getElementById('loginPass').value;
 
-            const adminPass = localStorage.getItem('adminCustomPassword') || '1522001';
-
-            // 1. التحقق من الأدمن الأساسي
-            if (user === 'admin' && pass === adminPass) {
-                localStorage.setItem('isAdminLoggedIn', 'true');
-                localStorage.setItem('currentLoggedInRole', 'مدير النظام (Admin)');
-                localStorage.setItem('currentLoggedInName', 'المسؤول الرئيسي');
-                startDashboardSession();
-                return;
+            try {
+                const credential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                if (credential.user.uid !== window.ADMIN_AUTH_UID) {
+                    await firebase.auth().signOut();
+                    alert('هذا الحساب غير مصرح له بدخول لوحة الإدارة.');
+                }
+            } catch (error) {
+                console.error('تعذر تسجيل دخول الإدارة:', error);
+                const messages = {
+                    'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+                    'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+                    'auth/too-many-requests': 'تم إيقاف المحاولات مؤقتًا. حاول مرة أخرى لاحقًا.',
+                    'auth/network-request-failed': 'تعذر الاتصال. تحقق من الإنترنت ثم حاول مرة أخرى.'
+                };
+                alert(messages[error.code] || `تعذر تسجيل الدخول: ${error.message}`);
             }
-
-            // 2. التحقق من قائمة الموظفين
-            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
-            const foundStaff = staffList.find(s => s.username === user && s.password === pass);
-
-            if (foundStaff) {
-                localStorage.setItem('isAdminLoggedIn', 'true');
-                localStorage.setItem('currentLoggedInRole', foundStaff.role);
-                localStorage.setItem('currentLoggedInName', foundStaff.name);
-                startDashboardSession();
-                return;
-            }
-
-            alert('اسم المستخدم أو كلمة المرور غير صحيحة!');
-        }
-
-        function startDashboardSession() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('adminDashboardContent').classList.remove('hidden');
-            
-            const roleName = localStorage.getItem('currentLoggedInRole') || 'موظف';
-            const personName = localStorage.getItem('currentLoggedInName') || '';
-            document.getElementById('currentUserBadge').innerText = `المستخدم الحالي: ${personName} (${roleName})`;
-
-            initAdminPanel();
-            setupPushNotifications();
-            applyStaffPermissions(); // تطبيق صلاحيات الموظف
-            showToast(`مرحباً بك، تم تسجيل الدخول بنجاح`);
         }
 
         // ================================================
@@ -1059,11 +1045,13 @@
             }
         }
 
-        function logoutAdmin() {
-            localStorage.removeItem('isAdminLoggedIn');
-            localStorage.removeItem('currentLoggedInRole');
-            localStorage.removeItem('currentLoggedInName');
-            location.reload();
+        async function logoutAdmin() {
+            try {
+                await firebase.auth().signOut();
+            } catch (error) {
+                console.error('تعذر تسجيل الخروج:', error);
+                alert(`تعذر تسجيل الخروج: ${error.message}`);
+            }
         }
 
         function initAdminPanel() {
@@ -2008,7 +1996,8 @@
 
             } catch (error) {
                 console.error("Error loading students: ", error);
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">حدث خطأ أثناء جلب البيانات من قاعدة البيانات</td></tr>`;
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-500"></td></tr>';
+                tbody.querySelector('td').textContent = `تعذر جلب بيانات الطلاب (${error.code || error.message || 'خطأ غير معروف'})`;
             }
         }
 
