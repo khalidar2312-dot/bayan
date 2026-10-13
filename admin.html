@@ -217,6 +217,11 @@
                         <i class="fa-solid fa-clipboard-question w-4 text-center"></i>
                         <span>إدارة الاختبارات</span>
                     </button>
+                    <button onclick="switchTab('assignments')" id="nav-assignments"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        <i class="fa-solid fa-file-pen w-4 text-center"></i>
+                        <span>إدارة الواجبات</span>
+                    </button>
                     <button onclick="switchTab('support')" id="nav-support"
                         class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
                         <i class="fa-solid fa-headset w-4 text-center"></i>
@@ -560,6 +565,58 @@
                                 <p class="text-center text-xs text-slate-400 py-6">جاري تحميل الأسئلة...</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- تاب: إدارة الواجبات -->
+                <div id="tab-assignments" class="tab-content hidden">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">إدارة الواجبات</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">أضف واجبًا للمادة والصف والترم، وراجع إجابات الطلاب</p>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label for="assignmentCourse" class="block text-xs font-bold text-slate-500 mb-1.5">المادة</label>
+                                <select id="assignmentCourse" onchange="loadAssignmentsAdmin()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="fiqh">الفقه الميسر</option><option value="tafseer">علم التفسير</option>
+                                    <option value="hadith">الحديث الشريف</option><option value="tawheed">علم التوحيد</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="assignmentGrade" class="block text-xs font-bold text-slate-500 mb-1.5">الصف</label>
+                                <select id="assignmentGrade" onchange="loadAssignmentsAdmin()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option><option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option><option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="assignmentTerm" class="block text-xs font-bold text-slate-500 mb-1.5">الترم</label>
+                                <select id="assignmentTerm" onchange="loadAssignmentsAdmin()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="الترم الأول">الترم الأول</option><option value="الترم الثاني">الترم الثاني</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-4">
+                        <h3 class="text-sm font-bold text-slate-700 mb-3">إضافة واجب جديد</h3>
+                        <form onsubmit="createAssignment(event)" class="space-y-3">
+                            <input id="assignmentTitle" type="text" maxlength="120" required placeholder="عنوان الواجب" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                            <textarea id="assignmentInstructions" maxlength="2000" rows="4" required placeholder="اكتب المطلوب من الطالب..." class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50 resize-y"></textarea>
+                            <div class="flex flex-col sm:flex-row sm:items-end gap-3">
+                                <div class="flex-1">
+                                    <label for="assignmentDueDate" class="block text-xs font-bold text-slate-500 mb-1.5">موعد التسليم (اختياري)</label>
+                                    <input id="assignmentDueDate" type="date" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                </div>
+                                <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-800 text-white font-bold text-xs hover:bg-emerald-900 transition">
+                                    <i class="fa-solid fa-plus ml-1"></i> إضافة الواجب
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="assignmentsAdminList" class="space-y-4">
+                        <div class="text-center py-8 text-slate-400 text-xs">جاري تحميل الواجبات...</div>
                     </div>
                 </div>
 
@@ -927,6 +984,13 @@
                     </div>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-assignments" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-file-pen text-emerald-600 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">إدارة الواجبات</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-support" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-headset text-blue-500 w-4 text-center"></i>
@@ -1005,6 +1069,7 @@
                     'inactive-students': ['bg-amber-50', 'text-amber-700', 'border', 'border-amber-100'],
                     'content':  ['bg-purple-50', 'text-purple-700', 'border', 'border-purple-100'],
                     'quizzes':   ['bg-indigo-50', 'text-indigo-700', 'border', 'border-indigo-100'],
+                    'assignments': ['bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100'],
                     'support':  ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
                     'announcements': ['bg-orange-50', 'text-orange-700', 'border', 'border-orange-100'],
                     'staff':    ['bg-slate-100', 'text-slate-800'],
@@ -1018,6 +1083,7 @@
 
             if (tabName === 'performance') loadPerformanceReport();
             if (tabName === 'inactive-students') loadInactiveStudents();
+            if (tabName === 'assignments') loadAssignmentsAdmin();
         }
 
         function toggleSidebar(forceClose) {
@@ -1364,6 +1430,209 @@
             } catch (error) {
                 console.error('خطأ في حذف سؤال الاختبار:', error);
                 alert('تعذر حذف السؤال. تحقق من الاتصال والصلاحيات.');
+            }
+        }
+
+        function getAssignmentContentKey() {
+            const course = document.getElementById('assignmentCourse').value;
+            const grade = document.getElementById('assignmentGrade').value;
+            const term = document.getElementById('assignmentTerm').value;
+            return `${course}__${grade}__${term}`.replace(/\s+/g, '_');
+        }
+
+        async function createAssignment(event) {
+            event.preventDefault();
+            const title = document.getElementById('assignmentTitle').value.trim();
+            const instructions = document.getElementById('assignmentInstructions').value.trim();
+            if (!title || !instructions) {
+                alert('اكتب عنوان الواجب وتعليماته.');
+                return;
+            }
+
+            const contentKey = getAssignmentContentKey();
+            const contentRef = window.doc(window.db, 'course_content', contentKey);
+            try {
+                const snapshot = await window.getDoc(contentRef);
+                const assignments = snapshot.exists() && Array.isArray(snapshot.data().assignments)
+                    ? snapshot.data().assignments
+                    : [];
+                assignments.push({
+                    id: `assignment_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                    title,
+                    instructions,
+                    dueDate: document.getElementById('assignmentDueDate').value || '',
+                    createdAt: new Date().toISOString()
+                });
+                await window.setDoc(contentRef, { assignments }, { merge: true });
+                document.getElementById('assignmentTitle').value = '';
+                document.getElementById('assignmentInstructions').value = '';
+                document.getElementById('assignmentDueDate').value = '';
+                await loadAssignmentsAdmin();
+                showToast('تم إضافة الواجب بنجاح');
+            } catch (error) {
+                console.error('تعذر إضافة الواجب:', error);
+                alert(`تعذر إضافة الواجب: ${error.message || 'تحقق من الاتصال والصلاحيات.'}`);
+            }
+        }
+
+        async function loadAssignmentsAdmin() {
+            const container = document.getElementById('assignmentsAdminList');
+            if (!container) return;
+
+            const contentKey = getAssignmentContentKey();
+            container.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs">جاري تحميل الواجبات والتسليمات...</div>';
+
+            try {
+                const [contentSnapshot, studentsSnapshot] = await Promise.all([
+                    window.getDoc(window.doc(window.db, 'course_content', contentKey)),
+                    window.getDocs(window.collection(window.db, 'students'))
+                ]);
+                if (contentKey !== getAssignmentContentKey()) return;
+
+                const assignments = contentSnapshot.exists() && Array.isArray(contentSnapshot.data().assignments)
+                    ? contentSnapshot.data().assignments
+                    : [];
+                if (!assignments.length) {
+                    container.innerHTML = '<div class="bg-white rounded-2xl border border-slate-100 p-6 text-center text-xs text-slate-400">لا توجد واجبات لهذه المادة والصف والترم بعد.</div>';
+                    return;
+                }
+
+                const course = document.getElementById('assignmentCourse').value;
+                const grade = document.getElementById('assignmentGrade').value;
+                const term = document.getElementById('assignmentTerm').value;
+                const eligibleStudents = studentsSnapshot.docs.map(studentDoc => ({
+                    id: studentDoc.id,
+                    ...studentDoc.data()
+                })).filter(student => {
+                    const subscriptions = student.subscriptions || {};
+                    const subscriptionData = subscriptions[`${course}_data`] || {};
+                    return subscriptions[course] === 'approved' &&
+                        subscriptionData.grade === grade &&
+                        subscriptionData.term === term;
+                });
+
+                const submissions = assignments.map(assignment => ({
+                    assignment,
+                    students: eligibleStudents.map(student => {
+                        const progress = student.courseProgress && student.courseProgress[contentKey] || {};
+                        const submission = progress.assignmentSubmissions && progress.assignmentSubmissions[assignment.id];
+                        return submission ? { student, submission } : null;
+                    }).filter(Boolean)
+                }));
+
+                container.innerHTML = submissions.map(({ assignment, students }) => {
+                    const dueDate = assignment.dueDate
+                        ? new Date(`${assignment.dueDate}T00:00:00`).toLocaleDateString('ar-EG')
+                        : 'بدون موعد محدد';
+                    return `
+                        <section class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                            <div class="p-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <h3 class="font-bold text-sm text-slate-800">${escapeQuizHtml(assignment.title)}</h3>
+                                    <p class="text-xs text-slate-500 mt-1 whitespace-pre-wrap">${escapeQuizHtml(assignment.instructions)}</p>
+                                    <p class="text-[11px] text-slate-400 mt-2">موعد التسليم: ${dueDate}</p>
+                                </div>
+                                <button type="button" data-delete-assignment="${escapeQuizHtml(assignment.id)}" class="shrink-0 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[11px] font-bold hover:bg-red-100">
+                                    <i class="fa-solid fa-trash-can ml-1"></i> حذف
+                                </button>
+                            </div>
+                            <div class="p-4">
+                                <p class="text-xs font-bold text-slate-600 mb-3">التسليمات (${students.length})</p>
+                                ${students.length ? `
+                                    <div class="space-y-3">
+                                        ${students.map(({ student, submission }) => `
+                                            <article class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                                                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                                    <div>
+                                                        <p class="text-xs font-bold text-slate-800">${escapeQuizHtml(student.fullName || student.name || 'طالب')}</p>
+                                                        <p class="text-[10px] text-slate-400">${escapeQuizHtml(student.email || '')}</p>
+                                                    </div>
+                                                    <span class="text-[10px] ${submission.status === 'graded' ? 'text-emerald-700' : 'text-amber-700'} font-bold">${submission.status === 'graded' ? 'تم التصحيح' : 'بانتظار التصحيح'}</span>
+                                                </div>
+                                                <p class="text-xs text-slate-700 whitespace-pre-wrap break-words mb-3">${escapeQuizHtml(submission.answer)}</p>
+                                                <div class="grid sm:grid-cols-[120px_1fr_auto] gap-2 items-end">
+                                                    <label class="text-[10px] font-bold text-slate-500">الدرجة من 100
+                                                        <input type="number" min="0" max="100" value="${submission.grade == null ? '' : Number(submission.grade)}" data-review-grade class="mt-1 w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-white">
+                                                    </label>
+                                                    <label class="text-[10px] font-bold text-slate-500">ملاحظات للطالب
+                                                        <input type="text" maxlength="500" value="${escapeQuizHtml(submission.feedback || '')}" data-review-feedback class="mt-1 w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-white">
+                                                    </label>
+                                                    <button type="button" data-save-review data-student-id="${escapeQuizHtml(student.id)}" data-assignment-id="${escapeQuizHtml(assignment.id)}" class="px-3 py-2 rounded-lg bg-emerald-800 text-white text-[11px] font-bold hover:bg-emerald-900">
+                                                        حفظ التصحيح
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        `).join('')}
+                                    </div>
+                                ` : '<p class="text-xs text-slate-400">لا توجد تسليمات لهذا الواجب حتى الآن.</p>'}
+                            </div>
+                        </section>`;
+                }).join('');
+
+                container.querySelectorAll('[data-delete-assignment]').forEach(button => {
+                    button.addEventListener('click', () => deleteAssignment(button.dataset.deleteAssignment));
+                });
+                container.querySelectorAll('[data-save-review]').forEach(button => {
+                    button.addEventListener('click', () => saveAssignmentReview(button, contentKey));
+                });
+            } catch (error) {
+                console.error('تعذر تحميل الواجبات والتسليمات:', error);
+                container.innerHTML = '<div class="bg-red-50 rounded-2xl p-4 text-xs text-red-700">تعذر تحميل الواجبات. تحقق من الاتصال والصلاحيات ثم حاول مرة أخرى.</div>';
+            }
+        }
+
+        async function deleteAssignment(assignmentId) {
+            if (!confirm('هل تريد حذف الواجب؟ لن يتم حذف إجابات الطلاب السابقة.')) return;
+            const contentKey = getAssignmentContentKey();
+            try {
+                const contentRef = window.doc(window.db, 'course_content', contentKey);
+                const snapshot = await window.getDoc(contentRef);
+                if (!snapshot.exists() || !Array.isArray(snapshot.data().assignments)) return;
+                const assignments = snapshot.data().assignments.filter(assignment => assignment.id !== assignmentId);
+                await window.updateDoc(contentRef, { assignments });
+                await loadAssignmentsAdmin();
+                showToast('تم حذف الواجب');
+            } catch (error) {
+                console.error('تعذر حذف الواجب:', error);
+                alert('تعذر حذف الواجب. تحقق من الاتصال والصلاحيات.');
+            }
+        }
+
+        async function saveAssignmentReview(button, contentKey) {
+            const card = button.closest('article');
+            const gradeInput = card.querySelector('[data-review-grade]');
+            const feedbackInput = card.querySelector('[data-review-feedback]');
+            const gradeText = gradeInput.value.trim();
+            const grade = Number(gradeText);
+            if (!gradeText || !Number.isFinite(grade) || grade < 0 || grade > 100) {
+                alert('أدخل درجة صحيحة من 0 إلى 100.');
+                return;
+            }
+
+            button.disabled = true;
+            try {
+                await window.updateDoc(
+                    window.doc(window.db, 'students', button.dataset.studentId),
+                    {
+                        [`courseProgress.${contentKey}.assignmentSubmissions.${button.dataset.assignmentId}.grade`]: grade,
+                        [`courseProgress.${contentKey}.assignmentSubmissions.${button.dataset.assignmentId}.feedback`]: feedbackInput.value.trim(),
+                        [`courseProgress.${contentKey}.assignmentSubmissions.${button.dataset.assignmentId}.status`]: 'graded',
+                        [`courseProgress.${contentKey}.assignmentSubmissions.${button.dataset.assignmentId}.reviewedAt`]: new Date().toISOString(),
+                        notifications: window.arrayUnion({
+                            text: 'تم تصحيح أحد واجباتك. افتح المادة لمراجعة الدرجة وملاحظات المدرس.',
+                            date: new Date().toLocaleString('ar-EG'),
+                            read: false,
+                            type: 'assignment_review'
+                        })
+                    }
+                );
+                showToast('تم حفظ تصحيح الواجب');
+                await loadAssignmentsAdmin();
+            } catch (error) {
+                console.error('تعذر حفظ تصحيح الواجب:', error);
+                alert(`تعذر حفظ التصحيح: ${error.message || 'تحقق من الاتصال والصلاحيات.'}`);
+            } finally {
+                button.disabled = false;
             }
         }
 
@@ -2103,7 +2372,7 @@
         // صلاحيات الموظفين
         // ================================================
 
-        const allTabs = ['requests', 'students', 'performance', 'inactive-students', 'content', 'quizzes', 'support', 'announcements', 'staff', 'settings'];
+        const allTabs = ['requests', 'students', 'performance', 'inactive-students', 'content', 'quizzes', 'assignments', 'support', 'announcements', 'staff', 'settings'];
 
         function openPermissionsModal(index) {
             const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
