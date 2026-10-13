@@ -1076,11 +1076,11 @@
             container.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">جاري تحميل الأسئلة...</p>';
 
             try {
-                const snapshot = await window.getDoc(window.doc(window.db, 'course_assessments', contentKey));
+                const snapshot = await window.getDoc(window.doc(window.db, 'course_content', contentKey));
                 if (contentKey !== getQuizContentKey()) return;
 
-                const questions = snapshot.exists() && Array.isArray(snapshot.data().questions)
-                    ? snapshot.data().questions
+                const questions = snapshot.exists() && Array.isArray(snapshot.data().quizQuestions)
+                    ? snapshot.data().quizQuestions
                     : [];
                 document.getElementById('quizQuestionsHeading').innerText = `أسئلة الاختبار (${questions.length})`;
 
@@ -1108,8 +1108,8 @@
 
         async function saveQuizQuestions(contentKey, questions) {
             await window.setDoc(
-                window.doc(window.db, 'course_assessments', contentKey),
-                { questions, updatedAt: window.serverTimestamp() },
+                window.doc(window.db, 'course_content', contentKey),
+                { quizQuestions: questions, updatedAt: window.serverTimestamp() },
                 { merge: true }
             );
         }
@@ -1126,10 +1126,10 @@
 
             const contentKey = getQuizContentKey();
             try {
-                const assessmentRef = window.doc(window.db, 'course_assessments', contentKey);
-                const snapshot = await window.getDoc(assessmentRef);
-                const questions = snapshot.exists() && Array.isArray(snapshot.data().questions)
-                    ? snapshot.data().questions
+                const contentRef = window.doc(window.db, 'course_content', contentKey);
+                const snapshot = await window.getDoc(contentRef);
+                const questions = snapshot.exists() && Array.isArray(snapshot.data().quizQuestions)
+                    ? snapshot.data().quizQuestions
                     : [];
 
                 questions.push({ prompt, options, correctIndex });
@@ -1150,11 +1150,11 @@
             if (!confirm('هل تريد حذف هذا السؤال من الاختبار؟')) return;
 
             try {
-                const assessmentRef = window.doc(window.db, 'course_assessments', contentKey);
-                const snapshot = await window.getDoc(assessmentRef);
-                if (!snapshot.exists() || !Array.isArray(snapshot.data().questions)) return;
+                const contentRef = window.doc(window.db, 'course_content', contentKey);
+                const snapshot = await window.getDoc(contentRef);
+                if (!snapshot.exists() || !Array.isArray(snapshot.data().quizQuestions)) return;
 
-                const questions = snapshot.data().questions;
+                const questions = snapshot.data().quizQuestions;
                 questions.splice(index, 1);
                 await saveQuizQuestions(contentKey, questions);
                 await loadQuizQuestions();
