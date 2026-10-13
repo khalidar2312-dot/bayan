@@ -122,6 +122,19 @@
                 <div id="quizResult" class="hidden mt-4 p-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-bold"></div>
             </section>
 
+            <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">تقدمك في المادة</h2>
+                        <p id="lessonProgressText" class="text-[11px] text-slate-400 mt-1">جاري تحميل تقدمك...</p>
+                    </div>
+                    <span id="lessonProgressPercent" class="text-sm font-extrabold text-emerald-800">0%</span>
+                </div>
+                <div class="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div id="lessonProgressBar" class="h-full bg-emerald-600 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </section>
+
             <!-- tabs الفيديو والملفات -->
             <div class="flex items-center gap-3 mb-6">
                 <button onclick="switchTab('videos')" id="tabVideos"
@@ -192,11 +205,14 @@
         const courseId = urlParams.get('course') || '';
         const grade = urlParams.get('grade') || '';
         const term = urlParams.get('term') || '';
+        const shouldResume = urlParams.get('resume') === '1';
 
         // مفتاح المحتوى في Firestore
         const contentKey = `${courseId}__${grade}__${term}`.replace(/\s+/g, '_');
         let currentStudentUid = null;
         let currentQuizQuestions = [];
+        let currentVideos = [];
+        let currentAttendance = {};
 
         document.addEventListener('DOMContentLoaded', function() {
             // تحديث العناوين
@@ -264,11 +280,33 @@
                     const data = contentDoc.data();
 
                     if (Array.isArray(data.videos) && data.videos.length > 0) {
+                        currentVideos = data.videos;
                         renderVideos(data.videos);
                     }
 
                     if (Array.isArray(data.files) && data.files.length > 0) {
                         renderFiles(data.files);
+                    }
+                }
+
+                const studentDoc = await db.collection('students').doc(currentStudentUid).get();
+                if (!studentDoc.exists) throw new Error('بيانات الطالب غير موجودة.');
+                const savedProgress = studentDoc.data().courseProgress || {};
+                const courseProgress = savedProgress[contentKey] || {};
+                currentAttendance = courseProgress.attendance || {};
+                updateLessonProgress();
+
+                if (shouldResume) {
+                    const lastLesson = Object.values(currentAttendance)
+                        .filter(lesson => lesson && lesson.url)
+                        .sort((first, second) =>
+                            new Date(second.lastOpenedAt || second.firstOpenedAt || 0) -
+                            new Date(first.lastOpenedAt || first.firstOpenedAt || 0)
+                        )[0];
+                    const lastVideo = lastLesson && currentVideos.find(video => video.url === lastLesson.url);
+                    if (lastVideo) {
+                        const isDrive = lastVideo.url.includes('drive.google.com');
+                        openVideo(lastVideo.url, lastVideo.title, isDrive);
                     }
                 }
 
@@ -290,6 +328,22 @@
                 console.error('خطأ في تحميل المحتوى:', error);
                 document.getElementById('quizAvailability').innerText = 'تعذر تحميل الاختبار. حاول تحديث الصفحة.';
             }
+        }
+
+        function updateLessonProgress() {
+            const watchedUrls = new Set(
+                Object.values(currentAttendance)
+                    .filter(lesson => lesson && lesson.url)
+                    .map(lesson => lesson.url)
+            );
+            const startedCount = currentVideos.filter(video => watchedUrls.has(video.url)).length;
+            const total = currentVideos.length;
+            const percentage = total ? Math.round(startedCount / total * 100) : 0;
+
+            document.getElementById('lessonProgressText').innerText =
+                total ? `بدأت مشاهدة ${startedCount} من ${total} درس` : 'لا توجد دروس فيديو في هذه المادة بعد';
+            document.getElementById('lessonProgressPercent').innerText = `${percentage}%`;
+            document.getElementById('lessonProgressBar').style.width = `${percentage}%`;
         }
 
         function renderVideos(videos) {
@@ -441,6 +495,8 @@
                 await studentRef.update({
                     [`courseProgress.${contentKey}.attendance.${lessonId}`]: attendance[lessonId]
                 });
+                currentAttendance[lessonId] = attendance[lessonId];
+                updateLessonProgress();
             } catch (error) {
                 console.error('تعذر تسجيل حضور الدرس:', error);
             }
