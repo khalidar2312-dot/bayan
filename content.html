@@ -304,7 +304,7 @@
                     }
                 }
 
-                currentAssignments = contentDoc.exists() && Array.isArray(contentDoc.data().assignments)
+                currentAssignments = contentDoc.exists && Array.isArray(contentDoc.data().assignments)
                     ? contentDoc.data().assignments
                     : [];
                 renderStudentAssignments();
