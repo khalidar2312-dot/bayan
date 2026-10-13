@@ -254,11 +254,21 @@
         }
 
         async function loadContent() {
+            let loadWarning = '';
+
             try {
                 const contentDoc = await db.collection('course_content').doc(contentKey).get();
                 const data = contentDoc.exists ? contentDoc.data() : {};
                 courseVideos = Array.isArray(data.videos) ? data.videos : [];
                 courseFiles = Array.isArray(data.files) ? data.files : [];
+            } catch (error) {
+                console.error('تعذر تحميل محتوى الدورة:', error);
+                courseVideos = [];
+                courseFiles = [];
+                loadWarning = 'تعذر تحميل محتوى الدورة.';
+            }
+
+            try {
                 const progressDoc = await db.collection('course_progress')
                     .doc(`${currentStudentId}__${contentKey}`).get();
                 const savedItems = progressDoc.exists ? progressDoc.data().completedItems : [];
@@ -270,14 +280,18 @@
                         ((type === 'video' && index < courseVideos.length) ||
                          (type === 'file' && index < courseFiles.length));
                 }));
-                renderVideos(courseVideos);
-                renderFiles(courseFiles);
-                updateProgressStatus();
-                await loadQuiz();
             } catch (error) {
-                console.error('خطأ في تحميل المحتوى:', error);
-                document.getElementById('progressStatus').innerText = 'تعذر تحميل تقدمك أو محتوى الدورة.';
+                console.error('تعذر تحميل تقدم الطالب:', error);
+                completedCourseItems = new Set();
+                loadWarning = loadWarning
+                    ? `${loadWarning} تعذر تحميل بيانات التقدم.`
+                    : 'تعذر تحميل بيانات التقدم.';
             }
+
+            renderVideos(courseVideos);
+            renderFiles(courseFiles);
+            updateProgressStatus(loadWarning);
+            await loadQuiz();
         }
 
         function renderVideos(videos) {
