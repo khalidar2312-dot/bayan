@@ -195,6 +195,11 @@
                         <i class="fa-solid fa-user-graduate w-4 text-center"></i>
                         <span>إدارة الطلاب</span>
                     </button>
+                    <button onclick="switchTab('performance')" id="nav-performance"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        <i class="fa-solid fa-chart-line w-4 text-center"></i>
+                        <span>متابعة أداء الطلاب</span>
+                    </button>
                     <button onclick="switchTab('content')" id="nav-content"
                         class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
                         <i class="fa-solid fa-photo-film w-4 text-center"></i>
@@ -281,6 +286,55 @@
                                 </thead>
                                 <tbody id="usersTableBody" class="text-xs divide-y divide-slate-50"></tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تاب: متابعة أداء الطلاب -->
+                <div id="tab-performance" class="tab-content hidden">
+                    <div class="mb-5">
+                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">متابعة أداء الطلاب</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">تقارير تقدم الطلاب في الدورات ونتائج الاختبارات</p>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4 flex items-start gap-3">
+                        <i class="fa-solid fa-circle-info text-blue-600 mt-0.5"></i>
+                        <p class="text-xs text-blue-800 leading-6">
+                            تم تجهيز قسم المتابعة. تسجيل تقدم الدروس ونسب الإكمال ونتائج الاختبارات سيظهر هنا بعد تفعيل تتبع التقدم ونظام الاختبارات.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                                    <i class="fa-solid fa-book-open"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-800">تقدم الدورات</h3>
+                                    <p class="text-[11px] text-slate-400">نسب إكمال الدروس لكل طالب</p>
+                                </div>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold">
+                                <i class="fa-regular fa-clock"></i>
+                                متاح بعد تفعيل تسجيل التقدم
+                            </span>
+                        </div>
+
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                    <i class="fa-solid fa-file-circle-check"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-800">الاختبارات والنتائج</h3>
+                                    <p class="text-[11px] text-slate-400">درجات ومحاولات الطلاب</p>
+                                </div>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold">
+                                <i class="fa-regular fa-clock"></i>
+                                متاح بعد إضافة نظام الاختبارات
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -592,6 +646,13 @@
                     </div>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-performance" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-cyan-600 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">متابعة أداء الطلاب</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-content" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-photo-film text-purple-500 w-4 text-center"></i>
@@ -663,6 +724,7 @@
                 const colorMap = {
                     'requests': ['bg-amber-50', 'text-amber-700', 'border', 'border-amber-100'],
                     'students': ['bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100'],
+                    'performance': ['bg-cyan-50', 'text-cyan-700', 'border', 'border-cyan-100'],
                     'content':  ['bg-purple-50', 'text-purple-700', 'border', 'border-purple-100'],
                     'support':  ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
                     'staff':    ['bg-slate-100', 'text-slate-800'],
@@ -1431,7 +1493,7 @@
         // صلاحيات الموظفين
         // ================================================
 
-        const allTabs = ['requests', 'students', 'content', 'support', 'staff', 'settings'];
+        const allTabs = ['requests', 'students', 'performance', 'content', 'support', 'staff', 'settings'];
 
         function openPermissionsModal(index) {
             const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
