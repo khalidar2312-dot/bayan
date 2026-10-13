@@ -39,6 +39,77 @@
             }
         }
     </script>
+    <style>
+        body {
+            background:
+                radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 30rem),
+                #f8fafc;
+        }
+
+        header {
+            backdrop-filter: blur(12px);
+        }
+
+        main.max-w-6xl {
+            max-width: 68rem;
+        }
+
+        #contentState > section,
+        #quizPanel {
+            border-radius: 1.25rem;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.045);
+        }
+
+        #contentState > section {
+            padding: 1.25rem;
+        }
+
+        #lessonProgressBar {
+            background-image: linear-gradient(90deg, #10b981, #047857);
+        }
+
+        #studentAssignmentsList article,
+        #videosList > div,
+        #filesList > a,
+        #filesList > div {
+            border-radius: 1rem;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        #studentAssignmentsList article:hover,
+        #videosList > div:hover,
+        #filesList > a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.09);
+        }
+
+        #tabVideos,
+        #tabFiles {
+            flex: 1;
+            justify-content: center;
+        }
+
+        #videoModal > div {
+            max-height: calc(100vh - 2rem);
+            overflow-y: auto;
+        }
+
+        @media (max-width: 640px) {
+            main {
+                padding-top: 1rem;
+                padding-bottom: 2rem;
+            }
+
+            #contentState > section {
+                padding: 1rem;
+            }
+
+            #contentState > div:first-of-type {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 
 <body class="bg-slate-50 text-slate-800 antialiased font-sans">
@@ -91,6 +162,19 @@
         <!-- المحتوى الفعلي -->
         <div id="contentState" class="hidden">
 
+            <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">تقدمك في المادة</h2>
+                        <p id="lessonProgressText" class="text-[11px] text-slate-400 mt-1">جاري تحميل تقدمك...</p>
+                    </div>
+                    <span id="lessonProgressPercent" class="text-sm font-extrabold text-emerald-800">0%</span>
+                </div>
+                <div class="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div id="lessonProgressBar" class="h-full bg-emerald-600 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </section>
+
             <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
@@ -122,19 +206,6 @@
                 <div id="quizResult" class="hidden mt-4 p-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-bold"></div>
             </section>
 
-            <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
-                <div class="flex items-center justify-between gap-3 mb-2">
-                    <div>
-                        <h2 class="font-bold text-sm text-slate-800">تقدمك في المادة</h2>
-                        <p id="lessonProgressText" class="text-[11px] text-slate-400 mt-1">جاري تحميل تقدمك...</p>
-                    </div>
-                    <span id="lessonProgressPercent" class="text-sm font-extrabold text-emerald-800">0%</span>
-                </div>
-                <div class="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div id="lessonProgressBar" class="h-full bg-emerald-600 rounded-full transition-all duration-500" style="width: 0%"></div>
-                </div>
-            </section>
-
             <section id="studentAssignmentsSection" class="hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
@@ -149,7 +220,7 @@
             </section>
 
             <!-- tabs الفيديو والملفات -->
-            <div class="flex items-center gap-3 mb-6">
+            <div class="flex items-center gap-2 mb-5 p-1.5 bg-white border border-slate-100 rounded-2xl shadow-sm">
                 <button onclick="switchTab('videos')" id="tabVideos"
                     class="px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm">
                     <i class="fa-solid fa-play-circle ml-1"></i> الفيديوهات
