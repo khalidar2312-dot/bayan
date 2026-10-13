@@ -304,17 +304,24 @@
                     }
                 }
 
-                const studentDoc = await db.collection('students').doc(currentStudentUid).get();
-                if (!studentDoc.exists) throw new Error('بيانات الطالب غير موجودة.');
-                const savedProgress = studentDoc.data().courseProgress || {};
-                const courseProgress = savedProgress[contentKey] || {};
-                currentAttendance = courseProgress.attendance || {};
-                updateLessonProgress();
-                currentAssignmentSubmissions = courseProgress.assignmentSubmissions || {};
                 currentAssignments = contentDoc.exists() && Array.isArray(contentDoc.data().assignments)
                     ? contentDoc.data().assignments
                     : [];
                 renderStudentAssignments();
+
+                try {
+                    const studentDoc = await db.collection('students').doc(currentStudentUid).get();
+                    if (!studentDoc.exists) throw new Error('بيانات الطالب غير موجودة.');
+                    const savedProgress = studentDoc.data().courseProgress || {};
+                    const courseProgress = savedProgress[contentKey] || {};
+                    currentAttendance = courseProgress.attendance || {};
+                    currentAssignmentSubmissions = courseProgress.assignmentSubmissions || {};
+                    updateLessonProgress();
+                    renderStudentAssignments();
+                } catch (progressError) {
+                    console.error('تعذر تحميل تقدم الطالب وتسليمات الواجب:', progressError);
+                    document.getElementById('lessonProgressText').innerText = 'تعذر تحميل تقدمك الآن.';
+                }
 
                 if (shouldResume) {
                     const lastLesson = Object.values(currentAttendance)
@@ -370,8 +377,12 @@
             const section = document.getElementById('studentAssignmentsSection');
             const container = document.getElementById('studentAssignmentsList');
             if (!currentAssignments.length) {
-                section.classList.add('hidden');
-                container.innerHTML = '';
+                section.classList.remove('hidden');
+                container.innerHTML = `
+                    <div class="rounded-xl bg-slate-50 border border-slate-100 p-4 text-xs text-slate-500">
+                        لا توجد واجبات مضافة لهذه المادة والصف والترم حاليًا.
+                        <span class="block mt-1 text-[11px] text-slate-400">${escapeHtml(grade)} — ${escapeHtml(term)}</span>
+                    </div>`;
                 return;
             }
 
