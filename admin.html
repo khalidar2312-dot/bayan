@@ -1230,6 +1230,27 @@
                     }
                 );
 
+                const studentRef = window.doc(window.db, 'students', currentChatUid);
+                const studentSnapshot = await window.getDoc(studentRef);
+
+                if (studentSnapshot.exists()) {
+                    const studentData = studentSnapshot.data();
+                    const notifications = Array.isArray(studentData.notifications)
+                        ? studentData.notifications
+                        : [];
+
+                    notifications.unshift({
+                        text: `رسالة جديدة من الدعم الفني: ${text}`,
+                        date: new Date().toLocaleString('ar-EG'),
+                        read: false,
+                        type: 'support_reply'
+                    });
+
+                    await window.updateDoc(studentRef, { notifications });
+                } else {
+                    console.warn('تعذر إضافة إشعار الدعم: بيانات الطالب غير موجودة.', currentChatUid);
+                }
+
             } catch (error) {
                 console.error('خطأ في إرسال الرد:', error);
             }
