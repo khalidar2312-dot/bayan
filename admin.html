@@ -531,6 +531,16 @@
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex" style="height: 500px;">
                         <!-- قائمة المحادثات -->
                         <div class="w-64 border-l border-slate-100 overflow-y-auto flex-shrink-0">
+                            <div class="px-3 py-3 border-b border-slate-100 bg-white">
+                                <label for="supportStudentSearch" class="block text-xs font-bold text-slate-600 mb-2">ابدأ محادثة مع طالب</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input id="supportStudentSearch" type="search" oninput="searchSupportStudents(this.value)"
+                                        placeholder="ابحث باسم الطالب..."
+                                        class="w-full pr-8 pl-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50">
+                                </div>
+                                <div id="supportStudentSearchResults" class="mt-2 space-y-1"></div>
+                            </div>
                             <div class="px-3 py-2 border-b border-slate-50 bg-slate-50">
                                 <p class="text-xs font-bold text-slate-500">المحادثات</p>
                             </div>
@@ -1926,6 +1936,7 @@
         // التعديل الرئيسي: جلب الطلاب مباشرة من Firestore
         // ==========================================
         let allStudentsData = []; // متغير عام لحفظ بيانات الطلاب للبحث
+        let supportStudentSearchDataLoaded = false;
 
         const courseNamesMap = {
             'fiqh': 'الفقه',
@@ -1948,6 +1959,7 @@
                         ...docSnap.data()
                     });
                 });
+                supportStudentSearchDataLoaded = true;
 
                 document.getElementById('statUsersCount').innerText = allStudentsData.length;
                 renderStudentsTable(allStudentsData);
@@ -1955,6 +1967,86 @@
             } catch (error) {
                 console.error("Error loading students: ", error);
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">حدث خطأ أثناء جلب البيانات من قاعدة البيانات</td></tr>`;
+            }
+        }
+
+        async function searchSupportStudents(searchText) {
+            const results = document.getElementById('supportStudentSearchResults');
+            const search = searchText.trim().toLocaleLowerCase();
+            results.innerHTML = '';
+            if (!search) return;
+
+            if (!supportStudentSearchDataLoaded) {
+                results.innerHTML = '<p class="text-[11px] text-slate-400 px-1 py-2">جاري البحث عن الطلاب...</p>';
+                try {
+                    const studentsSnapshot = await window.getDocs(window.collection(window.db, 'students'));
+                    allStudentsData = studentsSnapshot.docs.map(studentDoc => ({
+                        id: studentDoc.id,
+                        ...studentDoc.data()
+                    }));
+                    supportStudentSearchDataLoaded = true;
+                } catch (error) {
+                    console.error('تعذر تحميل الطلاب للبحث في الدعم:', error);
+                    results.innerHTML = '<p class="text-[11px] text-rose-600 px-1 py-2">تعذر تحميل الطلاب. حاول مرة أخرى.</p>';
+                    return;
+                }
+            }
+
+            const matches = allStudentsData.filter(student => {
+                const searchableText = [
+                    student.fullName,
+                    student.name,
+                    student.email,
+                    student.phone
+                ].filter(Boolean).join(' ').toLocaleLowerCase();
+                return searchableText.includes(search);
+            }).slice(0, 8);
+
+            if (!matches.length) {
+                results.innerHTML = '<p class="text-[11px] text-slate-400 px-1 py-2">لا يوجد طالب بهذا الاسم.</p>';
+                return;
+            }
+
+            results.innerHTML = matches.map(student => `
+                <button type="button" data-student-uid="${escapeSupportHtml(student.id)}"
+                    class="w-full text-right p-2 rounded-lg hover:bg-blue-50 transition">
+                    <span class="block text-xs font-bold text-slate-700">${escapeSupportHtml(student.fullName || student.name || 'طالب')}</span>
+                    <span class="block text-[10px] text-slate-400 truncate">${escapeSupportHtml(student.email || student.phone || '')}</span>
+                </button>
+            `).join('');
+            results.querySelectorAll('[data-student-uid]').forEach(button => {
+                button.addEventListener('click', () => startAdminChatWithStudent(button.dataset.studentUid));
+            });
+        }
+
+        function escapeSupportHtml(value) {
+            const element = document.createElement('div');
+            element.innerText = value == null ? '' : String(value);
+            return element.innerHTML;
+        }
+
+        async function startAdminChatWithStudent(uid) {
+            const student = allStudentsData.find(item => item.id === uid);
+            if (!student) return;
+
+            const name = student.fullName || student.name || 'طالب';
+            const email = student.email || '';
+            try {
+                await window.setDoc(
+                    window.doc(window.db, 'support_chats', uid),
+                    {
+                        studentName: name,
+                        studentEmail: email,
+                        unreadByAdmin: false
+                    },
+                    { merge: true }
+                );
+                document.getElementById('supportStudentSearch').value = '';
+                document.getElementById('supportStudentSearchResults').innerHTML = '';
+                openAdminChat(uid, name, email);
+            } catch (error) {
+                console.error('تعذر بدء محادثة الدعم مع الطالب:', error);
+                alert('تعذر بدء المحادثة. تحقق من الاتصال وحاول مرة أخرى.');
             }
         }
 
