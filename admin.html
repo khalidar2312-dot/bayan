@@ -880,7 +880,9 @@
     </div>
 
     <script>
+
         let lastRequestsCount = -1; // -1 تعني "أول تحميل" — لا يُطلق تنبيه
+        var allStudentsData = [];
 
         // ================================================
         // Sidebar Navigation
@@ -1979,8 +1981,6 @@
         // ==========================================
         // التعديل الرئيسي: جلب الطلاب مباشرة من Firestore
         // ==========================================
-        let allStudentsData = []; // متغير عام لحفظ بيانات الطلاب للبحث
-
         const courseNamesMap = {
             'fiqh': 'الفقه',
             'tafseer': 'التفسير',
@@ -2007,9 +2007,15 @@
                 renderStudentsTable(allStudentsData);
 
             } catch (error) {
-                console.error("Error loading students: ", error);
+                const signedInUid = window.adminAuth.currentUser?.uid || 'غير مسجل';
+                console.error("Error loading students:", {
+                    code: error.code,
+                    message: error.message,
+                    signedInUid: signedInUid,
+                    expectedAdminUid: window.ADMIN_AUTH_UID
+                });
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-500"></td></tr>';
-                tbody.querySelector('td').textContent = `تعذر جلب بيانات الطلاب (${error.code || error.message || 'خطأ غير معروف'})`;
+                tbody.querySelector('td').textContent = `تعذر جلب بيانات الطلاب (${error.code || error.message || 'خطأ غير معروف'}). حساب الإدارة: ${signedInUid}`;
             }
         }
 
