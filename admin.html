@@ -661,44 +661,93 @@
             
             <input type="hidden" id="editingUserDocId">
 
-            <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-5">
-                <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
-                    <input type="checkbox" id="sub-fiqh" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
-                    <span class="font-bold text-slate-800">الفقه الميسر</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
-                    <input type="checkbox" id="sub-tafseer" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
-                    <span class="font-bold text-slate-800">علم التفسير</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
-                    <input type="checkbox" id="sub-hadith" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
-                    <span class="font-bold text-slate-800">الحديث الشريف</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition">
-                    <input type="checkbox" id="sub-tawheed" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
-                    <span class="font-bold text-slate-800">علم التوحيد</span>
-                </label>
-            </div>
-            <div class="grid grid-cols-2 gap-3 mb-5">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1.5">صف المحتوى</label>
-                    <select id="editSubscriptionGrade" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
-                        <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                        <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                        <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                    </select>
+            <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-5 max-h-[55vh] overflow-y-auto">
+                <div class="p-2 rounded-xl bg-white">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="sub-fiqh" onchange="toggleSubscriptionMetadata('fiqh')" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                        <span class="font-bold text-slate-800">الفقه الميسر</span>
+                    </label>
+                    <div id="sub-fiqh-metadata" class="grid grid-cols-2 gap-2 mt-2">
+                        <select id="sub-fiqh-grade" aria-label="صف الفقه" class="w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50">
+                            <option value="">اختر الصف</option>
+                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                        </select>
+                        <select id="sub-fiqh-term" aria-label="ترم الفقه" class="w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50">
+                            <option value="">اختر الترم</option>
+                            <option value="الترم الأول">الترم الأول</option>
+                            <option value="الترم الثاني">الترم الثاني</option>
+                        </select>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الفصل الدراسي</label>
-                    <select id="editSubscriptionTerm" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
-                        <option value="الترم الأول">الترم الأول</option>
-                        <option value="الترم الثاني">الترم الثاني</option>
-                    </select>
+                <div class="p-2 rounded-xl bg-white">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="sub-tafseer" onchange="toggleSubscriptionMetadata('tafseer')" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                        <span class="font-bold text-slate-800">علم التفسير</span>
+                    </label>
+                    <div id="sub-tafseer-metadata" class="grid grid-cols-2 gap-2 mt-2">
+                        <select id="sub-tafseer-grade" aria-label="صف التفسير" class="w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50">
+                            <option value="">اختر الصف</option>
+                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                        </select>
+                        <select id="sub-tafseer-term" aria-label="ترم التفسير" class="w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50">
+                            <option value="">اختر الترم</option>
+                            <option value="الترم الأول">الترم الأول</option>
+                            <option value="الترم الثاني">الترم الثاني</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-2 rounded-xl bg-white">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="sub-hadith" onchange="toggleSubscriptionMetadata('hadith')" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                        <span class="font-bold text-slate-800">الحديث الشريف</span>
+                    </label>
+                    <div id="sub-hadith-metadata" class="grid grid-cols-2 gap-2 mt-2">
+                        <select id="sub-hadith-grade" aria-label="صف الحديث" class="w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50">
+                            <option value="">اختر الصف</option>
+                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                        </select>
+                        <select id="sub-hadith-term" aria-label="ترم الحديث" class="w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50">
+                            <option value="">اختر الترم</option>
+                            <option value="الترم الأول">الترم الأول</option>
+                            <option value="الترم الثاني">الترم الثاني</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-2 rounded-xl bg-white">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="sub-tawheed" onchange="toggleSubscriptionMetadata('tawheed')" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
+                        <span class="font-bold text-slate-800">علم التوحيد</span>
+                    </label>
+                    <div id="sub-tawheed-metadata" class="grid grid-cols-2 gap-2 mt-2">
+                        <select id="sub-tawheed-grade" aria-label="صف التوحيد" class="w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50">
+                            <option value="">اختر الصف</option>
+                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                        </select>
+                        <select id="sub-tawheed-term" aria-label="ترم التوحيد" class="w-full px-2 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50">
+                            <option value="">اختر الترم</option>
+                            <option value="الترم الأول">الترم الأول</option>
+                            <option value="الترم الثاني">الترم الثاني</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <p class="text-[11px] text-slate-500 mb-4">سيتم ربط كل مادة محددة بالصف والفصل الدراسي المختارين.</p>
+            <p class="text-[11px] text-slate-500 mb-4">اختَر الصف والترم الصحيحين لكل مادة؛ يجب أن يطابقا مكان رفع المحتوى.</p>
 
             <button onclick="saveStudentSubscriptions()" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition shadow-md">حفظ التغييرات</button>
         </div>
@@ -1978,22 +2027,13 @@
                 document.getElementById('editStudentNameTitle').innerText = `الطالب: ${targetUser.fullName || targetUser.name}`;
 
                 const subs = targetUser.subscriptions || {};
-                document.getElementById('sub-fiqh').checked = (subs['fiqh'] === 'approved');
-                document.getElementById('sub-tafseer').checked = (subs['tafseer'] === 'approved');
-                document.getElementById('sub-hadith').checked = (subs['hadith'] === 'approved');
-                document.getElementById('sub-tawheed').checked = (subs['tawheed'] === 'approved');
-
-                const existingCourseData = ['fiqh', 'tafseer', 'hadith', 'tawheed']
-                    .map(courseId => subs[`${courseId}_data`])
-                    .find(data => data && data.grade && data.term);
-                const gradeSelect = document.getElementById('editSubscriptionGrade');
-                const termSelect = document.getElementById('editSubscriptionTerm');
-                if (existingCourseData) {
-                    gradeSelect.value = existingCourseData.grade;
-                    termSelect.value = existingCourseData.term;
-                } else if (targetUser.grade && Array.from(gradeSelect.options).some(option => option.value === targetUser.grade)) {
-                    gradeSelect.value = targetUser.grade;
-                }
+                ['fiqh', 'tafseer', 'hadith', 'tawheed'].forEach(courseId => {
+                    const data = subs[`${courseId}_data`] || {};
+                    document.getElementById(`sub-${courseId}`).checked = (subs[courseId] === 'approved');
+                    document.getElementById(`sub-${courseId}-grade`).value = data.grade || '';
+                    document.getElementById(`sub-${courseId}-term`).value = data.term || '';
+                    toggleSubscriptionMetadata(courseId);
+                });
 
                 document.getElementById('editSubscriptionsModal').classList.remove('hidden');
             } catch (e) {
@@ -2005,13 +2045,31 @@
             document.getElementById('editSubscriptionsModal').classList.add('hidden');
         }
 
+        function toggleSubscriptionMetadata(courseId) {
+            const enabled = document.getElementById(`sub-${courseId}`).checked;
+            document.getElementById(`sub-${courseId}-metadata`).classList.toggle('hidden', !enabled);
+        }
+
         async function saveStudentSubscriptions() {
             const docId = window.currentEditingDocId;
             if (!docId) return;
 
             const courses = ['fiqh', 'tafseer', 'hadith', 'tawheed'];
-            const grade = document.getElementById('editSubscriptionGrade').value;
-            const term = document.getElementById('editSubscriptionTerm').value;
+            const missingMetadataCourse = courses.find(courseId =>
+                document.getElementById(`sub-${courseId}`).checked &&
+                (!document.getElementById(`sub-${courseId}-grade`).value ||
+                    !document.getElementById(`sub-${courseId}-term`).value)
+            );
+            if (missingMetadataCourse) {
+                const courseNames = {
+                    fiqh: 'الفقه الميسر',
+                    tafseer: 'علم التفسير',
+                    hadith: 'الحديث الشريف',
+                    tawheed: 'علم التوحيد'
+                };
+                alert(`اختر الصف والترم الصحيحين لمادة ${courseNames[missingMetadataCourse]} قبل الحفظ.`);
+                return;
+            }
 
             try {
                 const studentRef = window.doc(window.db, "students", docId);
@@ -2024,6 +2082,8 @@
 
                 courses.forEach(courseId => {
                     if (document.getElementById(`sub-${courseId}`).checked) {
+                        const grade = document.getElementById(`sub-${courseId}-grade`).value;
+                        const term = document.getElementById(`sub-${courseId}-term`).value;
                         updatedSubs[courseId] = 'approved';
                         updatedSubs[`${courseId}_data`] = {
                             ...(updatedSubs[`${courseId}_data`] || {}),
