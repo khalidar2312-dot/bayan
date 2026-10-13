@@ -17,8 +17,7 @@
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, updateEmail, sendPasswordResetEmail, signOut, deleteUser, setPersistence, browserSessionPersistence, inMemoryPersistence, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, runTransaction, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
         const firebaseConfig = {
@@ -31,29 +30,10 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const adminApp = initializeApp(firebaseConfig, "bayan-admin-auth");
-        const staffCreationApp = initializeApp(firebaseConfig, "bayan-staff-creation");
-        const db = getFirestore(adminApp);
-        const adminAuth = getAuth(adminApp);
-        const staffCreationAuth = getAuth(staffCreationApp);
-        await setPersistence(adminAuth, browserSessionPersistence);
-        await setPersistence(staffCreationAuth, inMemoryPersistence);
+        const db = getFirestore(app);
 
         // جعل الدوال متاحة عالمياً في النطاق العام (window) لكي تعمل مع أحداث HTML
         window.db = db;
-        window.adminAuth = adminAuth;
-        window.staffCreationAuth = staffCreationAuth;
-        window.onAuthStateChanged = onAuthStateChanged;
-        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-        window.updateProfile = updateProfile;
-        window.updateEmail = updateEmail;
-        window.sendPasswordResetEmail = sendPasswordResetEmail;
-        window.signOut = signOut;
-        window.deleteUser = deleteUser;
-        window.EmailAuthProvider = EmailAuthProvider;
-        window.reauthenticateWithCredential = reauthenticateWithCredential;
-        window.updatePassword = updatePassword;
         window.collection = collection;
         window.getDocs = getDocs;
         window.getDoc = getDoc;
@@ -67,9 +47,6 @@
         window.addDoc = addDoc;
         window.serverTimestamp = serverTimestamp;
         window.orderBy = orderBy;
-        window.runTransaction = runTransaction;
-        window.arrayUnion = arrayUnion;
-        window.writeBatch = writeBatch;
 
         // تهيئة Firebase Messaging
         const firebaseConfigCompat = {
@@ -85,148 +62,14 @@
         }
         window.messagingInstance = firebase.messaging();
 
-        window.ADMIN_AUTH_UID = "C7zCQWk4AWQlzhLoiTNJbGcvzU73";
-        let staffProfileUnsubscribe = null;
-        let adminAliasMigrationAttempted = false;
-
-        function internalLoginEmail(username) {
-            return `${username}-${crypto.randomUUID()}@staff.bayan2312.firebaseapp.com`;
-        }
-
-        async function ensureAdminUsername(user) {
-            if (adminAliasMigrationAttempted || !user.email) return;
-            adminAliasMigrationAttempted = true;
-            const aliasRef = window.doc(window.db, 'staff_usernames', 'admin');
-            let aliasCreated = false;
-            let internalEmail = '';
-
-            try {
-                const aliasSnapshot = await window.getDoc(aliasRef);
-                if (aliasSnapshot.exists()) {
-                    const alias = aliasSnapshot.data();
-                    if (alias.uid !== user.uid) {
-                        throw new Error('اسم المستخدم admin مرتبط بحساب آخر. تواصل مع الدعم.');
-                    }
-                    if (alias.authEmail !== user.email) {
-                        await window.updateEmail(user, alias.authEmail);
-                    }
-                    return;
-                }
-
-                internalEmail = internalLoginEmail('admin');
-                await window.setDoc(aliasRef, {
-                    username: 'admin',
-                    uid: user.uid,
-                    authEmail: internalEmail
-                });
-                aliasCreated = true;
-                await window.updateEmail(user, internalEmail);
-                showToast('تم تجهيز اسم دخول المدير: admin. استخدم كلمة المرور الحالية.');
-            } catch (error) {
-                console.error('تعذر تجهيز اسم دخول المدير:', error);
-                if (aliasCreated) {
-                    try {
-                        await window.deleteDoc(aliasRef);
-                    } catch (cleanupError) {
-                        console.error('تعذر إزالة سجل اسم المدير غير المكتمل:', cleanupError);
-                    }
-                }
-                showToast(error.code === 'auth/requires-recent-login'
-                    ? 'سجّل خروج المدير ثم ادخل مرة أخيرة ببريده الحالي لإعداد اسم الدخول admin.'
-                    : `تعذر إعداد اسم دخول المدير: ${error.message}`);
-            }
-        }
-
+        // بدء تحميل لوحة التحكم المرتبطة بـ Firestore بمجرد توفر الفايربيس
         document.addEventListener("DOMContentLoaded", function() {
-            localStorage.removeItem('adminStaffList');
-            localStorage.removeItem('isAdminLoggedIn');
-            localStorage.removeItem('currentLoggedInRole');
-            localStorage.removeItem('currentLoggedInName');
-            window.onAuthStateChanged(window.adminAuth, async function(user) {
-                if (staffProfileUnsubscribe) {
-                    staffProfileUnsubscribe();
-                    staffProfileUnsubscribe = null;
-                }
-                const loginScreen = document.getElementById('loginScreen');
-                const dashboard = document.getElementById('adminDashboardContent');
-                const status = document.getElementById('loginStatus');
-
-                if (!user) {
-                    loginScreen.classList.remove('hidden');
-                    dashboard.classList.add('hidden');
-                    window.currentAdminPermissions = [];
-                    window.currentAdminRole = '';
-                    adminAliasMigrationAttempted = false;
-                    return;
-                }
-
-                try {
-                    if (status) status.classList.add('hidden');
-                    const isAdmin = user.uid === window.ADMIN_AUTH_UID;
-                    let permissions = [];
-                    let displayName = isAdmin ? 'admin' : (user.email || 'مستخدم الإدارة');
-
-                    if (!isAdmin) {
-                        const staffSnapshot = await window.getDoc(window.doc(window.db, 'staff', user.uid));
-                        const staffData = staffSnapshot.exists() ? staffSnapshot.data() : null;
-                        if (!staffData || staffData.active !== true || !Array.isArray(staffData.permissions)) {
-                            throw new Error('حساب الموظف غير نشط أو لم يتم إعداد صلاحياته.');
-                        }
-                        permissions = staffData.permissions;
-                        displayName = staffData.name || user.displayName || user.email || 'موظف';
-                        staffProfileUnsubscribe = window.onSnapshot(
-                            window.doc(window.db, 'staff', user.uid),
-                            async snapshot => {
-                                const updatedStaff = snapshot.exists() ? snapshot.data() : null;
-                                if (!updatedStaff || updatedStaff.active !== true) {
-                                    alert('تم تعطيل صلاحية هذا الحساب في لوحة الإدارة.');
-                                    await window.signOut(window.adminAuth);
-                                    return;
-                                }
-                                window.currentAdminPermissions = updatedStaff.permissions || [];
-                                applyStaffPermissions();
-                                const activeTab = document.querySelector('.tab-content:not(.hidden)');
-                                const activeTabName = activeTab && activeTab.id.replace('tab-', '');
-                                if (activeTabName && !window.currentAdminPermissions.includes(activeTabName)) {
-                                    const firstAllowed = allTabs.find(tab => window.currentAdminPermissions.includes(tab));
-                                    if (firstAllowed) switchTab(firstAllowed);
-                                }
-                            },
-                            async error => {
-                                console.error('تعذر متابعة صلاحيات الموظف:', error);
-                                await window.signOut(window.adminAuth);
-                            }
-                        );
-                    } else {
-                        permissions = window.ADMIN_TAB_IDS || [];
-                        await ensureAdminUsername(user);
-                    }
-
-                    window.currentAdminPermissions = permissions;
-                    window.currentAdminRole = isAdmin ? 'مدير النظام (Admin)' : 'موظف';
-                    loginScreen.classList.add('hidden');
-                    dashboard.classList.remove('hidden');
-                    document.getElementById('currentUserBadge').innerText = `المستخدم الحالي: ${displayName}`;
-                    applyStaffPermissions();
-                    initAdminPanel();
-                    if (isAdmin) setupPushNotifications();
-                } catch (error) {
-                    console.error('تعذر التحقق من صلاحيات حساب الإدارة:', error);
-                    window.currentAdminPermissions = [];
-                    window.currentAdminRole = '';
-                    dashboard.classList.add('hidden');
-                    loginScreen.classList.remove('hidden');
-                    if (status) {
-                        status.innerText = error.code === 'permission-denied'
-                            ? 'تعذر قراءة صلاحيات الموظف. تحقق من نشر قواعد Firestore الجديدة.'
-                            : error.message;
-                        status.classList.remove('hidden');
-                    }
-                    if (user.uid !== window.ADMIN_AUTH_UID) {
-                        await window.signOut(window.adminAuth);
-                    }
-                }
-            });
+            const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
+            if (isLoggedIn === 'true') {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('adminDashboardContent').classList.remove('hidden');
+                initAdminPanel();
+            }
         });
     </script>
 
@@ -259,20 +102,18 @@
                     <i class="fa-solid fa-id-card-clip"></i>
                 </div>
                 <h2 class="text-2xl font-black font-kufi text-emerald-950">بوابة دخول الإدارة والموظفين</h2>
-                <p class="text-xs text-slate-400 mt-1">سجّل الدخول باسم المستخدم وكلمة المرور</p>
+                <p class="text-xs text-slate-400 mt-1">يرجى إدخال بيانات الحساب للتوجه للوحة التحكم</p>
             </div>
             
             <form onsubmit="handleUnifiedLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم</label>
-                    <input type="text" id="loginUser" required autocomplete="username" placeholder="admin" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم (Username)</label>
+                    <input type="text" id="loginUser" required placeholder="admin أو اسم الموظف" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور (Password)</label>
-                    <input type="password" id="loginPass" required autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
+                    <input type="password" id="loginPass" required placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600 font-mono" dir="ltr">
                 </div>
-                <p id="loginStatus" class="hidden text-xs text-center text-red-600"></p>
-                <p class="text-[11px] text-slate-400 text-center">اكتب اسم المستخدم وكلمة المرور. أول مرة فقط، يدخل المدير ببريده الحالي للتحويل إلى admin.</p>
                 <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-800 text-amber-300 font-bold hover:bg-emerald-900 transition shadow-lg text-sm">تسجيل الدخول</button>
             </form>
         </div>
@@ -374,21 +215,6 @@
                         class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
                         <i class="fa-solid fa-lock w-4 text-center"></i>
                         <span>الإعدادات</span>
-                    </button>
-                    <button onclick="switchTab('quizzes')" id="nav-quizzes"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
-                        <i class="fa-solid fa-pen-to-square w-4 text-center"></i>
-                        <span>إدارة الاختبارات</span>
-                    </button>
-                    <button onclick="switchTab('performance')" id="nav-performance"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
-                        <i class="fa-solid fa-chart-line w-4 text-center"></i>
-                        <span>متابعة أداء الطلاب</span>
-                    </button>
-                    <button onclick="switchTab('announcements')" id="nav-announcements"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
-                        <i class="fa-solid fa-bullhorn w-4 text-center"></i>
-                        <span>إعلانات الطلاب</span>
                     </button>
                 </nav>
 
@@ -621,21 +447,20 @@
                     </div>
                     <div id="staffManagementSection" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
                         <form onsubmit="addNewStaff(event)" class="space-y-3 mb-6">
-                            <p class="text-[11px] text-slate-500">الموظف يدخل باسم المستخدم وكلمة المرور فقط؛ لا يحتاج بريدًا إلكترونيًا.</p>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم الموظف</label>
                                     <input type="text" id="staffName" required placeholder="أحمد محمد" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم المستخدم (3 أحرف على الأقل)</label>
-                                    <input type="text" id="staffUsername" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]{3,30}" autocomplete="off" placeholder="malak" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">اسم المستخدم</label>
+                                    <input type="text" id="staffUsername" required placeholder="ahmed22" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">كلمة مرور مؤقتة (6 أحرف على الأقل)</label>
-                                    <input type="password" id="staffPassword" required minlength="6" autocomplete="new-password" placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
+                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">كلمة المرور</label>
+                                    <input type="password" id="staffPassword" required placeholder="••••••••" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono bg-slate-50" dir="ltr">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1.5">الدور / الصلاحية</label>
@@ -655,7 +480,7 @@
                                 <thead>
                                     <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
                                         <th class="px-4 py-3 font-bold">الموظف</th>
-                                        <th class="px-4 py-3 font-bold">اسم المستخدم</th>
+                                        <th class="px-4 py-3 font-bold">المستخدم</th>
                                         <th class="px-4 py-3 font-bold">الدور</th>
                                         <th class="px-4 py-3 font-bold text-center">حذف</th>
                                     </tr>
@@ -696,245 +521,6 @@
                                 <i class="fa-solid fa-floppy-disk ml-1"></i> حفظ الرقم السري
                             </button>
                         </form>
-                    </div>
-                </div>
-
-                <!-- تاب: إعلانات الطلاب -->
-                <div id="tab-announcements" class="tab-content hidden">
-                    <div class="mb-4">
-                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">إعلانات الطلاب</h2>
-                        <p class="mt-0.5 text-xs text-slate-400">أرسل تنبيهًا يظهر في قائمة الإشعارات لجميع حسابات الطلاب.</p>
-                    </div>
-                    <div class="max-w-3xl space-y-4">
-                        <form onsubmit="sendStudentAnnouncement(event)" class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                            <div class="mb-4 flex items-center gap-3">
-                                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                                    <i class="fa-solid fa-bullhorn"></i>
-                                </div>
-                                <div>
-                                    <h3 class="text-sm font-bold text-slate-800">إعلان جديد</h3>
-                                    <p id="announcementRecipients" class="mt-0.5 text-xs text-slate-400">سيصل الإعلان إلى جميع الطلاب المسجلين.</p>
-                                </div>
-                            </div>
-                            <div class="space-y-3">
-                                <div>
-                                    <label for="announcementTitle" class="mb-1.5 block text-xs font-bold text-slate-600">عنوان الإعلان</label>
-                                    <input id="announcementTitle" type="text" maxlength="100" required placeholder="مثال: موعد الاختبار القادم"
-                                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
-                                </div>
-                                <div>
-                                    <label for="announcementBody" class="mb-1.5 block text-xs font-bold text-slate-600">نص الإعلان</label>
-                                    <textarea id="announcementBody" rows="4" maxlength="1000" required placeholder="اكتب التفاصيل التي تريد إبلاغ الطلاب بها..."
-                                        class="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm leading-7 focus:border-emerald-500 focus:outline-none"></textarea>
-                                </div>
-                            </div>
-                            <p id="announcementStatus" class="mt-3 hidden text-sm" role="status" aria-live="polite"></p>
-                            <button id="sendAnnouncementButton" type="submit" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-60 sm:w-auto">
-                                <i class="fa-solid fa-paper-plane"></i>
-                                إرسال لجميع الطلاب
-                            </button>
-                        </form>
-                        <div class="rounded-xl border border-amber-100 bg-amber-50 p-4 text-xs leading-6 text-amber-900">
-                            <i class="fa-solid fa-circle-info ml-1"></i>
-                            سيظهر الإعلان كإشعار جديد غير مقروء عند الطالب، وسيزيد عداد جرس الإشعارات.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- تاب: إدارة الاختبارات -->
-                <div id="tab-quizzes" class="tab-content hidden">
-                    <div class="mb-4">
-                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">إدارة الاختبارات</h2>
-                        <p class="text-xs text-slate-400 mt-0.5">أضف أسئلة اختبار لكل مادة وصف وترم</p>
-                    </div>
-                    <div class="space-y-4">
-
-                        <!-- فلاتر الاختيار -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                <i class="fa-solid fa-filter text-emerald-600"></i> اختر المادة والصف والترم
-                            </h3>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">المادة</label>
-                                    <select id="quizCourse" onchange="loadQuizzes()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                        <option value="fiqh">الفقه الميسر</option>
-                                        <option value="tafseer">علم التفسير</option>
-                                        <option value="hadith">الحديث الشريف</option>
-                                        <option value="tawheed">علم التوحيد</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الصف الدراسي</label>
-                                    <select id="quizGrade" onchange="loadQuizzes()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                        <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                                        <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                                        <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الفصل الدراسي</label>
-                                    <select id="quizTerm" onchange="loadQuizzes()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                        <option value="الترم الأول">الترم الأول</option>
-                                        <option value="الترم الثاني">الترم الثاني</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- إضافة سؤال جديد -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
-                                <div class="w-7 h-7 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center text-xs">
-                                    <i class="fa-solid fa-plus"></i>
-                                </div>
-                                إضافة سؤال جديد
-                            </h3>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">نص السؤال</label>
-                                    <input type="text" id="quizQuestion" placeholder="مثال: ما هو حكم الوضوء؟" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                </div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-500 mb-1.5">الخيار أ</label>
-                                        <input type="text" id="quizOpt1" placeholder="الخيار الأول" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-500 mb-1.5">الخيار ب</label>
-                                        <input type="text" id="quizOpt2" placeholder="الخيار الثاني" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-500 mb-1.5">الخيار ج</label>
-                                        <input type="text" id="quizOpt3" placeholder="الخيار الثالث" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-500 mb-1.5">الخيار د</label>
-                                        <input type="text" id="quizOpt4" placeholder="الخيار الرابع" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الإجابة الصحيحة</label>
-                                    <select id="quizCorrect" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                        <option value="0">الخيار أ</option>
-                                        <option value="1">الخيار ب</option>
-                                        <option value="2">الخيار ج</option>
-                                        <option value="3">الخيار د</option>
-                                    </select>
-                                </div>
-                                <button onclick="addQuizQuestion()" class="w-full py-2.5 rounded-xl bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition">
-                                    <i class="fa-solid fa-plus ml-1"></i> إضافة السؤال
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- الأسئلة الحالية -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-bold text-slate-700">الأسئلة الحالية</h3>
-                                <span id="quizLabel" class="text-xs text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100"></span>
-                            </div>
-                            <div id="quizQuestionsList" class="space-y-3 text-xs text-slate-400 text-center py-4">
-                                اختر مادة وصف لعرض الأسئلة
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- تاب: متابعة أداء الطلاب -->
-                <div id="tab-performance" class="tab-content hidden">
-                    <div class="mb-4">
-                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">متابعة أداء الطلاب</h2>
-                        <p class="text-xs text-slate-400 mt-0.5">تابع تقدم الطلاب في محتوى الدورات ونسب الإكمال ونتائج الاختبارات</p>
-                    </div>
-                    <div class="space-y-4">
-
-                        <!-- فلاتر -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">المادة</label>
-                                    <select id="perfCourse" onchange="loadPerformance()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                        <option value="fiqh">الفقه الميسر</option>
-                                        <option value="tafseer">علم التفسير</option>
-                                        <option value="hadith">الحديث الشريف</option>
-                                        <option value="tawheed">علم التوحيد</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الصف الدراسي</label>
-                                    <select id="perfGrade" onchange="loadPerformance()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                        <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                                        <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                                        <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 mb-1.5">الفصل الدراسي</label>
-                                    <select id="perfTerm" onchange="loadPerformance()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
-                                        <option value="الترم الأول">الترم الأول</option>
-                                        <option value="الترم الثاني">الترم الثاني</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- إحصائيات سريعة -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-                                <i class="fa-solid fa-users text-emerald-600 text-xl mb-1 block"></i>
-                                <h3 id="perfStatStudents" class="text-2xl font-black text-slate-800">0</h3>
-                                <p class="text-[11px] text-slate-400 font-bold mt-0.5">طالب مشترك</p>
-                            </div>
-                            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-                                <i class="fa-solid fa-chart-pie text-blue-500 text-xl mb-1 block"></i>
-                                <h3 id="perfStatCompletion" class="text-2xl font-black text-slate-800">0%</h3>
-                                <p class="text-[11px] text-slate-400 font-bold mt-0.5">متوسط إكمال المحتوى</p>
-                            </div>
-                            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-                                <i class="fa-solid fa-pen-to-square text-amber-500 text-xl mb-1 block"></i>
-                                <h3 id="perfStatQuizzes" class="text-2xl font-black text-slate-800">0</h3>
-                                <p class="text-[11px] text-slate-400 font-bold mt-0.5">اختبار محلول</p>
-                            </div>
-                            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
-                                <i class="fa-solid fa-circle-check text-green-500 text-xl mb-1 block"></i>
-                                <h3 id="perfStatAvg" class="text-2xl font-black text-slate-800">0%</h3>
-                                <p class="text-[11px] text-slate-400 font-bold mt-0.5">متوسط نتائج الاختبارات</p>
-                            </div>
-                        </div>
-
-                        <!-- جدول أداء الطلاب -->
-                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                                <h3 class="text-sm font-bold text-slate-700">تقرير أداء الطلاب التفصيلي</h3>
-                                <button onclick="exportPerformance()" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs hover:bg-emerald-100 transition border border-emerald-100">
-                                    <i class="fa-solid fa-file-export ml-1"></i> تصدير
-                                </button>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-right border-collapse">
-                                    <thead>
-                                        <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
-                                            <th class="px-4 py-3 font-bold">اسم الطالب</th>
-                                            <th class="px-4 py-3 font-bold text-center">نسبة الإكمال</th>
-                                            <th class="px-4 py-3 font-bold text-center">المحتوى المكتمل</th>
-                                            <th class="px-4 py-3 font-bold text-center">نتيجة الاختبار</th>
-                                            <th class="px-4 py-3 font-bold text-center">آخر تحديث</th>
-                                            <th class="px-4 py-3 font-bold text-center">التقييم</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="performanceTableBody" class="text-xs divide-y divide-slate-50">
-                                        <tr><td colspan="6" class="text-center py-8 text-slate-400">اختر مادة وصف لعرض التقارير</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
                     </div>
                 </div>
 
@@ -988,9 +574,9 @@
                 <p id="permissionsStaffName" class="text-xs text-amber-600 font-bold mt-1"></p>
             </div>
 
-            <input type="hidden" id="permissionsStaffUid">
+            <input type="hidden" id="permissionsStaffIndex">
 
-            <div class="space-y-2 mb-5 max-h-[60vh] overflow-y-auto">
+            <div class="space-y-2 mb-5">
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-requests" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
@@ -1020,31 +606,17 @@
                     </div>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-staff" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-user-gear text-slate-500 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">إدارة الموظفين</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-settings" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-lock text-slate-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">الإعدادات</span>
-                    </div>
-                </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
-                    <input type="checkbox" id="perm-quizzes" class="w-4 h-4 text-emerald-600 rounded">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-pen-to-square text-emerald-600 w-4 text-center"></i>
-                        <span class="font-bold text-slate-700 text-xs">إدارة الاختبارات</span>
-                    </div>
-                </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
-                    <input type="checkbox" id="perm-performance" class="w-4 h-4 text-emerald-600 rounded">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-chart-line text-blue-600 w-4 text-center"></i>
-                        <span class="font-bold text-slate-700 text-xs">متابعة أداء الطلاب</span>
-                    </div>
-                </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
-                    <input type="checkbox" id="perm-announcements" class="w-4 h-4 text-emerald-600 rounded">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-bullhorn text-amber-600 w-4 text-center"></i>
-                        <span class="font-bold text-slate-700 text-xs">إعلانات الطلاب</span>
                     </div>
                 </label>
             </div>
@@ -1062,19 +634,13 @@
     </div>
 
     <script>
-
         let lastRequestsCount = -1; // -1 تعني "أول تحميل" — لا يُطلق تنبيه
-        var allStudentsData = [];
 
         // ================================================
         // Sidebar Navigation
         // ================================================
 
         function switchTab(tabName) {
-            if (window.currentAdminRole && !(window.currentAdminPermissions || []).includes(tabName)) {
-                showToast('ليست لديك صلاحية لفتح هذا القسم');
-                return;
-            }
             // إخفاء كل الـ tabs
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             // إخفاء active state من كل الأزرار
@@ -1101,18 +667,12 @@
                     'support':  ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
                     'staff':    ['bg-slate-100', 'text-slate-800'],
                     'settings': ['bg-slate-100', 'text-slate-800'],
-                    'quizzes':  ['bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100'],
-                    'performance': ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
-                    'announcements': ['bg-amber-50', 'text-amber-700', 'border', 'border-amber-100'],
                 };
                 (colorMap[tabName] || ['bg-slate-100', 'text-slate-800']).forEach(c => navBtn.classList.add(c));
             }
 
             // إغلاق الـ sidebar على الموبايل
             if (window.innerWidth < 1024) toggleSidebar(false);
-            if (tabName === 'quizzes') loadQuizzes();
-            if (tabName === 'performance') loadPerformance();
-            if (tabName === 'announcements') loadAnnouncementRecipientCount();
         }
 
         function toggleSidebar(forceClose) {
@@ -1130,34 +690,40 @@
         }
 
         // دالة تغيير الرقم السري
-        async function changePassword(event) {
+        function changePassword(event) {
             event.preventDefault();
             const currentInput = document.getElementById('currentPassInput').value.trim();
             const newInput = document.getElementById('newPassInput').value.trim();
             const confirmInput = document.getElementById('confirmPassInput').value.trim();
+
+            const loggedInUser = localStorage.getItem('currentLoggedInName');
+            const loggedInRole = localStorage.getItem('currentLoggedInRole');
 
             if (newInput !== confirmInput) {
                 alert('الرقم السري الجديد وتأكيده غير متطابقين!');
                 return;
             }
 
-            const user = window.adminAuth.currentUser;
-            if (!user || user.uid !== window.ADMIN_AUTH_UID || !user.email) {
-                alert('يجب تسجيل الدخول بحساب الإدارة في Firebase لتغيير كلمة المرور.');
-                return;
-            }
-
-            try {
-                const credential = window.EmailAuthProvider.credential(user.email, currentInput);
-                await window.reauthenticateWithCredential(user, credential);
-                await window.updatePassword(user, newInput);
-                showToast('تم تغيير كلمة مرور حساب الإدارة بنجاح!');
-            } catch (error) {
-                console.error('تعذر تغيير كلمة مرور الإدارة:', error);
-                alert(error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
-                    ? 'كلمة المرور الحالية غير صحيحة.'
-                    : `تعذر تغيير كلمة المرور: ${error.message}`);
-                return;
+            if (loggedInRole === 'مدير النظام (Admin)') {
+                const savedAdminPass = localStorage.getItem('adminCustomPassword') || '1522001';
+                if (currentInput !== savedAdminPass) {
+                    alert('الرقم السري الحالي غير صحيح!');
+                    return;
+                }
+                localStorage.setItem('adminCustomPassword', newInput);
+                showToast('تم تغيير كلمة مرور الأدمن بنجاح!');
+            } else {
+                let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+                let staffIndex = staffList.findIndex(s => s.name === loggedInUser);
+                if (staffIndex !== -1) {
+                    if (staffList[staffIndex].password !== currentInput) {
+                        alert('الرقم السري الحالي غير صحيح!');
+                        return;
+                    }
+                    staffList[staffIndex].password = newInput;
+                    localStorage.setItem('adminStaffList', JSON.stringify(staffList));
+                    showToast('تم تغيير كلمة المرور الخاصة بك بنجاح!');
+                }
             }
 
             document.getElementById('currentPassInput').value = '';
@@ -1166,45 +732,49 @@
         }
 
         // دالة تسجيل الدخول الموحدة
-        async function handleUnifiedLogin(event) {
+        function handleUnifiedLogin(event) {
             event.preventDefault();
-            const status = document.getElementById('loginStatus');
-            status.classList.add('hidden');
-            const username = document.getElementById('loginUser').value.trim();
-            const password = document.getElementById('loginPass').value;
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
 
-            try {
-                let email = username;
-                if (!username.includes('@')) {
-                    const normalizedUsername = username.toLowerCase();
-                    if (!/^[a-z0-9._-]{3,30}$/.test(normalizedUsername)) {
-                        throw new Error('اسم المستخدم يجب أن يكون من 3 إلى 30 حرفًا إنجليزيًا أو رقمًا.');
-                    }
-                    const aliasSnapshot = await window.getDoc(
-                        window.doc(window.db, 'staff_usernames', normalizedUsername)
-                    );
-                    if (!aliasSnapshot.exists()) {
-                        if (normalizedUsername === 'admin') {
-                            throw new Error('أول مرة فقط: سجّل دخول المدير بالبريد الحالي مرة واحدة لتحويله إلى اسم المستخدم admin.');
-                        }
-                        throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة.');
-                    }
-                    email = aliasSnapshot.data().authEmail;
-                }
-                await window.signInWithEmailAndPassword(window.adminAuth, email, password);
-            } catch (error) {
-                console.error('تعذر تسجيل دخول الإدارة:', error);
-                const messages = {
-                    'auth/invalid-credential': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
-                    'auth/user-not-found': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
-                    'auth/wrong-password': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
-                    'auth/invalid-email': 'اسم المستخدم أو كلمة المرور غير صحيحة.',
-                    'auth/too-many-requests': 'تم إيقاف المحاولات مؤقتًا. حاول مرة أخرى لاحقًا.',
-                    'auth/network-request-failed': 'تعذر الاتصال. تحقق من الإنترنت ثم حاول مرة أخرى.'
-                };
-                status.innerText = messages[error.code] || error.message;
-                status.classList.remove('hidden');
+            const adminPass = localStorage.getItem('adminCustomPassword') || '1522001';
+
+            // 1. التحقق من الأدمن الأساسي
+            if (user === 'admin' && pass === adminPass) {
+                localStorage.setItem('isAdminLoggedIn', 'true');
+                localStorage.setItem('currentLoggedInRole', 'مدير النظام (Admin)');
+                localStorage.setItem('currentLoggedInName', 'المسؤول الرئيسي');
+                startDashboardSession();
+                return;
             }
+
+            // 2. التحقق من قائمة الموظفين
+            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            const foundStaff = staffList.find(s => s.username === user && s.password === pass);
+
+            if (foundStaff) {
+                localStorage.setItem('isAdminLoggedIn', 'true');
+                localStorage.setItem('currentLoggedInRole', foundStaff.role);
+                localStorage.setItem('currentLoggedInName', foundStaff.name);
+                startDashboardSession();
+                return;
+            }
+
+            alert('اسم المستخدم أو كلمة المرور غير صحيحة!');
+        }
+
+        function startDashboardSession() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('adminDashboardContent').classList.remove('hidden');
+            
+            const roleName = localStorage.getItem('currentLoggedInRole') || 'موظف';
+            const personName = localStorage.getItem('currentLoggedInName') || '';
+            document.getElementById('currentUserBadge').innerText = `المستخدم الحالي: ${personName} (${roleName})`;
+
+            initAdminPanel();
+            setupPushNotifications();
+            applyStaffPermissions(); // تطبيق صلاحيات الموظف
+            showToast(`مرحباً بك، تم تسجيل الدخول بنجاح`);
         }
 
         // ================================================
@@ -1264,27 +834,20 @@
             }
         }
 
-        async function logoutAdmin() {
-            try {
-                await window.signOut(window.adminAuth);
-            } catch (error) {
-                console.error('تعذر تسجيل الخروج:', error);
-                alert(`تعذر تسجيل الخروج: ${error.message}`);
-            }
+        function logoutAdmin() {
+            localStorage.removeItem('isAdminLoggedIn');
+            localStorage.removeItem('currentLoggedInRole');
+            localStorage.removeItem('currentLoggedInName');
+            location.reload();
         }
 
         function initAdminPanel() {
-            const permissions = window.currentAdminPermissions || [];
-            if (window.currentAdminRole === 'مدير النظام (Admin)') loadStaffMembers();
-            if (permissions.includes('students') || permissions.includes('performance') || permissions.includes('announcements')) {
-                loadAllUsersFromFirestore();
-            }
-            if (permissions.includes('requests')) startRequestsListener();
-            if (window.currentAdminRole === 'مدير النظام (Admin)') startNotificationsListener();
-            if (permissions.includes('support')) startChatListener();
-            if (permissions.includes('content')) updateContentKey();
-            const firstAllowed = allTabs.find(tab => permissions.includes(tab));
-            if (firstAllowed) switchTab(firstAllowed);
+            loadStaffMembers();
+            loadAllUsersFromFirestore();
+            startRequestsListener();
+            startNotificationsListener();
+            startChatListener();
+            updateContentKey(); // تحميل المحتوى الافتراضي
         }
 
         function startRequestsListener() {
@@ -1500,389 +1063,6 @@
                 showToast('تم حذف الملف');
                 loadCurrentContent();
             } catch (e) { console.error(e); }
-        }
-
-        function setAnnouncementStatus(message, isError = false) {
-            const status = document.getElementById('announcementStatus');
-            status.innerText = message;
-            status.className = `mt-3 text-sm ${isError ? 'text-red-600' : 'text-emerald-700'}`;
-            status.classList.remove('hidden');
-        }
-
-        async function loadAnnouncementRecipientCount() {
-            const recipientLabel = document.getElementById('announcementRecipients');
-            try {
-                const studentsSnapshot = await window.getDocs(window.collection(window.db, 'students'));
-                recipientLabel.innerText = `سيصل الإعلان إلى ${studentsSnapshot.size} طالب مسجل.`;
-            } catch (error) {
-                console.error('تعذر تحميل عدد الطلاب لإعلان المنصة:', error);
-                recipientLabel.innerText = 'سيصل الإعلان إلى جميع الطلاب المسجلين.';
-                setAnnouncementStatus(`تعذر التحقق من عدد المستلمين: ${error.message}`, true);
-            }
-        }
-
-        async function sendStudentAnnouncement(event) {
-            event.preventDefault();
-            const title = document.getElementById('announcementTitle').value.trim();
-            const text = document.getElementById('announcementBody').value.trim();
-            const button = document.getElementById('sendAnnouncementButton');
-
-            if (!title || !text) {
-                setAnnouncementStatus('اكتب عنوان الإعلان ونصه قبل الإرسال.', true);
-                return;
-            }
-
-            if (!confirm('سيتم إرسال هذا الإعلان إلى جميع الطلاب المسجلين. هل تريد المتابعة؟')) return;
-
-            button.disabled = true;
-            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الإرسال...';
-            setAnnouncementStatus('جارٍ إرسال الإعلان إلى حسابات الطلاب...');
-
-            let sentCount = 0;
-            let totalCount = 0;
-            try {
-                const studentsSnapshot = await window.getDocs(window.collection(window.db, 'students'));
-                totalCount = studentsSnapshot.size;
-                if (!totalCount) {
-                    setAnnouncementStatus('لا يوجد طلاب مسجلون لإرسال الإعلان إليهم.', true);
-                    return;
-                }
-
-                const announcement = {
-                    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                    type: 'announcement',
-                    title,
-                    text,
-                    date: new Date().toLocaleString('ar-EG'),
-                    createdAt: Date.now(),
-                    read: false
-                };
-                const studentDocs = studentsSnapshot.docs;
-                const batchSize = 450;
-
-                for (let start = 0; start < studentDocs.length; start += batchSize) {
-                    const batch = window.writeBatch(window.db);
-                    const chunk = studentDocs.slice(start, start + batchSize);
-                    chunk.forEach(studentDoc => {
-                        batch.update(studentDoc.ref, {
-                            notifications: window.arrayUnion(announcement)
-                        });
-                    });
-                    await batch.commit();
-                    sentCount += chunk.length;
-                    document.getElementById('announcementRecipients').innerText =
-                        `تم الإرسال إلى ${sentCount} من ${totalCount} طالب...`;
-                }
-
-                document.getElementById('announcementTitle').value = '';
-                document.getElementById('announcementBody').value = '';
-                document.getElementById('announcementRecipients').innerText =
-                    `تم إرسال الإعلان إلى ${sentCount} طالب.`;
-                setAnnouncementStatus(`تم إرسال الإعلان بنجاح إلى ${sentCount} طالب.`);
-            } catch (error) {
-                console.error('تعذر إرسال إعلان الطلاب:', error);
-                const message = sentCount
-                    ? `تم إرسال الإعلان إلى ${sentCount} من ${totalCount} طالب، لكن تعذر استكمال الإرسال. السبب: ${error.message}`
-                    : `تعذر إرسال الإعلان. تحقق من صلاحيات Firestore واتصال الإنترنت. السبب: ${error.message}`;
-                setAnnouncementStatus(message, true);
-            } finally {
-                button.disabled = false;
-                button.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إرسال لجميع الطلاب';
-            }
-        }
-
-        // ================================================
-        // إدارة الاختبارات
-        // ================================================
-
-        let quizLoadRequestId = 0;
-        let savingQuizQuestion = false;
-
-        function getQuizKey() {
-            const course = document.getElementById('quizCourse').value;
-            const grade = document.getElementById('quizGrade').value;
-            const term = document.getElementById('quizTerm').value;
-            return `${course}__${grade}__${term}`.replace(/\s+/g, '_');
-        }
-
-        async function loadQuizzes() {
-            const requestId = ++quizLoadRequestId;
-            const key = getQuizKey();
-            const courseSelect = document.getElementById('quizCourse');
-            const label = `${courseSelect.options[courseSelect.selectedIndex].text} — ${document.getElementById('quizGrade').value} — ${document.getElementById('quizTerm').value}`;
-            document.getElementById('quizLabel').innerText = label;
-
-            const container = document.getElementById('quizQuestionsList');
-            container.innerHTML = '<div class="text-center text-slate-400 py-3">جاري التحميل...</div>';
-
-            try {
-                const docSnap = await window.getDoc(window.doc(window.db, 'quizzes', key));
-                if (requestId !== quizLoadRequestId) return;
-
-                if (!docSnap.exists() || !(docSnap.data().questions || []).length) {
-                    container.innerHTML = '<div class="text-center text-slate-400 py-3">لا توجد أسئلة بعد</div>';
-                    return;
-                }
-
-                const questions = docSnap.data().questions;
-                const letters = ['أ', 'ب', 'ج', 'د'];
-
-                container.innerHTML = questions.map((q, i) => `
-                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <div class="flex items-start justify-between gap-2 mb-2">
-                            <p class="font-bold text-slate-800 text-xs flex-1">${i+1}. ${q.question}</p>
-                            <button onclick="deleteQuizQuestion(${i})" class="text-red-400 hover:text-red-600 text-xs flex-shrink-0">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-1.5">
-                            ${q.options.map((opt, j) => `
-                                <div class="text-[11px] px-2 py-1 rounded-lg ${j === q.correct ? 'bg-emerald-100 text-emerald-700 font-bold border border-emerald-200' : 'bg-white text-slate-600 border border-slate-100'}">
-                                    ${letters[j]}. ${opt}
-                                </div>`).join('')}
-                        </div>
-                    </div>`).join('');
-            } catch(e) {
-                console.error(e);
-                if (requestId === quizLoadRequestId) {
-                    container.innerHTML = '<div class="text-center text-red-400 py-3">تعذر تحميل الأسئلة. تحقق من اتصال Firestore والصلاحيات.</div>';
-                }
-            }
-        }
-
-        async function addQuizQuestion() {
-            if (savingQuizQuestion) return;
-
-            const question = document.getElementById('quizQuestion').value.trim();
-            const opt1 = document.getElementById('quizOpt1').value.trim();
-            const opt2 = document.getElementById('quizOpt2').value.trim();
-            const opt3 = document.getElementById('quizOpt3').value.trim();
-            const opt4 = document.getElementById('quizOpt4').value.trim();
-            const correct = parseInt(document.getElementById('quizCorrect').value);
-
-            if (!question || !opt1 || !opt2 || !opt3 || !opt4) {
-                alert('يرجى إدخال السؤال وجميع الخيارات الأربعة.'); return;
-            }
-
-            const key = getQuizKey();
-            const addButton = document.querySelector('#tab-quizzes button[onclick="addQuizQuestion()"]');
-            savingQuizQuestion = true;
-            if (addButton) addButton.disabled = true;
-
-            try {
-                const docRef = window.doc(window.db, 'quizzes', key);
-                await window.runTransaction(window.db, async transaction => {
-                    const docSnap = await transaction.get(docRef);
-                    const questions = docSnap.exists() && Array.isArray(docSnap.data().questions)
-                        ? docSnap.data().questions
-                        : [];
-                    transaction.set(docRef, {
-                        questions: [...questions, { question, options: [opt1, opt2, opt3, opt4], correct }]
-                    }, { merge: true });
-                });
-
-                // تنظيف الحقول
-                ['quizQuestion','quizOpt1','quizOpt2','quizOpt3','quizOpt4'].forEach(id => document.getElementById(id).value = '');
-                document.getElementById('quizCorrect').value = '0';
-
-                showToast('✅ تم إضافة السؤال بنجاح');
-                await loadQuizzes();
-            } catch(e) {
-                console.error(e);
-                alert('حدث خطأ: ' + e.message);
-            } finally {
-                savingQuizQuestion = false;
-                if (addButton) addButton.disabled = false;
-            }
-        }
-
-        async function deleteQuizQuestion(index) {
-            if (!confirm('هل تريد حذف هذا السؤال؟')) return;
-            const key = getQuizKey();
-            try {
-                const docRef = window.doc(window.db, 'quizzes', key);
-                await window.runTransaction(window.db, async transaction => {
-                    const docSnap = await transaction.get(docRef);
-                    if (!docSnap.exists() || !Array.isArray(docSnap.data().questions)) {
-                        throw new Error('لم يتم العثور على قائمة الأسئلة لهذا الاختبار.');
-                    }
-                    const questions = [...docSnap.data().questions];
-                    if (index < 0 || index >= questions.length) {
-                        throw new Error('تغيرت قائمة الأسئلة. حدّث القائمة ثم حاول مرة أخرى.');
-                    }
-                    questions.splice(index, 1);
-                    transaction.set(docRef, { questions }, { merge: true });
-                });
-                showToast('تم حذف السؤال');
-                await loadQuizzes();
-            } catch(e) {
-                console.error(e);
-                alert('تعذر حذف السؤال: ' + e.message);
-            }
-        }
-
-        // ================================================
-        // متابعة أداء الطلاب
-        // ================================================
-
-        async function loadPerformance() {
-            const course = document.getElementById('perfCourse').value;
-            const grade = document.getElementById('perfGrade').value;
-            const term = document.getElementById('perfTerm').value;
-            const key = `${course}__${grade}__${term}`.replace(/\s+/g, '_');
-
-            const tbody = document.getElementById('performanceTableBody');
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-400">جاري تحميل البيانات...</td></tr>';
-            ['perfStatStudents', 'perfStatQuizzes'].forEach(id => {
-                document.getElementById(id).innerText = '0';
-            });
-            document.getElementById('perfStatCompletion').innerText = '0%';
-            document.getElementById('perfStatAvg').innerText = '0%';
-
-            try {
-                const [studentsSnap, contentSnap] = await Promise.all([
-                    window.getDocs(window.collection(window.db, 'students')),
-                    window.getDoc(window.doc(window.db, 'course_content', key))
-                ]);
-                const students = [];
-                studentsSnap.forEach(d => {
-                    const data = d.data();
-                    const subs = data.subscriptions || {};
-                    const subscriptionData = subs[course + '_data'] || {};
-                    if (subs[course] === 'approved' &&
-                        subscriptionData.grade === grade &&
-                        subscriptionData.term === term) {
-                        students.push({ id: d.id, ...data });
-                    }
-                });
-
-                document.getElementById('perfStatStudents').innerText = students.length;
-
-                if (students.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">لا يوجد طلاب مشتركين في هذه المادة والصف والفصل الدراسي</td></tr>';
-                    return;
-                }
-
-                const contentData = contentSnap.exists() ? contentSnap.data() : {};
-                const videos = Array.isArray(contentData.videos) ? contentData.videos : [];
-                const files = Array.isArray(contentData.files) ? contentData.files : [];
-                const totalItems = videos.length + files.length;
-                let totalCompletion = 0;
-                let studentsWithContent = 0;
-                let totalScore = 0;
-                let totalQuizzes = 0;
-
-                const rows = await Promise.all(students.map(async student => {
-                    const [progressSnap, quizSnap] = await Promise.all([
-                        window.getDoc(window.doc(window.db, 'course_progress', `${student.id}__${key}`)),
-                        window.getDoc(window.doc(window.db, 'quiz_results', `${student.id}__${key}`))
-                    ]);
-                    const progress = progressSnap.exists() ? progressSnap.data() : {};
-                    const completedItems = Array.isArray(progress.completedItems) ? progress.completedItems : [];
-                    const validCompletedItems = new Set(completedItems.filter(item => {
-                        if (typeof item !== 'string') return false;
-                        const [type, rawIndex] = item.split(':');
-                        const index = Number(rawIndex);
-                        return Number.isInteger(index) && index >= 0 &&
-                            ((type === 'video' && index < videos.length) ||
-                             (type === 'file' && index < files.length));
-                    }));
-                    const validCompletedCount = validCompletedItems.size;
-                    const completion = totalItems > 0
-                        ? Math.min(100, Math.round((validCompletedCount / totalItems) * 100))
-                        : null;
-                    if (completion !== null) {
-                        totalCompletion += completion;
-                        studentsWithContent++;
-                    }
-
-                    let quizScore = '-';
-                    let quizScoreNum = null;
-                    let quizDate = null;
-                    if (quizSnap.exists()) {
-                        const quiz = quizSnap.data();
-                        const score = Number(quiz.score);
-                        const quizTotal = Number(quiz.total);
-                        if (Number.isFinite(score) && Number.isFinite(quizTotal) && quizTotal > 0) {
-                            quizScoreNum = Math.round((score / quizTotal) * 100);
-                            quizScore = `${score}/${quizTotal} (${quizScoreNum}%)`;
-                            totalScore += quizScoreNum;
-                            totalQuizzes++;
-                        }
-                        quizDate = performanceDateValue(quiz.submittedAt);
-                    }
-
-                    const updatedAt = performanceDateValue(progress.updatedAt);
-                    const lastActivity = updatedAt && quizDate
-                        ? (updatedAt > quizDate ? updatedAt : quizDate)
-                        : updatedAt || quizDate;
-                    let badge = '<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold">لا توجد نتيجة</span>';
-                    if (quizScoreNum !== null) {
-                        if (quizScoreNum >= 85) badge = '<span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">ممتاز</span>';
-                        else if (quizScoreNum >= 70) badge = '<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">جيد</span>';
-                        else if (quizScoreNum >= 50) badge = '<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">مقبول</span>';
-                        else badge = '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-bold">يحتاج متابعة</span>';
-                    }
-
-                    return `
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-4 py-3 font-bold text-slate-800">${escapePerformanceText(student.fullName || 'بدون اسم')}</td>
-                            <td class="px-4 py-3 text-center font-bold text-blue-700">${completion === null ? '-' : completion + '%'}</td>
-                            <td class="px-4 py-3 text-center text-slate-600">${totalItems > 0 ? `${validCompletedCount}/${totalItems}` : 'لا يوجد محتوى'}</td>
-                            <td class="px-4 py-3 text-center font-mono text-slate-600 text-[11px]">${quizScore}</td>
-                            <td class="px-4 py-3 text-center text-[11px] text-slate-400">${lastActivity ? lastActivity.toLocaleDateString('ar-EG') : '-'}</td>
-                            <td class="px-4 py-3 text-center text-[11px]">${badge}</td>
-                        </tr>`;
-                }));
-
-                tbody.innerHTML = rows.join('');
-
-                document.getElementById('perfStatQuizzes').innerText = totalQuizzes;
-                document.getElementById('perfStatAvg').innerText = totalQuizzes > 0 ? Math.round(totalScore / totalQuizzes) + '%' : '0%';
-                document.getElementById('perfStatCompletion').innerText = studentsWithContent > 0
-                    ? Math.round(totalCompletion / studentsWithContent) + '%'
-                    : '0%';
-            } catch (error) {
-                console.error('Error loading student performance report:', error);
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-400">تعذر تحميل التقرير. تحقق من الاتصال والصلاحيات ثم أعد المحاولة.</td></tr>';
-            }
-        }
-
-        function performanceDateValue(value) {
-            if (!value) return null;
-            const date = typeof value.toDate === 'function' ? value.toDate() : new Date(value);
-            return Number.isNaN(date.getTime()) ? null : date;
-        }
-
-        function escapePerformanceText(value) {
-            return String(value).replace(/[&<>"']/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            })[character]);
-        }
-
-        function exportPerformance() {
-            const rows = document.querySelectorAll('#performanceTableBody tr');
-            if (!rows.length) return;
-
-            let csv = 'اسم الطالب,نسبة الإكمال,المحتوى المكتمل,نتيجة الاختبار,آخر تحديث,التقييم\n';
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length > 1) {
-                    csv += Array.from(cells).map(c => `"${c.innerText.trim().replace(/"/g, '""')}"`).join(',') + '\n';
-                }
-            });
-
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'تقرير_أداء_الطلاب.csv';
-            a.click();
-            URL.revokeObjectURL(url);
         }
 
         function startChatListener() {
@@ -2139,13 +1319,6 @@
             loadStaffMembers();
         }
 
-        function refreshStudentListIfAllowed() {
-            const permissions = window.currentAdminPermissions || [];
-            if (permissions.includes('students') || permissions.includes('performance') || permissions.includes('announcements')) {
-                loadAllUsersFromFirestore();
-            }
-        }
-
         function renderRequestsTable(snapshot) {
             const tbody = document.getElementById('requestsTableBody');
 
@@ -2179,153 +1352,75 @@
             }).join('');
         }
 
-        let staffCache = [];
-
-        function escapeStaffText(value) {
-            return String(value || '').replace(/[&<>"']/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            })[character]);
-        }
-
-        async function addNewStaff(event) {
+        function addNewStaff(event) {
             event.preventDefault();
             const name = document.getElementById('staffName').value.trim();
-            const username = document.getElementById('staffUsername').value.trim().toLowerCase();
-            const password = document.getElementById('staffPassword').value;
+            const username = document.getElementById('staffUsername').value.trim();
+            const password = document.getElementById('staffPassword').value.trim();
             const role = document.getElementById('staffRole').value;
-            if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
-                alert('اسم المستخدم يجب أن يكون من 3 إلى 30 حرفًا إنجليزيًا أو رقمًا، ويسمح بالنقطة والشرطة.');
-                return;
-            }
-            const permissionsByRole = {
-                'موظف خدمة عملاء': ['support'],
-                'مساعد مراجعة اشتراكات': ['requests'],
-                'مشرف أكاديمي': ['content', 'quizzes', 'performance']
-            };
-            let createdUser = null;
-            const aliasRef = window.doc(window.db, 'staff_usernames', username);
-            try {
-                const existingAlias = await window.getDoc(aliasRef);
-                if (existingAlias.exists()) {
-                    throw new Error('اسم المستخدم مستخدم بالفعل. اختر اسمًا آخر.');
-                }
-                const generatedEmail = internalLoginEmail(username);
-                const credential = await window.createUserWithEmailAndPassword(
-                    window.staffCreationAuth,
-                    generatedEmail,
-                    password
-                );
-                createdUser = credential.user;
-                await window.updateProfile(createdUser, { displayName: name });
-                const staffRef = window.doc(window.db, 'staff', createdUser.uid);
-                await window.runTransaction(window.db, async transaction => {
-                    const currentAlias = await transaction.get(aliasRef);
-                    if (currentAlias.exists()) {
-                        throw new Error('اسم المستخدم مستخدم بالفعل. اختر اسمًا آخر.');
-                    }
-                    transaction.set(staffRef, {
-                        name,
-                        username,
-                        role,
-                        permissions: permissionsByRole[role],
-                        active: true,
-                        createdAt: window.serverTimestamp()
-                    });
-                    transaction.set(aliasRef, {
-                        username,
-                        uid: createdUser.uid,
-                        authEmail: generatedEmail
-                    });
-                });
-                event.target.reset();
-                showToast(`تم إنشاء حساب الموظف. اسم الدخول: ${username}`);
-                await loadStaffMembers();
-            } catch (error) {
-                console.error('تعذر إنشاء حساب الموظف:', error);
-                if (createdUser) {
-                    try {
-                        await window.deleteUser(createdUser);
-                    } catch (cleanupError) {
-                        console.error('تعذر حذف حساب الموظف الذي لم تكتمل إضافته:', cleanupError);
-                    }
-                }
-                const messages = {
-                    'auth/email-already-in-use': 'تعذر إنشاء الحساب الداخلي. حاول باسم مستخدم مختلف.',
-                    'auth/weak-password': 'كلمة المرور ضعيفة؛ استخدم 6 أحرف على الأقل.',
-                    'permission-denied': 'تعذر حفظ ملف الموظف. تأكد من نشر قواعد Firestore الجديدة وأنك داخل بحساب المدير.'
-                };
-                alert(messages[error.code] || `تعذر إنشاء حساب الموظف: ${error.message}`);
-            } finally {
-                if (window.staffCreationAuth.currentUser) {
-                    try {
-                        await window.signOut(window.staffCreationAuth);
-                    } catch (error) {
-                        console.error('تعذر إنهاء جلسة إنشاء الموظف المؤقتة:', error);
-                    }
-                }
-            }
+
+            let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            
+            staffList.push({
+                name,
+                username,
+                password,
+                role,
+                date: new Date().toLocaleDateString('ar-EG')
+            });
+
+            localStorage.setItem('adminStaffList', JSON.stringify(staffList));
+            
+            document.getElementById('staffName').value = '';
+            document.getElementById('staffUsername').value = '';
+            document.getElementById('staffPassword').value = '';
+            
+            showToast("تم تعيين وإضافة الموظف بنجاح وأصبح بإمكانه الدخول الآن");
+            loadStaffMembers();
         }
 
-        async function loadStaffMembers() {
+        function loadStaffMembers() {
             const tbody = document.getElementById('staffTableBody');
-            try {
-                const snapshot = await window.getDocs(window.collection(window.db, 'staff'));
-                staffCache = snapshot.docs
-                    .map(staffDoc => ({ uid: staffDoc.id, ...staffDoc.data() }))
-                    .filter(staff => staff.active === true);
-                document.getElementById('statStaffCount').innerText = staffCache.length;
-                if (staffCache.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">لا يوجد موظفون حتى الآن</td></tr>`;
-                    return;
-                }
-                tbody.innerHTML = staffCache.map(staff => {
-                    const uid = escapeStaffText(staff.uid);
-                    const name = escapeStaffText(staff.name);
-                    const username = staff.username
-                        ? escapeStaffText(staff.username)
-                        : '<span class="text-amber-700">حساب قديم - يحتاج إعادة إضافة</span>';
-                    const role = escapeStaffText(staff.role);
-                    const date = staff.createdAt && staff.createdAt.toDate
-                        ? staff.createdAt.toDate().toLocaleDateString('ar-EG')
-                        : '';
-                    return `
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-4 py-3 font-bold text-slate-800">${name}<div class="text-[10px] text-slate-400 font-normal">${date}</div></td>
-                            <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${username}</td>
-                            <td class="px-4 py-3"><span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-100">${role}</span></td>
-                            <td class="px-4 py-3 text-center">
-                                <div class="flex items-center justify-center gap-1.5">
-                                    <button onclick="openPermissionsModal('${uid}')" class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[11px] hover:bg-emerald-100 transition border border-emerald-100"><i class="fa-solid fa-shield-halved ml-1"></i>صلاحيات</button>
-                                    <button onclick="deleteStaff('${uid}')" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">تعطيل الحساب</button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (error) {
-                console.error('تعذر تحميل حسابات الموظفين:', error);
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-600">تعذر تحميل الموظفين: ${escapeStaffText(error.message)}</td></tr>`;
+            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            
+            document.getElementById('statStaffCount').innerText = staffList.length;
+
+            if (staffList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">لا يوجد موظفين معينين حتى الآن</td></tr>`;
+                return;
             }
+
+            tbody.innerHTML = staffList.map((staff, index) => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-3 font-bold text-slate-800">${staff.name}<div class="text-[10px] text-slate-400 font-normal">${staff.date}</div></td>
+                    <td class="px-4 py-3 font-mono text-slate-600 text-[11px]" dir="ltr">${staff.username}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-100">${staff.role}</span></td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="openPermissionsModal(${index})" class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[11px] hover:bg-emerald-100 transition border border-emerald-100"><i class="fa-solid fa-shield-halved ml-1"></i>صلاحيات</button>
+                            <button onclick="deleteStaff(${index})" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-bold text-[11px] hover:bg-red-100 transition border border-red-100">حذف</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         // ================================================
         // صلاحيات الموظفين
         // ================================================
 
-        const allTabs = ['requests', 'students', 'content', 'support', 'settings', 'quizzes', 'performance', 'announcements'];
-        window.ADMIN_TAB_IDS = ['requests', 'students', 'content', 'support', 'staff', 'settings', 'quizzes', 'performance', 'announcements'];
+        const allTabs = ['requests', 'students', 'content', 'support', 'staff', 'settings'];
 
-        function openPermissionsModal(uid) {
-            const staff = staffCache.find(item => item.uid === uid);
+        function openPermissionsModal(index) {
+            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            const staff = staffList[index];
             if (!staff) return;
 
-            document.getElementById('permissionsStaffUid').value = uid;
+            document.getElementById('permissionsStaffIndex').value = index;
             document.getElementById('permissionsStaffName').innerText = staff.name;
-            const perms = staff.permissions || [];
+
+            // تحميل الصلاحيات الحالية
+            const perms = staff.permissions || allTabs; // افتراضياً كل الصلاحيات
             allTabs.forEach(tab => {
                 const cb = document.getElementById('perm-' + tab);
                 if (cb) cb.checked = perms.includes(tab);
@@ -2338,66 +1433,58 @@
             document.getElementById('permissionsModal').classList.add('hidden');
         }
 
-        async function savePermissions() {
-            const uid = document.getElementById('permissionsStaffUid').value;
+        function savePermissions() {
+            const index = parseInt(document.getElementById('permissionsStaffIndex').value);
+            let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+
             const selectedPerms = allTabs.filter(tab => {
                 const cb = document.getElementById('perm-' + tab);
                 return cb && cb.checked;
             });
-            if (!selectedPerms.length) {
-                alert('اختر صلاحية واحدة على الأقل للموظف.');
-                return;
-            }
-            try {
-                await window.updateDoc(window.doc(window.db, 'staff', uid), {
-                    permissions: selectedPerms,
-                    updatedAt: window.serverTimestamp()
-                });
-                closePermissionsModal();
-                showToast('تم تحديث الصلاحيات. ستُطبّق فورًا على عمليات Firestore.');
-                await loadStaffMembers();
-            } catch (error) {
-                console.error('تعذر تحديث صلاحيات الموظف:', error);
-                alert(`تعذر تحديث صلاحيات الموظف: ${error.message}`);
-            }
+
+            staffList[index].permissions = selectedPerms;
+            localStorage.setItem('adminStaffList', JSON.stringify(staffList));
+
+            closePermissionsModal();
+            showToast('✅ تم حفظ صلاحيات الموظف بنجاح');
         }
 
         function applyStaffPermissions() {
-            const perms = window.currentAdminPermissions || [];
+            const role = localStorage.getItem('currentLoggedInRole') || '';
+            const name = localStorage.getItem('currentLoggedInName') || '';
+
+            // الأدمن الرئيسي له كل الصلاحيات
+            if (role === 'مدير النظام (Admin)') return;
+
+            // جلب صلاحيات الموظف
+            const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+            const staff = staffList.find(s => s.name === name);
+            if (!staff) return;
+
+            const perms = staff.permissions || allTabs;
+
+            // إخفاء الـ tabs وأزرار الـ sidebar اللي مش مصرح بيها
             allTabs.forEach(tab => {
                 const navBtn = document.getElementById('nav-' + tab);
-                if (navBtn) navBtn.classList.toggle('hidden', !perms.includes(tab));
+                if (!perms.includes(tab)) {
+                    if (navBtn) navBtn.classList.add('hidden');
+                } else {
+                    if (navBtn) navBtn.classList.remove('hidden');
+                }
             });
-            const staffNav = document.getElementById('nav-staff');
-            if (staffNav) staffNav.classList.toggle('hidden', window.currentAdminRole !== 'مدير النظام (Admin)');
+
+            // فتح أول tab مسموح بيه
+            const firstAllowed = allTabs.find(t => perms.includes(t));
+            if (firstAllowed) switchTab(firstAllowed);
         }
 
-        async function deleteStaff(uid) {
-            if (!confirm("سيتم تعطيل صلاحية هذا الحساب في اللوحة. هل تريد المتابعة؟")) return;
-            try {
-                const staffRef = window.doc(window.db, 'staff', uid);
-                const staff = staffCache.find(item => item.uid === uid);
-                if (!staff) throw new Error('تعذر العثور على ملف الموظف.');
-                if (staff.username) {
-                    const aliasRef = window.doc(window.db, 'staff_usernames', staff.username);
-                    await window.runTransaction(window.db, async transaction => {
-                        transaction.update(staffRef, {
-                            active: false,
-                            updatedAt: window.serverTimestamp()
-                        });
-                        transaction.delete(aliasRef);
-                    });
-                } else {
-                    await window.updateDoc(staffRef, {
-                        active: false,
-                        updatedAt: window.serverTimestamp()
-                    });
-                }
-                showToast('تم تعطيل الحساب وإزالة اسم المستخدم.');
-                await loadStaffMembers();
-            } catch (error) {
-                console.error('تعذر تعطيل حساب الموظف:', error);
-                alert(`تعذر تعطيل حساب الموظف: ${error.message}`);
+        function deleteStaff(index) {
+            if (confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
+                let staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
+                staffList.splice(index, 1);
+                localStorage.setItem('adminStaffList', JSON.stringify(staffList));
+                showToast("تم إزالة الموظف بنجاح");
+                loadStaffMembers();
             }
         }
 
@@ -2406,6 +1493,8 @@
         // ==========================================
         // التعديل الرئيسي: جلب الطلاب مباشرة من Firestore
         // ==========================================
+        let allStudentsData = []; // متغير عام لحفظ بيانات الطلاب للبحث
+
         const courseNamesMap = {
             'fiqh': 'الفقه',
             'tafseer': 'التفسير',
@@ -2432,15 +1521,8 @@
                 renderStudentsTable(allStudentsData);
 
             } catch (error) {
-                const signedInUid = window.adminAuth.currentUser?.uid || 'غير مسجل';
-                console.error("Error loading students:", {
-                    code: error.code,
-                    message: error.message,
-                    signedInUid: signedInUid,
-                    expectedAdminUid: window.ADMIN_AUTH_UID
-                });
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-500"></td></tr>';
-                tbody.querySelector('td').textContent = `تعذر جلب بيانات الطلاب (${error.code || error.message || 'خطأ غير معروف'}). حساب الإدارة: ${signedInUid}`;
+                console.error("Error loading students: ", error);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">حدث خطأ أثناء جلب البيانات من قاعدة البيانات</td></tr>`;
             }
         }
 
@@ -2593,11 +1675,8 @@
                     // إضافة إشعار للطالب
                     let notifications = studentData.notifications || [];
                     notifications.unshift({
-                        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                        type: 'subscription',
                         text: `تم تفعيل اشتراكك في مادة "${req.courseTitle}" بنجاح! يمكنك الآن مشاهدة المحتوى.`,
                         date: new Date().toLocaleString('ar-EG'),
-                        createdAt: Date.now(),
                         read: false
                     });
 
@@ -2611,7 +1690,7 @@
                 await window.updateDoc(requestRef, { status: 'approved' });
 
                 showToast('✅ تم قبول الطلب وتفعيل الاشتراك بنجاح');
-                refreshStudentListIfAllowed();
+                loadAllUsersFromFirestore();
 
             } catch (e) {
                 console.error('خطأ في قبول الطلب:', e);
@@ -2644,11 +1723,8 @@
 
                     let notifications = studentData.notifications || [];
                     notifications.unshift({
-                        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                        type: 'subscription',
                         text: `عذراً، تم رفض طلب اشتراكك في مادة "${req.courseTitle}". تواصل مع الإدارة للاستفسار.`,
                         date: new Date().toLocaleString('ar-EG'),
-                        createdAt: Date.now(),
                         read: false
                     });
 
@@ -2662,7 +1738,7 @@
                 await window.updateDoc(requestRef, { status: 'rejected' });
 
                 showToast('تم رفض الطلب وإبلاغ الطالب');
-                refreshStudentListIfAllowed();
+                loadAllUsersFromFirestore();
 
             } catch (e) {
                 console.error('خطأ في رفض الطلب:', e);
@@ -2679,7 +1755,7 @@
             if (!confirm(`هل تريد إرسال رابط إعادة تعيين كلمة المرور إلى:\n${email}؟`)) return;
 
             try {
-                await window.sendPasswordResetEmail(window.adminAuth, email);
+                await firebase.auth().sendPasswordResetEmail(email);
                 showToast(`✅ تم إرسال رابط إعادة كلمة المرور إلى ${email}`);
                 alert(`✅ تم إرسال الرابط إلى ${email}\n\nتنبيه للطالب:\nلو مش لاقي الإيميل في الـ Inbox، يفتح مجلد Spam/جنك ويدور على إيميل من:\nnoreply@bayan2312.firebaseapp.com`);
             } catch (error) {
