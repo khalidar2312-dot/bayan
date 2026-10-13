@@ -17,7 +17,7 @@
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, writeBatch, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
         const firebaseConfig = {
@@ -47,6 +47,8 @@
         window.addDoc = addDoc;
         window.serverTimestamp = serverTimestamp;
         window.orderBy = orderBy;
+        window.writeBatch = writeBatch;
+        window.arrayUnion = arrayUnion;
 
         // تهيئة Firebase Messaging
         const firebaseConfigCompat = {
@@ -215,6 +217,11 @@
                         <i class="fa-solid fa-headset w-4 text-center"></i>
                         <span>الدعم الفني</span>
                         <span id="navBadgeChat" class="hidden mr-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">0</span>
+                    </button>
+                    <button onclick="switchTab('announcements')" id="nav-announcements"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        <i class="fa-solid fa-bullhorn w-4 text-center"></i>
+                        <span>إعلانات الطلاب</span>
                     </button>
                     <button onclick="switchTab('staff')" id="nav-staff"
                         class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
@@ -573,6 +580,66 @@
                     </div>
                 </div>
 
+                <!-- تاب: إعلانات الطلاب -->
+                <div id="tab-announcements" class="tab-content hidden">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">إعلانات الطلاب</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">أرسل تنبيهًا للطلاب أو للمشتركين في مادة وصف محددين</p>
+                    </div>
+                    <div class="max-w-2xl bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                        <form onsubmit="sendStudentAnnouncement(event)" class="space-y-4">
+                            <div>
+                                <label for="announcementAudience" class="block text-xs font-bold text-slate-600 mb-1.5">من يستقبل الإعلان؟</label>
+                                <select id="announcementAudience" onchange="updateAnnouncementAudienceFields()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                    <option value="all">كل الطلاب</option>
+                                    <option value="course">المشتركون في مادة محددة</option>
+                                    <option value="grade">المشتركون في مادة وصف محددين</option>
+                                    <option value="term">المشتركون في مادة وصف وترم محددين</option>
+                                </select>
+                            </div>
+                            <div id="announcementCourseField" class="hidden">
+                                <label for="announcementCourse" class="block text-xs font-bold text-slate-600 mb-1.5">المادة</label>
+                                <select id="announcementCourse" onchange="updateAnnouncementAudiencePreview()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                    <option value="fiqh">الفقه الميسر</option>
+                                    <option value="tafseer">علم التفسير</option>
+                                    <option value="hadith">الحديث الشريف</option>
+                                    <option value="tawheed">علم التوحيد</option>
+                                </select>
+                            </div>
+                            <div id="announcementGradeField" class="hidden">
+                                <label for="announcementGrade" class="block text-xs font-bold text-slate-600 mb-1.5">الصف</label>
+                                <select id="announcementGrade" onchange="updateAnnouncementAudiencePreview()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                </select>
+                            </div>
+                            <div id="announcementTermField" class="hidden">
+                                <label for="announcementTerm" class="block text-xs font-bold text-slate-600 mb-1.5">الترم</label>
+                                <select id="announcementTerm" onchange="updateAnnouncementAudiencePreview()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                                    <option value="الترم الأول">الترم الأول</option>
+                                    <option value="الترم الثاني">الترم الثاني</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="announcementTitle" class="block text-xs font-bold text-slate-600 mb-1.5">عنوان الإعلان</label>
+                                <input id="announcementTitle" type="text" maxlength="100" required placeholder="مثال: تم رفع درس جديد" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50">
+                            </div>
+                            <div>
+                                <label for="announcementMessage" class="block text-xs font-bold text-slate-600 mb-1.5">تفاصيل الإعلان</label>
+                                <textarea id="announcementMessage" maxlength="1000" rows="4" required placeholder="اكتب تفاصيل الإعلان للطلاب..." class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50 resize-y"></textarea>
+                            </div>
+                            <p id="announcementAudiencePreview" class="text-xs text-slate-500">سيصل الإعلان إلى كل الطلاب.</p>
+                            <div id="announcementSendResult" class="hidden rounded-xl p-3 text-xs font-bold" role="status"></div>
+                            <button id="sendAnnouncementButton" type="submit" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition">
+                                <i class="fa-solid fa-paper-plane ml-1"></i> إرسال الإعلان
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- تاب: إدارة الموظفين -->
                 <div id="tab-staff" class="tab-content hidden">
                     <div class="mb-4">
@@ -823,6 +890,13 @@
                     </div>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-announcements" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-bullhorn text-orange-500 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">إعلانات الطلاب</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-staff" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-user-gear text-slate-500 w-4 text-center"></i>
@@ -887,6 +961,7 @@
                     'content':  ['bg-purple-50', 'text-purple-700', 'border', 'border-purple-100'],
                     'quizzes':   ['bg-indigo-50', 'text-indigo-700', 'border', 'border-indigo-100'],
                     'support':  ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
+                    'announcements': ['bg-orange-50', 'text-orange-700', 'border', 'border-orange-100'],
                     'staff':    ['bg-slate-100', 'text-slate-800'],
                     'settings': ['bg-slate-100', 'text-slate-800'],
                 };
@@ -1851,7 +1926,7 @@
         // صلاحيات الموظفين
         // ================================================
 
-        const allTabs = ['requests', 'students', 'performance', 'content', 'quizzes', 'support', 'staff', 'settings'];
+        const allTabs = ['requests', 'students', 'performance', 'content', 'quizzes', 'support', 'announcements', 'staff', 'settings'];
 
         function openPermissionsModal(index) {
             const staffList = JSON.parse(localStorage.getItem('adminStaffList')) || [];
@@ -1963,6 +2038,7 @@
 
                 document.getElementById('statUsersCount').innerText = allStudentsData.length;
                 renderStudentsTable(allStudentsData);
+                updateAnnouncementAudiencePreview();
 
             } catch (error) {
                 console.error("Error loading students: ", error);
@@ -2047,6 +2123,124 @@
             } catch (error) {
                 console.error('تعذر بدء محادثة الدعم مع الطالب:', error);
                 alert('تعذر بدء المحادثة. تحقق من الاتصال وحاول مرة أخرى.');
+            }
+        }
+
+        function updateAnnouncementAudienceFields() {
+            const audience = document.getElementById('announcementAudience').value;
+            document.getElementById('announcementCourseField').classList.toggle('hidden', audience === 'all');
+            document.getElementById('announcementGradeField').classList.toggle('hidden', audience === 'all' || audience === 'course');
+            document.getElementById('announcementTermField').classList.toggle('hidden', audience !== 'term');
+            updateAnnouncementAudiencePreview();
+        }
+
+        function getAnnouncementRecipients(students) {
+            const audience = document.getElementById('announcementAudience').value;
+            if (audience === 'all') return students;
+
+            const courseId = document.getElementById('announcementCourse').value;
+            const grade = document.getElementById('announcementGrade').value;
+            const term = document.getElementById('announcementTerm').value;
+
+            return students.filter(student => {
+                const subscriptions = student.subscriptions || {};
+                if (subscriptions[courseId] !== 'approved') return false;
+                const subscriptionData = subscriptions[`${courseId}_data`] || {};
+                if ((audience === 'grade' || audience === 'term') && subscriptionData.grade !== grade) return false;
+                if (audience === 'term' && subscriptionData.term !== term) return false;
+                return true;
+            });
+        }
+
+        function updateAnnouncementAudiencePreview() {
+            const preview = document.getElementById('announcementAudiencePreview');
+            if (!preview) return;
+
+            const audience = document.getElementById('announcementAudience').value;
+            if (!supportStudentSearchDataLoaded) {
+                preview.innerText = 'سيتم تحديد عدد المستلمين قبل الإرسال.';
+                return;
+            }
+
+            const count = getAnnouncementRecipients(allStudentsData).length;
+            preview.innerText = count
+                ? `سيصل الإعلان إلى ${count} طالب${count === 1 ? '' : 'اً'}.`
+                : 'لا يوجد طلاب مطابقون لهذا الاختيار.';
+        }
+
+        async function sendStudentAnnouncement(event) {
+            event.preventDefault();
+
+            const title = document.getElementById('announcementTitle').value.trim();
+            const message = document.getElementById('announcementMessage').value.trim();
+            const result = document.getElementById('announcementSendResult');
+            const sendButton = document.getElementById('sendAnnouncementButton');
+            if (!title || !message) {
+                alert('اكتب عنوان الإعلان وتفاصيله قبل الإرسال.');
+                return;
+            }
+
+            sendButton.disabled = true;
+            sendButton.classList.add('opacity-60', 'cursor-not-allowed');
+            result.classList.add('hidden');
+
+            let sentCount = 0;
+            let recipientCount = 0;
+            try {
+                const studentsSnapshot = await window.getDocs(window.collection(window.db, 'students'));
+                const students = studentsSnapshot.docs.map(studentDoc => ({
+                    id: studentDoc.id,
+                    ...studentDoc.data()
+                }));
+                const recipients = getAnnouncementRecipients(students);
+                recipientCount = recipients.length;
+                if (!recipients.length) {
+                    result.innerText = 'لم يتم الإرسال: لا يوجد طلاب ضمن الفئة المختارة.';
+                    result.className = 'rounded-xl p-3 text-xs font-bold bg-amber-50 text-amber-800';
+                    return;
+                }
+
+                if (!confirm(`سيتم إرسال الإعلان إلى ${recipients.length} طالب. هل تريد المتابعة؟`)) {
+                    result.innerText = 'تم إلغاء الإرسال.';
+                    result.className = 'rounded-xl p-3 text-xs font-bold bg-slate-100 text-slate-600';
+                    return;
+                }
+
+                const notification = {
+                    text: `${title} — ${message}`,
+                    date: new Date().toLocaleString('ar-EG'),
+                    read: false,
+                    type: 'announcement'
+                };
+
+                for (let start = 0; start < recipients.length; start += 450) {
+                    const batch = window.writeBatch(window.db);
+                    const chunk = recipients.slice(start, start + 450);
+                    chunk.forEach(student => {
+                        batch.update(
+                            window.doc(window.db, 'students', student.id),
+                            { notifications: window.arrayUnion(notification) }
+                        );
+                    });
+                    await batch.commit();
+                    sentCount += chunk.length;
+                }
+
+                result.innerText = `تم إرسال الإعلان بنجاح إلى ${sentCount} طالب.`;
+                result.className = 'rounded-xl p-3 text-xs font-bold bg-emerald-50 text-emerald-800';
+                document.getElementById('announcementTitle').value = '';
+                document.getElementById('announcementMessage').value = '';
+                updateAnnouncementAudiencePreview();
+            } catch (error) {
+                console.error('تعذر إرسال إعلان الطلاب:', error);
+                result.innerText = sentCount
+                    ? `تعذر إكمال الإرسال. وصل الإعلان إلى ${sentCount} من ${recipientCount} طالب. لم يصل للباقين؛ تجنب إعادة الإرسال للجميع حتى لا يتكرر الإعلان عند من استلمه.`
+                    : `تعذر إرسال الإعلان: ${error.message || 'تحقق من الاتصال والصلاحيات ثم حاول مرة أخرى.'}`;
+                result.className = 'rounded-xl p-3 text-xs font-bold bg-rose-50 text-rose-700';
+            } finally {
+                result.classList.remove('hidden');
+                sendButton.disabled = false;
+                sendButton.classList.remove('opacity-60', 'cursor-not-allowed');
             }
         }
 
