@@ -1617,6 +1617,15 @@
 
                     // الاشتراك المفعّل — نجيب الصف والترم من عنوان الاشتراك
                     const subData = subscriptions[courseId + '_data'] || {};
+                    if (!subData.grade || !subData.term) {
+                        btn.innerText = "بيانات الاشتراك ناقصة ⚠️";
+                        btn.className = "px-4 py-2 rounded-xl bg-rose-100 text-rose-700 font-black text-sm shadow-md";
+                        btn.onclick = function() {
+                            alert("بيانات الصف والفصل الدراسي لهذا الاشتراك غير مكتملة. يرجى التواصل مع الإدارة لتحديثها.");
+                        };
+                        return;
+                    }
+
                     btn.onclick = function() {
                         const grade = subData.grade || '';
                         const term = subData.term || '';
