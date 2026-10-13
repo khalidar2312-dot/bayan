@@ -1831,9 +1831,10 @@
                 notifications.map(function (n) {
 
                     return `
-                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+                        <div class="p-3 rounded-2xl ${n.read ? 'bg-slate-50 border-slate-100' : 'bg-emerald-50 border-emerald-200'} border text-xs space-y-1">
 
-                            <p class="font-bold text-slate-800">
+                            ${n.title ? `<p class="font-extrabold text-slate-800">${escapeHtml(n.title)}</p>` : ''}
+                            <p class="${n.title ? 'text-slate-600' : 'font-bold text-slate-800'}">
                                 ${escapeHtml(n.text)}
                             </p>
 
