@@ -1403,6 +1403,12 @@
                 } else {
 
                     currentUserData = null;
+                    if (chatStatusUnsubscribe) {
+                        chatStatusUnsubscribe();
+                        chatStatusUnsubscribe = null;
+                        chatStatusUid = null;
+                    }
+                    hideChatBadge();
 
                     localStorage.removeItem('activeUser');
 
@@ -1476,6 +1482,7 @@
             updateCourseButtons(user);
 
             renderNotifications(user);
+            subscribeToChatNotifications(user.uid);
 
         }
 
@@ -2425,6 +2432,8 @@
         // =========================
 
         let chatUnsubscribe = null;
+        let chatStatusUnsubscribe = null;
+        let chatStatusUid = null;
 
         function toggleChatWidget() {
             const widget = document.getElementById('chatWidget');
@@ -2439,12 +2448,13 @@
                     document.getElementById('chatLoginPrompt').classList.add('hidden');
                     document.getElementById('chatInputBox').classList.remove('hidden');
                     loadChatMessages(user.uid);
+                    markChatMessagesRead(user.uid);
                 } else {
                     document.getElementById('chatLoginPrompt').classList.remove('hidden');
                     document.getElementById('chatInputBox').classList.add('hidden');
                 }
                 // إخفاء الـ badge
-                document.getElementById('chatUnreadBadge').classList.add('hidden');
+                hideChatBadge();
             } else {
                 // لما يقفل الشات
                 if (chatUnsubscribe) {
@@ -2466,16 +2476,6 @@
                 .orderBy('createdAt', 'asc')
                 .onSnapshot(function(snapshot) {
                     renderChatMessages(snapshot.docs);
-
-                    // تنبيه لو الشات مقفول وجاء رد من الأدمن
-                    const widget = document.getElementById('chatWidget');
-                    if (widget.classList.contains('hidden')) {
-                        snapshot.docChanges().forEach(function(change) {
-                            if (change.type === 'added' && change.doc.data().sender === 'admin') {
-                                showChatBadge();
-                            }
-                        });
-                    }
                 }, function(error) {
                     console.error('خطأ في تحميل الرسائل:', error);
                 });
@@ -2554,6 +2554,7 @@
                     lastMessage: text,
                     lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
                     unreadByAdmin: true,
+                    unreadByStudent: false,
                     uid: user.uid
                 }, { merge: true });
 
@@ -2570,7 +2571,57 @@
 
         function showChatBadge() {
             const badge = document.getElementById('chatUnreadBadge');
+            if (!badge) return;
+            badge.innerText = '!';
             badge.classList.remove('hidden');
+        }
+
+        function hideChatBadge() {
+            const badge = document.getElementById('chatUnreadBadge');
+            if (!badge) return;
+            badge.classList.add('hidden');
+        }
+
+        function subscribeToChatNotifications(uid) {
+            if (!uid || chatStatusUid === uid) return;
+
+            if (chatStatusUnsubscribe) {
+                chatStatusUnsubscribe();
+            }
+
+            chatStatusUid = uid;
+            chatStatusUnsubscribe = db
+                .collection('support_chats')
+                .doc(uid)
+                .onSnapshot(function(chatSnapshot) {
+                    const widget = document.getElementById('chatWidget');
+                    if (!chatSnapshot.exists || !chatSnapshot.data().unreadByStudent) {
+                        hideChatBadge();
+                        return;
+                    }
+
+                    if (widget && !widget.classList.contains('hidden')) {
+                        markChatMessagesRead(uid);
+                        hideChatBadge();
+                        return;
+                    }
+
+                    showChatBadge();
+                }, function(error) {
+                    console.error('خطأ في مراقبة إشعارات الدعم:', error);
+                });
+        }
+
+        async function markChatMessagesRead(uid) {
+            try {
+                const chatRef = db.collection('support_chats').doc(uid);
+                const chatSnapshot = await chatRef.get();
+                if (chatSnapshot.exists && chatSnapshot.data().unreadByStudent) {
+                    await chatRef.update({ unreadByStudent: false });
+                }
+            } catch (error) {
+                console.error('خطأ في تحديث حالة قراءة رسائل الدعم:', error);
+            }
         }
 
         // =========================
