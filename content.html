@@ -416,13 +416,14 @@
             if (!currentStudentUid || !url) return;
 
             try {
-                const progressRef = db
-                    .collection('students')
-                    .doc(currentStudentUid)
-                    .collection('course_progress')
-                    .doc(contentKey);
-                const progressSnapshot = await progressRef.get();
-                const progress = progressSnapshot.exists ? progressSnapshot.data() : {};
+                const studentRef = db.collection('students').doc(currentStudentUid);
+                const studentSnapshot = await studentRef.get();
+                if (!studentSnapshot.exists) throw new Error('بيانات الطالب غير موجودة.');
+
+                const student = studentSnapshot.data();
+                const progress = student.courseProgress && typeof student.courseProgress === 'object'
+                    ? student.courseProgress[contentKey] || {}
+                    : {};
                 const attendance = progress.attendance && typeof progress.attendance === 'object'
                     ? progress.attendance
                     : {};
@@ -432,12 +433,14 @@
                 attendance[lessonId] = {
                     title,
                     url,
-                    firstOpenedAt: existing.firstOpenedAt || firebase.firestore.FieldValue.serverTimestamp(),
-                    lastOpenedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    firstOpenedAt: existing.firstOpenedAt || new Date().toISOString(),
+                    lastOpenedAt: new Date().toISOString(),
                     openCount: (existing.openCount || 0) + 1
                 };
 
-                await progressRef.set({ attendance }, { merge: true });
+                await studentRef.update({
+                    [`courseProgress.${contentKey}.attendance.${lessonId}`]: attendance[lessonId]
+                });
             } catch (error) {
                 console.error('تعذر تسجيل حضور الدرس:', error);
             }
@@ -498,11 +501,10 @@
                 await db
                     .collection('students')
                     .doc(currentStudentUid)
-                    .collection('course_progress')
-                    .doc(contentKey)
-                    .set({
-                        quizAttempts: firebase.firestore.FieldValue.arrayUnion(attempt)
-                    }, { merge: true });
+                    .update({
+                        [`courseProgress.${contentKey}.quizAttempts`]:
+                            firebase.firestore.FieldValue.arrayUnion(attempt)
+                    });
 
                 const result = document.getElementById('quizResult');
                 result.innerText = `نتيجتك: ${score} من ${currentQuizQuestions.length} (${attempt.percentage}%)`;
@@ -510,7 +512,8 @@
                 document.getElementById('quizForm').querySelector('button[type="submit"]').disabled = true;
             } catch (error) {
                 console.error('تعذر حفظ نتيجة الاختبار:', error);
-                alert('تم حساب النتيجة لكن تعذر حفظها. تحقق من الاتصال وحاول مرة أخرى.');
+                const errorDetails = error.code || error.message || 'سبب غير معروف';
+                alert(`تم حساب النتيجة لكن تعذر حفظها: ${errorDetails}`);
             }
         }
 
