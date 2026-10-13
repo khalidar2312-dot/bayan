@@ -798,6 +798,15 @@
         <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative mx-4">
 
             <button
+                onclick="clearAllNotifications()"
+                class="absolute top-4 right-4 text-red-500 hover:text-red-600 text-lg font-bold"
+                title="حذف كل الإشعارات">
+
+                <i class="fa-solid fa-trash-can"></i>
+
+            </button>
+
+            <button
                 onclick="toggleNotificationModal()"
                 class="absolute top-4 left-4 text-slate-400 hover:text-slate-600 text-xl font-bold">
 
@@ -1587,14 +1596,24 @@
 
 
             list.innerHTML =
-                notifications.map(function (n) {
+                notifications.map(function (n, index) {
 
                     return `
-                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-2">
 
-                            <p class="font-bold text-slate-800">
-                                ${escapeHtml(n.text)}
-                            </p>
+                            <div class="flex items-start justify-between gap-2">
+                                <p class="font-bold text-slate-800 flex-1">
+                                    ${escapeHtml(n.text)}
+                                </p>
+
+                                <button
+                                    type="button"
+                                    onclick="deleteNotification(${index})"
+                                    class="text-red-500 hover:text-red-600 transition"
+                                    title="حذف الإشعار">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
 
                             <span class="text-[10px] text-slate-400 block">
                                 ${escapeHtml(n.date || '')}
@@ -1604,6 +1623,62 @@
                     `;
 
                 }).join('');
+
+        }
+
+
+        async function deleteNotification(index) {
+
+            const activeUser = getActiveUser();
+
+            if (!activeUser || !Array.isArray(activeUser.notifications)) return;
+
+            const updatedNotifications = activeUser.notifications.filter(function (_, i) {
+                return i !== index;
+            });
+
+            activeUser.notifications = updatedNotifications;
+            currentUserData = activeUser;
+
+            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+            if (activeUser.uid) {
+                try {
+                    await db.collection('students').doc(activeUser.uid).update({
+                        notifications: updatedNotifications
+                    });
+                } catch (error) {
+                    console.error('خطأ في حذف الإشعار:', error);
+                }
+            }
+
+            renderNotifications(activeUser);
+
+        }
+
+
+        async function clearAllNotifications() {
+
+            const activeUser = getActiveUser();
+
+            if (!activeUser) return;
+
+            activeUser.notifications = [];
+            currentUserData = activeUser;
+
+            localStorage.setItem('activeUser', JSON.stringify(activeUser));
+
+            if (activeUser.uid) {
+                try {
+                    await db.collection('students').doc(activeUser.uid).update({
+                        notifications: []
+                    });
+                } catch (error) {
+                    console.error('خطأ في حذف كل الإشعارات:', error);
+                }
+            }
+
+            renderNotifications(activeUser);
 
         }
 
