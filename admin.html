@@ -1403,6 +1403,7 @@
                     title,
                     text,
                     date: new Date().toLocaleString('ar-EG'),
+                    createdAt: Date.now(),
                     read: false
                 };
                 const studentDocs = studentsSnapshot.docs;
@@ -2348,8 +2349,11 @@
                     // إضافة إشعار للطالب
                     let notifications = studentData.notifications || [];
                     notifications.unshift({
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                        type: 'subscription',
                         text: `تم تفعيل اشتراكك في مادة "${req.courseTitle}" بنجاح! يمكنك الآن مشاهدة المحتوى.`,
                         date: new Date().toLocaleString('ar-EG'),
+                        createdAt: Date.now(),
                         read: false
                     });
 
@@ -2396,8 +2400,11 @@
 
                     let notifications = studentData.notifications || [];
                     notifications.unshift({
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                        type: 'subscription',
                         text: `عذراً، تم رفض طلب اشتراكك في مادة "${req.courseTitle}". تواصل مع الإدارة للاستفسار.`,
                         date: new Date().toLocaleString('ar-EG'),
+                        createdAt: Date.now(),
                         read: false
                     });
 
