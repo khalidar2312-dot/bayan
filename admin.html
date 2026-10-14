@@ -212,6 +212,11 @@
                         <i class="fa-solid fa-photo-film w-4 text-center"></i>
                         <span>المحتوى التعليمي</span>
                     </button>
+                    <button onclick="switchTab('schedule')" id="nav-schedule"
+                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        <i class="fa-solid fa-calendar-days w-4 text-center"></i>
+                        <span>الجدول</span>
+                    </button>
                     <button onclick="switchTab('quizzes')" id="nav-quizzes"
                         class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
                         <i class="fa-solid fa-clipboard-question w-4 text-center"></i>
@@ -252,6 +257,97 @@
 
             <!-- المحتوى الرئيسي -->
             <main class="flex-1 p-4 lg:p-6 overflow-auto">
+
+                <!-- تاب: إدارة الجدول الدراسي -->
+                <div id="tab-schedule" class="tab-content hidden">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-extrabold font-kufi text-slate-800">إدارة الجدول الدراسي</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">حدد مواعيد نزول الحصص والاختبارات والمراجعات حسب المادة والصف والترم.</p>
+                    </div>
+
+                    <form id="scheduleForm" onsubmit="saveScheduleEvent(event)" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-5">
+                        <input type="hidden" id="scheduleEditingId">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <label class="block text-xs font-bold text-slate-500">
+                                نوع الموعد
+                                <select id="scheduleEventType" required class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="lesson">حصة</option>
+                                    <option value="quiz">اختبار</option>
+                                    <option value="review">مراجعة</option>
+                                </select>
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500">
+                                المادة
+                                <select id="scheduleCourse" required onchange="loadScheduleAdmin()" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="fiqh">الفقه الميسر</option>
+                                    <option value="tafseer">علم التفسير</option>
+                                    <option value="hadith">الحديث الشريف</option>
+                                    <option value="tawheed">علم التوحيد</option>
+                                </select>
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500">
+                                الصف الدراسي
+                                <select id="scheduleGrade" required onchange="loadScheduleAdmin()" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                </select>
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500">
+                                الفصل الدراسي
+                                <select id="scheduleTerm" required onchange="loadScheduleAdmin()" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="الترم الأول">الترم الأول</option>
+                                    <option value="الترم الثاني">الترم الثاني</option>
+                                </select>
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500">
+                                نطاق الموعد
+                                <select id="scheduleScopeType" required onchange="updateScheduleScopeField()" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="chapter">فصل</option>
+                                    <option value="unit">وحدة</option>
+                                    <option value="term">الترم بالكامل</option>
+                                </select>
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500">
+                                اسم الفصل أو الوحدة
+                                <input type="text" id="scheduleScopeName" maxlength="100" placeholder="مثال: الفصل الأول أو الوحدة الثانية" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500">
+                                عنوان الموعد
+                                <input type="text" id="scheduleTitle" required maxlength="120" placeholder="مثال: نزول شرح الدرس الأول" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500">
+                                التاريخ
+                                <input type="date" id="scheduleDate" required class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500">
+                                الوقت (اختياري)
+                                <input type="time" id="scheduleTime" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                            </label>
+                            <label class="block text-xs font-bold text-slate-500 sm:col-span-2 lg:col-span-3">
+                                تفاصيل إضافية (اختياري)
+                                <textarea id="scheduleDescription" rows="2" maxlength="500" placeholder="تفاصيل تظهر للطلاب في الجدول" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50"></textarea>
+                            </label>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-4">
+                            <button id="scheduleSaveButton" type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-800 text-white font-bold text-xs hover:bg-emerald-900 transition">
+                                <i class="fa-solid fa-plus ml-1"></i> إضافة للجدول
+                            </button>
+                            <button id="scheduleCancelEditButton" type="button" onclick="resetScheduleForm()" class="hidden px-5 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200 transition">
+                                إلغاء التعديل
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                        <h3 class="text-sm font-bold text-slate-700 mb-4">المواعيد المضافة</h3>
+                        <div id="adminScheduleList" class="space-y-3">
+                            <p class="text-center text-xs text-slate-400 py-6">افتح الجدول لتحميل المواعيد.</p>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- تاب: طلبات الاشتراك -->
                 <div id="tab-requests" class="tab-content">
@@ -925,93 +1021,93 @@
     </div>
 
     <!-- Modal صلاحيات الموظف -->
-    <div id="permissionsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative mx-4">
-            <button onclick="closePermissionsModal()" class="absolute top-4 left-4 text-slate-400 text-xl font-bold">
+    <div id="permissionsModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/70 backdrop-blur-sm p-3 hidden">
+        <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[calc(100vh-1.5rem)] p-4 sm:p-6 shadow-2xl relative mx-1 flex flex-col overflow-hidden">
+            <button onclick="closePermissionsModal()" class="absolute top-4 left-4 z-10 w-9 h-9 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-xl font-bold flex items-center justify-center" title="إغلاق" aria-label="إغلاق نافذة الصلاحيات">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-            <div class="text-center mb-5">
-                <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mx-auto mb-3">
+            <div class="text-center mb-4 shrink-0">
+                <div class="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-lg mx-auto mb-2">
                     <i class="fa-solid fa-shield-halved"></i>
                 </div>
-                <h3 class="text-lg font-extrabold font-kufi text-slate-800">صلاحيات الموظف</h3>
+                <h3 class="text-base font-extrabold font-kufi text-slate-800">صلاحيات الموظف</h3>
                 <p id="permissionsStaffName" class="text-xs text-amber-600 font-bold mt-1"></p>
             </div>
 
             <input type="hidden" id="permissionsStaffIndex">
 
-            <div class="space-y-2 mb-5">
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-2 mb-4 overflow-y-auto min-h-0">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-requests" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-list-check text-amber-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">طلبات الاشتراك</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-students" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-user-graduate text-emerald-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إدارة الطلاب</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-performance" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-chart-line text-cyan-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">متابعة أداء الطلاب</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-inactive-students" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-user-clock text-amber-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">الطلاب غير النشطين</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-content" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-photo-film text-purple-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">المحتوى التعليمي</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-quizzes" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-clipboard-question text-indigo-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إدارة الاختبارات</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-assignments" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-file-pen text-emerald-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إدارة الواجبات</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-support" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-headset text-blue-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">الدعم الفني</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-announcements" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-bullhorn text-orange-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إعلانات الطلاب</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-staff" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-user-gear text-slate-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إدارة الموظفين</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-settings" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-lock text-slate-500 w-4 text-center"></i>
@@ -1020,7 +1116,7 @@
                 </label>
             </div>
 
-            <button onclick="savePermissions()" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition shadow-sm">
+            <button onclick="savePermissions()" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition shadow-sm shrink-0">
                 <i class="fa-solid fa-floppy-disk ml-1"></i> حفظ الصلاحيات
             </button>
         </div>
@@ -1068,6 +1164,7 @@
                     'performance': ['bg-cyan-50', 'text-cyan-700', 'border', 'border-cyan-100'],
                     'inactive-students': ['bg-amber-50', 'text-amber-700', 'border', 'border-amber-100'],
                     'content':  ['bg-purple-50', 'text-purple-700', 'border', 'border-purple-100'],
+                    'schedule': ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
                     'quizzes':   ['bg-indigo-50', 'text-indigo-700', 'border', 'border-indigo-100'],
                     'assignments': ['bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100'],
                     'support':  ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
@@ -1084,6 +1181,195 @@
             if (tabName === 'performance') loadPerformanceReport();
             if (tabName === 'inactive-students') loadInactiveStudents();
             if (tabName === 'assignments') loadAssignmentsAdmin();
+            if (tabName === 'schedule') loadScheduleAdmin();
+        }
+
+        function updateScheduleScopeField() {
+            const isTermWide = document.getElementById('scheduleScopeType').value === 'term';
+            const scopeName = document.getElementById('scheduleScopeName');
+            scopeName.disabled = isTermWide;
+            scopeName.required = !isTermWide;
+            if (isTermWide) scopeName.value = '';
+            scopeName.placeholder = isTermWide
+                ? 'الترم بالكامل'
+                : 'مثال: الفصل الأول أو الوحدة الثانية';
+        }
+
+        function resetScheduleForm() {
+            document.getElementById('scheduleForm').reset();
+            document.getElementById('scheduleEditingId').value = '';
+            document.getElementById('scheduleSaveButton').innerHTML = '<i class="fa-solid fa-plus ml-1"></i> إضافة للجدول';
+            document.getElementById('scheduleCancelEditButton').classList.add('hidden');
+            updateScheduleScopeField();
+        }
+
+        function getScheduleContentKey() {
+            const course = document.getElementById('scheduleCourse').value;
+            const grade = document.getElementById('scheduleGrade').value;
+            const term = document.getElementById('scheduleTerm').value;
+            return `${course}__${grade}__${term}`.replace(/\s+/g, '_');
+        }
+
+        async function saveScheduleEvent(event) {
+            event.preventDefault();
+            const editingId = document.getElementById('scheduleEditingId').value;
+            const courseSelect = document.getElementById('scheduleCourse');
+            const scopeType = document.getElementById('scheduleScopeType').value;
+            const now = new Date().toISOString();
+            const data = {
+                eventType: document.getElementById('scheduleEventType').value,
+                courseId: courseSelect.value,
+                courseName: courseSelect.options[courseSelect.selectedIndex].text,
+                grade: document.getElementById('scheduleGrade').value,
+                term: document.getElementById('scheduleTerm').value,
+                scopeType,
+                scopeName: scopeType === 'term' ? '' : document.getElementById('scheduleScopeName').value.trim(),
+                title: document.getElementById('scheduleTitle').value.trim(),
+                eventDate: document.getElementById('scheduleDate').value,
+                eventTime: document.getElementById('scheduleTime').value,
+                description: document.getElementById('scheduleDescription').value.trim(),
+                updatedAt: now
+            };
+
+            const saveButton = document.getElementById('scheduleSaveButton');
+            saveButton.disabled = true;
+            saveButton.classList.add('opacity-60', 'cursor-not-allowed');
+            try {
+                const contentRef = window.doc(window.db, 'course_content', getScheduleContentKey());
+                const contentSnapshot = await window.getDoc(contentRef);
+                const events = contentSnapshot.exists() && Array.isArray(contentSnapshot.data().schedule)
+                    ? [...contentSnapshot.data().schedule]
+                    : [];
+                if (editingId) {
+                    const eventIndex = events.findIndex(item => item.id === editingId);
+                    if (eventIndex < 0) {
+                        alert('لم يتم العثور على الموعد المطلوب تعديله ضمن هذا الصف والمادة والترم.');
+                        return;
+                    }
+                    events[eventIndex] = { ...events[eventIndex], ...data };
+                } else {
+                    events.push({
+                        ...data,
+                        id: `schedule_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                        createdAt: now
+                    });
+                }
+                await window.setDoc(contentRef, {
+                    schedule: events,
+                    updatedAt: window.serverTimestamp()
+                }, { merge: true });
+                resetScheduleForm();
+                await loadScheduleAdmin();
+                showToast(editingId ? 'تم تحديث الموعد في الجدول' : 'تمت إضافة الموعد للجدول');
+            } catch (error) {
+                console.error('تعذر حفظ موعد الجدول:', error);
+                alert('تعذر حفظ الموعد. تحقق من الاتصال وصلاحيات قاعدة البيانات.');
+            } finally {
+                saveButton.disabled = false;
+                saveButton.classList.remove('opacity-60', 'cursor-not-allowed');
+            }
+        }
+
+        async function loadScheduleAdmin() {
+            const container = document.getElementById('adminScheduleList');
+            if (!container) return;
+            container.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">جاري تحميل المواعيد...</p>';
+
+            try {
+                const snapshot = await window.getDoc(window.doc(window.db, 'course_content', getScheduleContentKey()));
+                const events = snapshot.exists() && Array.isArray(snapshot.data().schedule)
+                    ? [...snapshot.data().schedule].sort((a, b) => `${a.eventDate || ''} ${a.eventTime || ''}`.localeCompare(`${b.eventDate || ''} ${b.eventTime || ''}`))
+                    : [];
+
+                if (!events.length) {
+                    container.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">لا توجد مواعيد مضافة للجدول بعد.</p>';
+                    return;
+                }
+
+                const eventTypes = { lesson: 'حصة', quiz: 'اختبار', review: 'مراجعة' };
+                const scopeTypes = { chapter: 'فصل', unit: 'وحدة', term: 'الترم بالكامل' };
+                container.innerHTML = events.map(item => {
+                    const dateText = /^\d{4}-\d{2}-\d{2}$/.test(item.eventDate || '')
+                        ? new Date(`${item.eventDate}T00:00:00`).toLocaleDateString('ar-EG')
+                        : 'تاريخ غير محدد';
+                    const scopeLabel = scopeTypes[item.scopeType] || 'نطاق غير محدد';
+                    const target = item.scopeType === 'term' ? scopeLabel : `${scopeLabel}: ${escapeQuizHtml(item.scopeName || '')}`;
+                    return `
+                        <article class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                                        <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold">${escapeQuizHtml(eventTypes[item.eventType] || 'موعد')}</span>
+                                        <span class="text-[10px] text-slate-500">${escapeQuizHtml(item.courseName || '')} — ${escapeQuizHtml(item.grade || '')} — ${escapeQuizHtml(item.term || '')}</span>
+                                    </div>
+                                    <h4 class="font-bold text-sm text-slate-800">${escapeQuizHtml(item.title || '')}</h4>
+                                    <p class="text-[11px] text-slate-500 mt-1">${target} · ${dateText}${item.eventTime ? ` — ${escapeQuizHtml(item.eventTime)}` : ''}</p>
+                                    ${item.description ? `<p class="text-xs text-slate-600 mt-2 whitespace-pre-wrap">${escapeQuizHtml(item.description)}</p>` : ''}
+                                </div>
+                                <div class="flex gap-2 shrink-0">
+                                    <button type="button" data-edit-schedule="${escapeQuizHtml(item.id)}" class="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-bold hover:bg-amber-100">تعديل</button>
+                                    <button type="button" data-delete-schedule="${escapeQuizHtml(item.id)}" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[11px] font-bold hover:bg-red-100">حذف</button>
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+
+                container.querySelectorAll('[data-edit-schedule]').forEach(button => {
+                    button.addEventListener('click', () => editScheduleEvent(events.find(item => item.id === button.dataset.editSchedule)));
+                });
+                container.querySelectorAll('[data-delete-schedule]').forEach(button => {
+                    button.addEventListener('click', () => deleteScheduleEvent(button.dataset.deleteSchedule));
+                });
+            } catch (error) {
+                console.error('تعذر تحميل مواعيد الجدول:', error);
+                container.innerHTML = '<p class="text-center text-xs text-red-500 py-6">تعذر تحميل المواعيد. تحقق من الاتصال والصلاحيات.</p>';
+            }
+        }
+
+        function editScheduleEvent(item) {
+            if (!item) return;
+            document.getElementById('scheduleEditingId').value = item.id;
+            document.getElementById('scheduleEventType').value = item.eventType || 'lesson';
+            document.getElementById('scheduleCourse').value = item.courseId || 'fiqh';
+            document.getElementById('scheduleGrade').value = item.grade || 'الصف الأول الإعدادي';
+            document.getElementById('scheduleTerm').value = item.term || 'الترم الأول';
+            document.getElementById('scheduleScopeType').value = item.scopeType || 'chapter';
+            document.getElementById('scheduleScopeName').value = item.scopeName || '';
+            document.getElementById('scheduleTitle').value = item.title || '';
+            document.getElementById('scheduleDate').value = item.eventDate || '';
+            document.getElementById('scheduleTime').value = item.eventTime || '';
+            document.getElementById('scheduleDescription').value = item.description || '';
+            document.getElementById('scheduleSaveButton').innerHTML = '<i class="fa-solid fa-floppy-disk ml-1"></i> حفظ التعديلات';
+            document.getElementById('scheduleCancelEditButton').classList.remove('hidden');
+            updateScheduleScopeField();
+            document.getElementById('scheduleForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function deleteScheduleEvent(eventId) {
+            if (!eventId || !confirm('هل تريد حذف هذا الموعد من الجدول؟')) return;
+            try {
+                const contentRef = window.doc(window.db, 'course_content', getScheduleContentKey());
+                const snapshot = await window.getDoc(contentRef);
+                if (!snapshot.exists() || !Array.isArray(snapshot.data().schedule)) {
+                    alert('لم يتم العثور على مواعيد لهذا الاختيار.');
+                    return;
+                }
+                const events = snapshot.data().schedule.filter(item => item.id !== eventId);
+                if (events.length === snapshot.data().schedule.length) {
+                    alert('لم يتم العثور على الموعد المطلوب حذفه.');
+                    return;
+                }
+                await window.setDoc(contentRef, {
+                    schedule: events,
+                    updatedAt: window.serverTimestamp()
+                }, { merge: true });
+                await loadScheduleAdmin();
+                showToast('تم حذف الموعد من الجدول');
+            } catch (error) {
+                console.error('تعذر حذف موعد الجدول:', error);
+                alert('تعذر حذف الموعد. تحقق من الاتصال وصلاحيات قاعدة البيانات.');
+            }
         }
 
         function toggleSidebar(forceClose) {
