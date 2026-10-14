@@ -454,21 +454,35 @@
 
 
     <!-- Academic schedule -->
-    <section id="schedule" class="py-16 bg-white border-y border-slate-100">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="text-center max-w-3xl mx-auto mb-8 space-y-2">
-                <span class="text-amber-600 font-extrabold text-xs uppercase">مواعيدك الدراسية</span>
-                <h2 class="text-3xl font-extrabold font-kufi text-emerald-950">الجدول</h2>
-                <p class="text-slate-600 text-sm">مواعيد نزول الحصص والاختبارات والمراجعات لموادك المسجل بها.</p>
+    <section id="schedule" class="py-14 sm:py-16 bg-gradient-to-b from-emerald-50/70 via-white to-white border-y border-emerald-900/10">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="text-center max-w-2xl mx-auto mb-8">
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-bold text-xs mb-3">
+                    <i class="fa-regular fa-calendar-days"></i>
+                    مواعيدك الدراسية
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold font-kufi text-emerald-950">الجدول</h2>
+                <p class="text-slate-600 text-sm mt-2">تابع مواعيد نزول الحصص والاختبارات والمراجعات لموادك.</p>
             </div>
 
-            <div id="studentScheduleMessage" class="max-w-3xl mx-auto bg-emerald-50 border border-emerald-100 rounded-2xl p-5 text-center text-sm text-emerald-900">
-                سجل الدخول لعرض جدولك الدراسي.
-                <button type="button" onclick="openLoginModal()" class="block mx-auto mt-3 px-5 py-2 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition">
+            <div id="studentScheduleMessage" class="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 bg-white border border-emerald-100 rounded-2xl p-4 sm:p-5 text-center text-sm text-slate-700 shadow-sm">
+                <span id="studentScheduleMessageText">سجل الدخول لعرض جدولك الدراسي.</span>
+                <button id="studentScheduleLoginButton" type="button" onclick="openLoginModal()" class="px-5 py-2 rounded-xl bg-emerald-800 text-white font-bold hover:bg-emerald-900 transition shadow-sm">
                     تسجيل الدخول
                 </button>
             </div>
-            <div id="studentScheduleList" class="max-w-4xl mx-auto space-y-3"></div>
+
+            <div id="studentScheduleOverview" class="hidden max-w-3xl mx-auto grid grid-cols-2 gap-3 mb-5">
+                <div class="flex items-center gap-3 rounded-2xl bg-white border border-emerald-100 p-4 shadow-sm">
+                    <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center"><i class="fa-regular fa-calendar-check"></i></span>
+                    <div><p id="studentScheduleUpcomingCount" class="text-lg font-black text-emerald-900">0</p><p class="text-[11px] font-bold text-slate-500">مواعيد قادمة</p></div>
+                </div>
+                <div class="flex items-center gap-3 rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
+                    <span class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center"><i class="fa-regular fa-clock"></i></span>
+                    <div><p id="studentSchedulePastCount" class="text-lg font-black text-slate-700">0</p><p class="text-[11px] font-bold text-slate-500">مواعيد سابقة</p></div>
+                </div>
+            </div>
+            <div id="studentScheduleList" class="max-w-4xl mx-auto space-y-7"></div>
         </div>
     </section>
 
@@ -1597,8 +1611,24 @@
 
         async function loadAcademicSchedule(user) {
             const message = document.getElementById('studentScheduleMessage');
+            const messageText = document.getElementById('studentScheduleMessageText');
+            const loginButton = document.getElementById('studentScheduleLoginButton');
+            const overview = document.getElementById('studentScheduleOverview');
             const container = document.getElementById('studentScheduleList');
-            if (!message || !container) return;
+            if (!message || !messageText || !loginButton || !overview || !container) return;
+
+            const showMessage = (text, tone = 'neutral', showLogin = false) => {
+                const toneClasses = {
+                    neutral: 'bg-white border-slate-200 text-slate-700',
+                    error: 'bg-rose-50 border-rose-200 text-rose-700',
+                    success: 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                };
+                messageText.innerText = text;
+                message.className = `max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 rounded-2xl border p-4 sm:p-5 text-center text-sm shadow-sm ${toneClasses[tone] || toneClasses.neutral}`;
+                loginButton.classList.toggle('hidden', !showLogin);
+                message.classList.remove('hidden');
+                overview.classList.add('hidden');
+            };
 
             const subscriptions = user && user.subscriptions || {};
             const enrolledCourses = Object.keys(subscriptions).filter(courseId =>
@@ -1609,12 +1639,12 @@
                 subscriptions[`${courseId}_data`].term
             );
             if (!enrolledCourses.length) {
-                message.innerText = 'لا توجد مواد مفعلة لعرض مواعيدها. اشترك في مادة أو تواصل مع الإدارة.';
+                showMessage('لا توجد مواد مفعلة لعرض مواعيدها. اشترك في مادة أو تواصل مع الإدارة.');
                 container.innerHTML = '';
                 return;
             }
 
-            message.innerText = 'جاري تحميل جدولك الدراسي...';
+            showMessage('جاري تحميل جدولك الدراسي...');
             container.innerHTML = '';
             try {
                 const courseSnapshots = await Promise.all(enrolledCourses.map(courseId => {
@@ -1640,17 +1670,26 @@
                 });
 
                 if (!events.length) {
-                    message.innerText = 'لا توجد مواعيد مضافة لموادك وصفك الدراسي حتى الآن.';
+                    showMessage('لا توجد مواعيد مضافة لموادك وصفك الدراسي حتى الآن.', 'neutral');
                     return;
                 }
 
-                message.innerText = `يعرض الجدول مواعيد ${events.length} نشاط${events.length === 1 ? '' : 'اً'} لموادك المسجل بها.`;
+                const upcomingEvents = events.filter(item => item.eventDate >= today);
+                const previousEvents = events.filter(item => item.eventDate < today);
+                document.getElementById('studentScheduleUpcomingCount').innerText = upcomingEvents.length;
+                document.getElementById('studentSchedulePastCount').innerText = previousEvents.length;
+                message.classList.add('hidden');
+                overview.classList.remove('hidden');
+
                 const eventTypes = { lesson: 'حصة', quiz: 'اختبار', review: 'مراجعة' };
                 const scopeTypes = { chapter: 'فصل', unit: 'وحدة', term: 'الترم بالكامل' };
-                container.innerHTML = events.map(item => {
+                const renderEvent = item => {
                     const courseData = subscriptions[`${item.courseId}_data`] || {};
-                    const displayDate = new Date(`${item.eventDate}T00:00:00`).toLocaleDateString('ar-EG', {
-                        weekday: 'long',
+                    const eventDate = new Date(`${item.eventDate}T00:00:00`);
+                    const displayDay = eventDate.toLocaleDateString('ar-EG', { day: 'numeric' });
+                    const displayMonth = eventDate.toLocaleDateString('ar-EG', { month: 'short' });
+                    const displayWeekday = eventDate.toLocaleDateString('ar-EG', { weekday: 'long' });
+                    const displayDate = eventDate.toLocaleDateString('ar-EG', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
@@ -1660,30 +1699,75 @@
                         ? scopeLabel
                         : `${scopeLabel}: ${escapeHtml(item.scopeName || '')}`;
                     const isPast = item.eventDate < today;
+                    const typeClasses = {
+                        lesson: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                        quiz: 'bg-rose-50 text-rose-700 border-rose-100',
+                        review: 'bg-amber-50 text-amber-700 border-amber-100'
+                    };
+                    const typeIcons = {
+                        lesson: 'fa-play',
+                        quiz: 'fa-clipboard-question',
+                        review: 'fa-book-open'
+                    };
+                    const eventType = item.eventType || 'lesson';
                     return `
-                        <article class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="flex flex-wrap items-center gap-2 mb-2">
-                                        <span class="px-2.5 py-1 rounded-lg ${item.eventType === 'quiz' ? 'bg-rose-50 text-rose-700' : item.eventType === 'review' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'} text-[10px] font-bold">${escapeHtml(eventTypes[item.eventType] || 'موعد')}</span>
-                                        <span class="text-[11px] text-slate-500">${escapeHtml(item.courseName || item.courseId || '')} — ${escapeHtml(courseData.grade || '')} — ${escapeHtml(courseData.term || '')}</span>
-                                        ${isPast ? '<span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-bold">انتهى</span>' : ''}
-                                    </div>
-                                    <h3 class="font-bold text-slate-800">${escapeHtml(item.title || '')}</h3>
-                                    <p class="text-xs text-slate-500 mt-1">${target}</p>
-                                    ${item.description ? `<p class="text-xs text-slate-600 mt-2 whitespace-pre-wrap">${escapeHtml(item.description)}</p>` : ''}
+                        <article class="group relative overflow-hidden rounded-2xl border ${isPast ? 'border-slate-200 bg-slate-50/70' : 'border-emerald-100 bg-white hover:border-emerald-200 hover:shadow-md'} shadow-sm transition duration-200">
+                            <div class="absolute inset-y-0 right-0 w-1 ${isPast ? 'bg-slate-300' : eventType === 'quiz' ? 'bg-rose-400' : eventType === 'review' ? 'bg-amber-400' : 'bg-emerald-500'}"></div>
+                            <div class="grid grid-cols-[4.25rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)] items-center gap-3 sm:gap-5 p-3.5 sm:p-5">
+                                <div class="flex flex-col items-center justify-center rounded-xl ${isPast ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-800'} py-3 px-1 text-center">
+                                    <span class="text-2xl sm:text-3xl leading-none font-black">${displayDay}</span>
+                                    <span class="mt-1 text-[11px] font-bold">${displayMonth}</span>
                                 </div>
-                                <div class="sm:text-left shrink-0 sm:min-w-44">
-                                    <p class="text-xs font-bold text-emerald-800"><i class="fa-regular fa-calendar ml-1"></i>${displayDate}</p>
-                                    ${item.eventTime ? `<p class="text-xs text-slate-500 mt-1"><i class="fa-regular fa-clock ml-1"></i>${escapeHtml(item.eventTime)}</p>` : ''}
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                                        <span class="inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-extrabold ${typeClasses[eventType] || typeClasses.lesson}">
+                                            <i class="fa-solid ${typeIcons[eventType] || typeIcons.lesson}"></i>
+                                            ${escapeHtml(eventTypes[eventType] || 'موعد')}
+                                        </span>
+                                        <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
+                                            <i class="fa-solid fa-book"></i>
+                                            ${escapeHtml(item.courseName || item.courseId || '')}
+                                        </span>
+                                        ${isPast
+                                            ? '<span class="rounded-lg bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600">انتهى</span>'
+                                            : item.eventDate === today
+                                                ? '<span class="rounded-lg bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-800">اليوم</span>'
+                                                : ''}
+                                    </div>
+                                    <h3 class="text-sm sm:text-base font-extrabold leading-relaxed ${isPast ? 'text-slate-600' : 'text-slate-800'}">${escapeHtml(item.title || '')}</h3>
+                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px] text-slate-500">
+                                        <span><i class="fa-regular fa-calendar ml-1"></i>${displayWeekday}، ${displayDate}</span>
+                                        ${item.eventTime ? `<span><i class="fa-regular fa-clock ml-1"></i>${escapeHtml(item.eventTime)}</span>` : ''}
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 mt-1.5">${target} · ${escapeHtml(courseData.grade || '')} · ${escapeHtml(courseData.term || '')}</p>
+                                    ${item.description ? `<p class="text-xs text-slate-600 mt-2 pt-2 border-t border-slate-100 whitespace-pre-wrap">${escapeHtml(item.description)}</p>` : ''}
                                 </div>
                             </div>
                         </article>
                     `;
-                }).join('');
+                };
+                const renderGroup = (title, icon, groupEvents, upcoming) => {
+                    if (!groupEvents.length) return '';
+                    return `
+                        <section>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-8 h-8 rounded-lg ${upcoming ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'} flex items-center justify-center">
+                                    <i class="fa-solid ${icon}"></i>
+                                </span>
+                                <h3 class="font-extrabold text-sm ${upcoming ? 'text-emerald-950' : 'text-slate-600'}">${title}</h3>
+                                <span class="text-[10px] font-bold text-slate-400">(${groupEvents.length})</span>
+                            </div>
+                            <div class="space-y-3">${groupEvents.map(renderEvent).join('')}</div>
+                        </section>
+                    `;
+                };
+                container.innerHTML = [
+                    renderGroup('المواعيد القادمة', 'fa-calendar-day', upcomingEvents, true),
+                    renderGroup('مواعيد سابقة', 'fa-clock-rotate-left', previousEvents, false)
+                ].join('');
             } catch (error) {
                 console.error('تعذر تحميل الجدول الدراسي:', error);
-                message.innerText = 'تعذر تحميل الجدول الآن. حاول تحديث الصفحة.';
+                showMessage('تعذر تحميل الجدول الآن. حاول تحديث الصفحة.', 'error');
                 container.innerHTML = '';
             }
         }
