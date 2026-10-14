@@ -1021,93 +1021,93 @@
     </div>
 
     <!-- Modal صلاحيات الموظف -->
-    <div id="permissionsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm hidden">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative mx-4">
-            <button onclick="closePermissionsModal()" class="absolute top-4 left-4 text-slate-400 text-xl font-bold">
+    <div id="permissionsModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/70 backdrop-blur-sm p-3 hidden">
+        <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[calc(100vh-1.5rem)] p-4 sm:p-6 shadow-2xl relative mx-1 flex flex-col overflow-hidden">
+            <button onclick="closePermissionsModal()" class="absolute top-4 left-4 z-10 w-9 h-9 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 text-xl font-bold flex items-center justify-center" title="إغلاق" aria-label="إغلاق نافذة الصلاحيات">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-            <div class="text-center mb-5">
-                <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-xl mx-auto mb-3">
+            <div class="text-center mb-4 shrink-0">
+                <div class="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-lg mx-auto mb-2">
                     <i class="fa-solid fa-shield-halved"></i>
                 </div>
-                <h3 class="text-lg font-extrabold font-kufi text-slate-800">صلاحيات الموظف</h3>
+                <h3 class="text-base font-extrabold font-kufi text-slate-800">صلاحيات الموظف</h3>
                 <p id="permissionsStaffName" class="text-xs text-amber-600 font-bold mt-1"></p>
             </div>
 
             <input type="hidden" id="permissionsStaffIndex">
 
-            <div class="space-y-2 mb-5">
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-2 mb-4 overflow-y-auto min-h-0">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-requests" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-list-check text-amber-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">طلبات الاشتراك</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-students" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-user-graduate text-emerald-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إدارة الطلاب</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-performance" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-chart-line text-cyan-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">متابعة أداء الطلاب</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-inactive-students" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-user-clock text-amber-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">الطلاب غير النشطين</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-content" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-photo-film text-purple-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">المحتوى التعليمي</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-quizzes" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-clipboard-question text-indigo-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إدارة الاختبارات</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-assignments" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-file-pen text-emerald-600 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إدارة الواجبات</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-support" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-headset text-blue-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">الدعم الفني</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-announcements" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-bullhorn text-orange-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إعلانات الطلاب</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-staff" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-user-gear text-slate-500 w-4 text-center"></i>
                         <span class="font-bold text-slate-700 text-xs">إدارة الموظفين</span>
                     </div>
                 </label>
-                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-settings" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-lock text-slate-500 w-4 text-center"></i>
@@ -1116,7 +1116,7 @@
                 </label>
             </div>
 
-            <button onclick="savePermissions()" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition shadow-sm">
+            <button onclick="savePermissions()" class="w-full py-3 rounded-xl bg-emerald-800 text-white font-bold text-sm hover:bg-emerald-900 transition shadow-sm shrink-0">
                 <i class="fa-solid fa-floppy-disk ml-1"></i> حفظ الصلاحيات
             </button>
         </div>
