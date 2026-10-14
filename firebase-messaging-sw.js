@@ -4,6 +4,84 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
+const APP_CACHE = 'bayan-pwa-v2';
+const APP_SHELL = ['index.html', 'content.html', 'admin.html', 'manifest.webmanifest', 'pwa.js', 'icon.svg', 'icon-192.png', 'icon-512.png'];
+
+self.addEventListener('install', function(event) {
+    event.waitUntil(
+        caches.open(APP_CACHE)
+            .then(function(cache) {
+                const appFiles = APP_SHELL.map(function(file) {
+                    return new URL(file, self.location.href).href;
+                });
+                return cache.addAll(appFiles);
+            })
+            .then(function() {
+                return self.skipWaiting();
+            })
+    );
+});
+
+self.addEventListener('activate', function(event) {
+    event.waitUntil(
+        caches.keys()
+            .then(function(cacheNames) {
+                return Promise.all(cacheNames
+                    .filter(function(cacheName) {
+                        return cacheName.startsWith('bayan-pwa-') && cacheName !== APP_CACHE;
+                    })
+                    .map(function(cacheName) {
+                        return caches.delete(cacheName);
+                    }));
+            })
+            .then(function() {
+                return self.clients.claim();
+            })
+    );
+});
+
+self.addEventListener('fetch', function(event) {
+    const request = event.request;
+    const requestUrl = new URL(request.url);
+    if (request.method !== 'GET' || requestUrl.origin !== self.location.origin) return;
+
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request)
+                .then(function(response) {
+                    if (response.ok) {
+                        const responseCopy = response.clone();
+                        caches.open(APP_CACHE).then(function(cache) {
+                            cache.put(request, responseCopy);
+                        });
+                    }
+                    return response;
+                })
+                .catch(function() {
+                    return caches.match(request).then(function(cachedPage) {
+                        return cachedPage || caches.match(new URL('index.html', self.location.href).href);
+                    });
+                })
+        );
+        return;
+    }
+
+    event.respondWith(
+        caches.match(request).then(function(cachedResponse) {
+            if (cachedResponse) return cachedResponse;
+            return fetch(request).then(function(response) {
+                if (response.ok) {
+                    const responseCopy = response.clone();
+                    caches.open(APP_CACHE).then(function(cache) {
+                        cache.put(request, responseCopy);
+                    });
+                }
+                return response;
+            });
+        })
+    );
+});
+
 firebase.initializeApp({
     apiKey: "AIzaSyBDQ0cP8C5Hv3xAun7iLSD2PSp0x7sP-08",
     authDomain: "bayan2312.firebaseapp.com",
@@ -22,8 +100,8 @@ messaging.onBackgroundMessage(function(payload) {
     const notificationTitle = payload.notification?.title || 'أكاديمية بيان';
     const notificationOptions = {
         body: payload.notification?.body || 'يوجد إشعار جديد',
-        icon: '/bayan/icon.png',
-        badge: '/bayan/icon.png',
+        icon: new URL('icon-192.png', self.location.href).href,
+        badge: new URL('icon-192.png', self.location.href).href,
         dir: 'rtl',
         lang: 'ar',
         tag: payload.data?.type || 'general',
