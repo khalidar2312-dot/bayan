@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 53122)
-Total output lines: 3302
+Warning: truncated output (original token count: 53173)
+Total output lines: 3304
 
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -37,7 +37,9 @@ Total output lines: 3302
             appId: "1:710544079379:web:f9478de93d6005b37ddde6"
         };
 
-        const app = initializeApp(firebaseConfig);
+        // Keep admin Auth separate from the student app's default Firebase Auth session.
+        // This lets the same browser stay signed into both accounts without overwriting either.
+        const app = initializeApp(firebaseConfig, "bayan-admin");
         const db = getFirestore(app);
         const auth = getAuth(app);
         const adminUid = "U0FWm3YU2TNkMvWbq9NkvrtSVaS2";
@@ -1242,13 +1244,7 @@ Total output lines: 3302
             const course = document.getElementById('scheduleCourse').value;
             const grade = document.getElementById('scheduleGrade').value;
             const term = document.getElementById('scheduleTerm').value;
-            return `${course}__${grade}__${term}`.replace(/\s+/g, '_');
-        }
-
-        async function saveScheduleEvent(event) {
-            event.preventDefault();
-            const editingId = document.getElementById('scheduleEditingId').value;
-  …3122 tokens truncated…        showToast('تم تغيير كلمة المرور بنجاح.');
+            return `${course}__${grade}__${term}`.repla…3173 tokens truncated…        showToast('تم تغيير كلمة المرور بنجاح.');
             } catch (error) {
                 const message = error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
                     ? 'كلمة المرور الحالية غير صحيحة.'
