@@ -1,0 +1,148 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.uid == 'U0FWm3YU2TNkMvWbq9NkvrtSVaS2';
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function hasStaffPermission(permission) {
+      return isAdmin()
+        || (signedIn()
+          && exists(/databases/$(database)/documents/staff_accounts/$(request.auth.uid))
+          && get(/databases/$(database)/documents/staff_accounts/$(request.auth.uid)).data.active == true
+          && get(/databases/$(database)/documents/staff_accounts/$(request.auth.uid)).data.permissions is list
+          && get(/databases/$(database)/documents/staff_accounts/$(request.auth.uid)).data.permissions.hasAny([permission]));
+    }
+
+    function subscriptionStatusDoesNotGrantAccess(courseId) {
+      let oldStatus = resource.data.subscriptions.get(courseId, null);
+      let newStatus = request.resource.data.subscriptions.get(courseId, null);
+      return newStatus != 'approved' || oldStatus == 'approved';
+    }
+
+    function studentSubscriptionChangesAreSafe() {
+      let changed = request.resource.data.subscriptions.diff(resource.data.subscriptions).affectedKeys();
+      return changed.hasOnly(['fiqh', 'tafseer', 'hadith', 'tawheed'])
+        && subscriptionStatusDoesNotGrantAccess('fiqh')
+        && subscriptionStatusDoesNotGrantAccess('tafseer')
+        && subscriptionStatusDoesNotGrantAccess('hadith')
+        && subscriptionStatusDoesNotGrantAccess('tawheed');
+    }
+
+    function staffSubscriptionChangesAreSafe() {
+      let changed = request.resource.data.subscriptions.diff(resource.data.subscriptions).affectedKeys();
+      let subscriptions = request.resource.data.subscriptions;
+      return changed.hasOnly(['fiqh', 'tafseer', 'hadith', 'tawheed'])
+        && (!changed.hasAny(['fiqh']) || subscriptions.get('fiqh', '') in ['pending', 'approved', 'rejected'])
+        && (!changed.hasAny(['tafseer']) || subscriptions.get('tafseer', '') in ['pending', 'approved', 'rejected'])
+        && (!changed.hasAny(['hadith']) || subscriptions.get('hadith', '') in ['pending', 'approved', 'rejected'])
+        && (!changed.hasAny(['tawheed']) || subscriptions.get('tawheed', '') in ['pending', 'approved', 'rejected']);
+    }
+
+    function isEnrolledInContent(courseId, contentId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/students/$(request.auth.uid))
+        && get(/databases/$(database)/documents/students/$(request.auth.uid)).data.subscriptions.get(courseId, '') == 'approved'
+        && contentId == courseId + '__'
+          + get(/databases/$(database)/documents/students/$(request.auth.uid)).data.subscriptions[courseId + '_data'].get('grade', '').replace(' ', '_') + '__'
+          + get(/databases/$(database)/documents/students/$(request.auth.uid)).data.subscriptions[courseId + '_data'].get('term', '').replace(' ', '_');
+    }
+
+    match /students/{studentId} {
+      allow read: if isAdmin() || isOwner(studentId)
+        || hasStaffPermission('students') || hasStaffPermission('requests')
+        || hasStaffPermission('performance') || hasStaffPermission('inactive-students');
+      allow create: if isOwner(studentId)
+        && request.resource.data.uid == studentId
+        && request.resource.data.keys().hasOnly([
+          'uid', 'fullName', 'email', 'phone', 'parentPhone', 'grade',
+          'subscriptions', 'notifications', 'createdAt'
+        ])
+        && request.resource.data.subscriptions is map
+        && request.resource.data.notifications is list;
+      allow update: if isAdmin() || (isOwner(studentId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['notifications', 'courseProgress', 'subscriptions'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['subscriptions'])
+          || studentSubscriptionChangesAreSafe()))
+        || (hasStaffPermission('requests')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['subscriptions', 'notifications'])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['subscriptions'])
+            || staffSubscriptionChangesAreSafe()));
+      allow delete: if isAdmin();
+    }
+
+    match /subscription_requests/{requestId} {
+      allow read: if isAdmin() || hasStaffPermission('requests')
+        || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly([
+          'uid', 'userName', 'userEmail', 'userPhone', 'parentPhone',
+          'courseId', 'courseTitle', 'coursePrice', 'senderPhone', 'notes',
+          'status', 'createdAt', 'updatedAt'
+        ]));
+      allow update: if isAdmin() || hasStaffPermission('requests')
+        || (signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'uid', 'userName', 'userEmail', 'userPhone', 'parentPhone',
+          'courseId', 'courseTitle', 'coursePrice', 'senderPhone', 'notes',
+          'status', 'createdAt', 'updatedAt'
+        ]));
+      allow delete: if isAdmin();
+    }
+
+    match /course_content/{contentId} {
+      allow read: if isAdmin()
+        || hasStaffPermission('content') || hasStaffPermission('schedule')
+        || hasStaffPermission('quizzes') || hasStaffPermission('assignments')
+        || (contentId.matches('^fiqh__.*$') && isEnrolledInContent('fiqh', contentId))
+        || (contentId.matches('^tafseer__.*$') && isEnrolledInContent('tafseer', contentId))
+        || (contentId.matches('^hadith__.*$') && isEnrolledInContent('hadith', contentId))
+        || (contentId.matches('^tawheed__.*$') && isEnrolledInContent('tawheed', contentId));
+      allow create, update, delete: if isAdmin() || hasStaffPermission('content');
+    }
+
+    match /support_chats/{uid} {
+      allow read: if isAdmin() || hasStaffPermission('support') || isOwner(uid);
+      allow create, update: if isAdmin() || hasStaffPermission('support') || isOwner(uid);
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || hasStaffPermission('support') || isOwner(uid);
+        allow create: if isAdmin()
+          || (hasStaffPermission('support') && request.resource.data.sender == 'admin')
+          || (isOwner(uid) && request.resource.data.sender == 'student');
+        allow update, delete: if isAdmin() || hasStaffPermission('support');
+      }
+    }
+
+    match /staff_accounts/{staffId} {
+      allow read: if isAdmin() || isOwner(staffId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /admin_tokens/{documentId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /pending_notifications/{documentId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
+
