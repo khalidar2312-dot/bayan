@@ -4,7 +4,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-const APP_CACHE = 'bayan-pwa-v3';
+const APP_CACHE = 'bayan-pwa-v4';
 const APP_SHELL = ['index.html', 'content.html', 'admin.html', 'manifest.webmanifest', 'pwa.js', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function(event) {
