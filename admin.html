@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 53173)
-Total output lines: 3304
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -1244,7 +1241,208 @@ Total output lines: 3304
             const course = document.getElementById('scheduleCourse').value;
             const grade = document.getElementById('scheduleGrade').value;
             const term = document.getElementById('scheduleTerm').value;
-            return `${course}__${grade}__${term}`.repla…3173 tokens truncated…        showToast('تم تغيير كلمة المرور بنجاح.');
+            return `${course}__${grade}__${term}`.replace(/\s+/g, '_');
+        }
+
+        async function saveScheduleEvent(event) {
+            event.preventDefault();
+            const editingId = document.getElementById('scheduleEditingId').value;
+            const courseSelect = document.getElementById('scheduleCourse');
+            const scopeType = document.getElementById('scheduleScopeType').value;
+            const now = new Date().toISOString();
+            const data = {
+                eventType: document.getElementById('scheduleEventType').value,
+                courseId: courseSelect.value,
+                courseName: courseSelect.options[courseSelect.selectedIndex].text,
+                grade: document.getElementById('scheduleGrade').value,
+                term: document.getElementById('scheduleTerm').value,
+                scopeType,
+                scopeName: scopeType === 'term' ? '' : document.getElementById('scheduleScopeName').value.trim(),
+                title: document.getElementById('scheduleTitle').value.trim(),
+                eventDate: document.getElementById('scheduleDate').value,
+                eventTime: document.getElementById('scheduleTime').value,
+                description: document.getElementById('scheduleDescription').value.trim(),
+                updatedAt: now
+            };
+
+            const saveButton = document.getElementById('scheduleSaveButton');
+            saveButton.disabled = true;
+            saveButton.classList.add('opacity-60', 'cursor-not-allowed');
+            try {
+                const contentRef = window.doc(window.db, 'course_content', getScheduleContentKey());
+                const contentSnapshot = await window.getDoc(contentRef);
+                const events = contentSnapshot.exists() && Array.isArray(contentSnapshot.data().schedule)
+                    ? [...contentSnapshot.data().schedule]
+                    : [];
+                if (editingId) {
+                    const eventIndex = events.findIndex(item => item.id === editingId);
+                    if (eventIndex < 0) {
+                        alert('لم يتم العثور على الموعد المطلوب تعديله ضمن هذا الصف والمادة والترم.');
+                        return;
+                    }
+                    events[eventIndex] = { ...events[eventIndex], ...data };
+                } else {
+                    events.push({
+                        ...data,
+                        id: `schedule_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                        createdAt: now
+                    });
+                }
+                await window.setDoc(contentRef, {
+                    schedule: events,
+                    updatedAt: window.serverTimestamp()
+                }, { merge: true });
+                resetScheduleForm();
+                await loadScheduleAdmin();
+                showToast(editingId ? 'تم تحديث الموعد في الجدول' : 'تمت إضافة الموعد للجدول');
+            } catch (error) {
+                console.error('تعذر حفظ موعد الجدول:', error);
+                alert('تعذر حفظ الموعد. تحقق من الاتصال وصلاحيات قاعدة البيانات.');
+            } finally {
+                saveButton.disabled = false;
+                saveButton.classList.remove('opacity-60', 'cursor-not-allowed');
+            }
+        }
+
+        async function loadScheduleAdmin() {
+            const container = document.getElementById('adminScheduleList');
+            if (!container) return;
+            container.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">جاري تحميل المواعيد...</p>';
+
+            try {
+                const snapshot = await window.getDoc(window.doc(window.db, 'course_content', getScheduleContentKey()));
+                const events = snapshot.exists() && Array.isArray(snapshot.data().schedule)
+                    ? [...snapshot.data().schedule].sort((a, b) => `${a.eventDate || ''} ${a.eventTime || ''}`.localeCompare(`${b.eventDate || ''} ${b.eventTime || ''}`))
+                    : [];
+
+                if (!events.length) {
+                    container.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">لا توجد مواعيد مضافة للجدول بعد.</p>';
+                    return;
+                }
+
+                const eventTypes = { lesson: 'حصة', quiz: 'اختبار', review: 'مراجعة' };
+                const scopeTypes = { chapter: 'فصل', unit: 'وحدة', term: 'الترم بالكامل' };
+                container.innerHTML = events.map(item => {
+                    const dateText = /^\d{4}-\d{2}-\d{2}$/.test(item.eventDate || '')
+                        ? new Date(`${item.eventDate}T00:00:00`).toLocaleDateString('ar-EG')
+                        : 'تاريخ غير محدد';
+                    const scopeLabel = scopeTypes[item.scopeType] || 'نطاق غير محدد';
+                    const target = item.scopeType === 'term' ? scopeLabel : `${scopeLabel}: ${escapeQuizHtml(item.scopeName || '')}`;
+                    return `
+                        <article class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                                        <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold">${escapeQuizHtml(eventTypes[item.eventType] || 'موعد')}</span>
+                                        <span class="text-[10px] text-slate-500">${escapeQuizHtml(item.courseName || '')} — ${escapeQuizHtml(item.grade || '')} — ${escapeQuizHtml(item.term || '')}</span>
+                                    </div>
+                                    <h4 class="font-bold text-sm text-slate-800">${escapeQuizHtml(item.title || '')}</h4>
+                                    <p class="text-[11px] text-slate-500 mt-1">${target} · ${dateText}${item.eventTime ? ` — ${escapeQuizHtml(item.eventTime)}` : ''}</p>
+                                    ${item.description ? `<p class="text-xs text-slate-600 mt-2 whitespace-pre-wrap">${escapeQuizHtml(item.description)}</p>` : ''}
+                                </div>
+                                <div class="flex gap-2 shrink-0">
+                                    <button type="button" data-edit-schedule="${escapeQuizHtml(item.id)}" class="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-bold hover:bg-amber-100">تعديل</button>
+                                    <button type="button" data-delete-schedule="${escapeQuizHtml(item.id)}" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-[11px] font-bold hover:bg-red-100">حذف</button>
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+
+                container.querySelectorAll('[data-edit-schedule]').forEach(button => {
+                    button.addEventListener('click', () => editScheduleEvent(events.find(item => item.id === button.dataset.editSchedule)));
+                });
+                container.querySelectorAll('[data-delete-schedule]').forEach(button => {
+                    button.addEventListener('click', () => deleteScheduleEvent(button.dataset.deleteSchedule));
+                });
+            } catch (error) {
+                console.error('تعذر تحميل مواعيد الجدول:', error);
+                container.innerHTML = '<p class="text-center text-xs text-red-500 py-6">تعذر تحميل المواعيد. تحقق من الاتصال والصلاحيات.</p>';
+            }
+        }
+
+        function editScheduleEvent(item) {
+            if (!item) return;
+            document.getElementById('scheduleEditingId').value = item.id;
+            document.getElementById('scheduleEventType').value = item.eventType || 'lesson';
+            document.getElementById('scheduleCourse').value = item.courseId || 'fiqh';
+            document.getElementById('scheduleGrade').value = item.grade || 'الصف الأول الإعدادي';
+            document.getElementById('scheduleTerm').value = item.term || 'الترم الأول';
+            document.getElementById('scheduleScopeType').value = item.scopeType || 'chapter';
+            document.getElementById('scheduleScopeName').value = item.scopeName || '';
+            document.getElementById('scheduleTitle').value = item.title || '';
+            document.getElementById('scheduleDate').value = item.eventDate || '';
+            document.getElementById('scheduleTime').value = item.eventTime || '';
+            document.getElementById('scheduleDescription').value = item.description || '';
+            document.getElementById('scheduleSaveButton').innerHTML = '<i class="fa-solid fa-floppy-disk ml-1"></i> حفظ التعديلات';
+            document.getElementById('scheduleCancelEditButton').classList.remove('hidden');
+            updateScheduleScopeField();
+            document.getElementById('scheduleForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function deleteScheduleEvent(eventId) {
+            if (!eventId || !confirm('هل تريد حذف هذا الموعد من الجدول؟')) return;
+            try {
+                const contentRef = window.doc(window.db, 'course_content', getScheduleContentKey());
+                const snapshot = await window.getDoc(contentRef);
+                if (!snapshot.exists() || !Array.isArray(snapshot.data().schedule)) {
+                    alert('لم يتم العثور على مواعيد لهذا الاختيار.');
+                    return;
+                }
+                const events = snapshot.data().schedule.filter(item => item.id !== eventId);
+                if (events.length === snapshot.data().schedule.length) {
+                    alert('لم يتم العثور على الموعد المطلوب حذفه.');
+                    return;
+                }
+                await window.setDoc(contentRef, {
+                    schedule: events,
+                    updatedAt: window.serverTimestamp()
+                }, { merge: true });
+                await loadScheduleAdmin();
+                showToast('تم حذف الموعد من الجدول');
+            } catch (error) {
+                console.error('تعذر حذف موعد الجدول:', error);
+                alert('تعذر حذف الموعد. تحقق من الاتصال وصلاحيات قاعدة البيانات.');
+            }
+        }
+
+        function toggleSidebar(forceClose) {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const isOpen = !sidebar.classList.contains('hidden');
+
+            if (forceClose === false || isOpen) {
+                sidebar.classList.add('hidden');
+                overlay.classList.add('hidden');
+            } else {
+                sidebar.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        // دالة تغيير الرقم السري
+        async function changePassword(event) {
+            event.preventDefault();
+            const currentInput = document.getElementById('currentPassInput').value.trim();
+            const newInput = document.getElementById('newPassInput').value.trim();
+            const confirmInput = document.getElementById('confirmPassInput').value.trim();
+
+            if (newInput !== confirmInput) {
+                alert('الرقم السري الجديد وتأكيده غير متطابقين!');
+                return;
+            }
+
+            const user = window.adminAuth.instance.currentUser;
+            if (!user || user.uid !== window.BAYAN_ADMIN_UID || !user.email) {
+                alert('انتهت جلسة الإدارة. سجّل الدخول مرة أخرى.');
+                return;
+            }
+
+            try {
+                const credential = window.adminAuth.EmailAuthProvider.credential(user.email, currentInput);
+                await window.adminAuth.reauthenticateWithCredential(user, credential);
+                await window.adminAuth.updatePassword(user, newInput);
+                showToast('تم تغيير كلمة المرور بنجاح.');
             } catch (error) {
                 const message = error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
                     ? 'كلمة المرور الحالية غير صحيحة.'
@@ -3103,4 +3301,3 @@ Total output lines: 3304
     <script src="pwa.js"></script>
 </body>
 </html>
-
