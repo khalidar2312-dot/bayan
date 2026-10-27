@@ -21,6 +21,7 @@
     <!-- استيراد فايربيس (Firebase SDKs الإصدار التاسع Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, writeBatch, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
@@ -35,10 +36,21 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
         const adminUid = "U0FWm3YU2TNkMvWbq9NkvrtSVaS2";
 
         // جعل الدوال متاحة عالمياً في النطاق العام (window) لكي تعمل مع أحداث HTML
         window.db = db;
+        window.adminAuth = {
+            instance: auth,
+            onAuthStateChanged,
+            signInWithEmailAndPassword,
+            signOut,
+            sendPasswordResetEmail,
+            EmailAuthProvider,
+            reauthenticateWithCredential,
+            updatePassword
+        };
         window.BAYAN_ADMIN_UID = adminUid;
         window.collection = collection;
         window.getDocs = getDocs;
@@ -72,7 +84,7 @@
 
         // لا تعتمد لوحة الإدارة على قيم localStorage؛ Firebase Auth وUID هما مصدر الصلاحية.
         document.addEventListener("DOMContentLoaded", function() {
-            firebase.auth().onAuthStateChanged(function(user) {
+            onAuthStateChanged(auth, function(user) {
                 if (user && user.uid === window.BAYAN_ADMIN_UID) {
                     localStorage.setItem('currentLoggedInRole', 'مدير النظام (Admin)');
                     localStorage.setItem('currentLoggedInName', user.displayName || user.email || 'المسؤول');
@@ -86,7 +98,7 @@
                 localStorage.removeItem('currentLoggedInRole');
                 localStorage.removeItem('currentLoggedInName');
 
-                if (user) firebase.auth().signOut();
+                if (user) signOut(auth);
             });
         });
     </script>
@@ -1417,16 +1429,16 @@
                 return;
             }
 
-            const user = firebase.auth().currentUser;
+            const user = window.adminAuth.instance.currentUser;
             if (!user || user.uid !== window.BAYAN_ADMIN_UID || !user.email) {
                 alert('انتهت جلسة الإدارة. سجّل الدخول مرة أخرى.');
                 return;
             }
 
             try {
-                const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentInput);
-                await user.reauthenticateWithCredential(credential);
-                await user.updatePassword(newInput);
+                const credential = window.adminAuth.EmailAuthProvider.credential(user.email, currentInput);
+                await window.adminAuth.reauthenticateWithCredential(user, credential);
+                await window.adminAuth.updatePassword(user, newInput);
                 showToast('تم تغيير كلمة المرور بنجاح.');
             } catch (error) {
                 const message = error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
@@ -1447,9 +1459,13 @@
             const email = document.getElementById('loginUser').value.trim();
             const pass = document.getElementById('loginPass').value.trim();
             try {
-                const credential = await firebase.auth().signInWithEmailAndPassword(email, pass);
+                const credential = await window.adminAuth.signInWithEmailAndPassword(
+                    window.adminAuth.instance,
+                    email,
+                    pass
+                );
                 if (credential.user.uid !== window.BAYAN_ADMIN_UID) {
-                    await firebase.auth().signOut();
+                    await window.adminAuth.signOut(window.adminAuth.instance);
                     alert('هذا الحساب غير مصرح له بدخول لوحة الإدارة.');
                 }
             } catch (error) {
@@ -1535,7 +1551,7 @@
 
         async function logoutAdmin() {
             try {
-                await firebase.auth().signOut();
+                await window.adminAuth.signOut(window.adminAuth.instance);
             } catch (error) {
                 console.error('تعذر تسجيل الخروج:', error);
             }
@@ -3254,7 +3270,7 @@
             if (!confirm(`هل تريد إرسال رابط إعادة تعيين كلمة المرور إلى:\n${email}؟`)) return;
 
             try {
-                await firebase.auth().sendPasswordResetEmail(email);
+                await window.adminAuth.sendPasswordResetEmail(window.adminAuth.instance, email);
                 showToast(`✅ تم إرسال رابط إعادة كلمة المرور إلى ${email}`);
                 alert(`✅ تم إرسال الرابط إلى ${email}\n\nتنبيه للطالب:\nلو مش لاقي الإيميل في الـ Inbox، يفتح مجلد Spam/جنك ويدور على إيميل من:\nnoreply@bayan2312.firebaseapp.com`);
             } catch (error) {
