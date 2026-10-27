@@ -3441,6 +3441,7 @@
                         .collection('subscription_requests')
                         .where('uid', '==', uid)
                         .where('courseId', '==', courseId)
+                        .where('status', '==', 'pending')
                         .limit(1)
                         .get();
 
