@@ -4,7 +4,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-const APP_CACHE = 'bayan-pwa-v4';
+const APP_CACHE = 'bayan-pwa-v5';
 const APP_SHELL = ['index.html', 'content.html', 'admin.html', 'manifest.webmanifest', 'pwa.js', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function(event) {
@@ -70,7 +70,7 @@ self.addEventListener('fetch', function(event) {
         caches.match(request).then(function(cachedResponse) {
             if (cachedResponse) return cachedResponse;
             return fetch(request).then(function(response) {
-                if (response.ok) {
+                if (response.status === 200 && !request.headers.has('range')) {
                     const responseCopy = response.clone();
                     caches.open(APP_CACHE).then(function(cache) {
                         cache.put(request, responseCopy);
