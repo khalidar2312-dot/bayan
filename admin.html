@@ -3244,33 +3244,45 @@
                 const studentRef = window.doc(window.db, 'students', req.uid);
                 const studentSnap = await window.getDoc(studentRef);
 
-                if (studentSnap.exists()) {
-                    const studentData = studentSnap.data();
-                    let subs = studentData.subscriptions || {};
-                    subs[req.courseId] = 'approved';
-
-                    // استخراج الصف والترم من عنوان المادة
-                    // العنوان بيكون: "الفقه الميسر — الصف الأول الإعدادي — الترم الأول"
-                    const titleParts = (req.courseTitle || '').split('—').map(s => s.trim());
-                    subs[req.courseId + '_data'] = {
-                        grade: titleParts[1] || '',
-                        term: titleParts[2] || '',
-                        fullTitle: req.courseTitle
-                    };
-
-                    // إضافة إشعار للطالب
-                    let notifications = studentData.notifications || [];
-                    notifications.unshift({
-                        text: `تم تفعيل اشتراكك في مادة "${req.courseTitle}" بنجاح! يمكنك الآن مشاهدة المحتوى.`,
-                        date: new Date().toLocaleString('ar-EG'),
-                        read: false
-                    });
-
-                    await window.updateDoc(studentRef, {
-                        subscriptions: subs,
-                        notifications: notifications
-                    });
+                if (!studentSnap.exists()) {
+                    alert('بيانات الطالب غير موجودة، تعذر إتمام القبول.');
+                    return;
                 }
+
+                const studentData = studentSnap.data();
+                let subs = studentData.subscriptions || {};
+
+                // الصف والترم: من الطلب إن وجدا، وإلا من الاشتراك المسجل من التطبيق
+                const existingData = subs[req.courseId + '_data'] || {};
+                const titleParts = (req.courseTitle || '').split('—').map(s => s.trim());
+                const grade = req.grade || existingData.grade || titleParts[1] || '';
+                const term = req.term || existingData.term || titleParts[2] || '';
+
+                if (!grade || !term) {
+                    alert('بيانات الصف والترم مش محفوظة لهذا الطالب. افتح "تعديل اشتراكات الطالب" واختر الصف والترم ثم احفظ، وبعدها اقبل الطلب.');
+                    return;
+                }
+
+                subs[req.courseId] = 'approved';
+                subs[req.courseId + '_data'] = {
+                    ...existingData,
+                    grade: grade,
+                    term: term,
+                    fullTitle: req.courseTitle || existingData.fullTitle || ''
+                };
+
+                // إضافة إشعار للطالب
+                let notifications = studentData.notifications || [];
+                notifications.unshift({
+                    text: `تم تفعيل اشتراكك في مادة "${req.courseTitle}" بنجاح! يمكنك الآن مشاهدة المحتوى.`,
+                    date: new Date().toLocaleString('ar-EG'),
+                    read: false
+                });
+
+                await window.updateDoc(studentRef, {
+                    subscriptions: subs,
+                    notifications: notifications
+                });
 
                 // 2. تحديث حالة الطلب إلى approved في Firestore
                 await window.updateDoc(requestRef, { status: 'approved' });
@@ -3306,6 +3318,7 @@
                     const studentData = studentSnap.data();
                     let subs = studentData.subscriptions || {};
                     delete subs[req.courseId];
+                    delete subs[req.courseId + '_data'];
 
                     let notifications = studentData.notifications || [];
                     notifications.unshift({
