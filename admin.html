@@ -142,6 +142,117 @@
             }
         }
     </script>
+
+    <style>
+        /* ===== القائمة الجانبية — تصميم «البطاقات العائمة» ===== */
+        .admin-sidebar {
+            background: linear-gradient(180deg, #eef3ed 0%, #e8efe9 100%);
+            border-left: 1px solid rgba(15, 107, 82, .12);
+            box-shadow: 0 0 0 1px rgba(15, 107, 82, .03);
+        }
+        .admin-sidebar .sidebar-stats { padding: 14px 12px 4px; }
+        .admin-sidebar .sidebar-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .admin-sidebar .sidebar-stat {
+            background: #fff;
+            border: 1px solid rgba(15, 107, 82, .10);
+            border-radius: 12px;
+            padding: 10px 6px;
+            text-align: center;
+            box-shadow: 0 2px 7px rgba(20, 50, 35, .06);
+        }
+        .admin-sidebar .sidebar-stat h3 {
+            color: #0f6b52;
+            font-size: 20px;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+        .admin-sidebar .sidebar-stat p {
+            margin-top: 2px;
+            color: #6b7c70;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .admin-sidebar .sidebar-live {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+        .admin-sidebar .sidebar-live p { margin-top: 0; }
+        .admin-sidebar .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 12px 16px;
+        }
+        .admin-sidebar .nav-btn {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            text-align: right;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #4c5f53;
+            background: #fff;
+            border: 1px solid rgba(20, 50, 35, .06);
+            box-shadow: 0 2px 7px rgba(20, 50, 35, .06);
+            transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+        }
+        .admin-sidebar .nav-btn:hover {
+            color: #0f6b52;
+            background: #fcfefc;
+            box-shadow: 0 4px 10px rgba(20, 50, 35, .09);
+            transform: translateY(-1px);
+        }
+        .admin-sidebar .nav-btn i {
+            width: 18px;
+            flex: none;
+            font-size: 13px;
+            text-align: center;
+            color: #6f9182;
+            transition: color .15s ease;
+        }
+        .admin-sidebar .nav-btn.is-active {
+            background: linear-gradient(140deg, #128062 0%, #0a4f3d 100%);
+            border-color: rgba(216, 180, 106, .55);
+            color: #fdf8ea;
+            box-shadow: 0 7px 16px rgba(15, 107, 82, .26);
+            transform: none;
+        }
+        .admin-sidebar .nav-btn.is-active i { color: #eacb82; }
+        .admin-sidebar .sidebar-badge {
+            margin-inline-start: auto;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #c65a4f;
+            color: #fff;
+            font-size: 10.5px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .admin-sidebar .nav-btn.is-active .sidebar-badge { background: #eacb82; color: #0a4f3d; }
+        .admin-sidebar .nav-btn.hidden,
+        .admin-sidebar .sidebar-badge.hidden { display: none; }
+        @media (prefers-reduced-motion: reduce) {
+            .admin-sidebar .nav-btn,
+            .admin-sidebar .nav-btn i { transition: none; }
+            .admin-sidebar .nav-btn:hover { transform: none; }
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased">
 
@@ -214,91 +325,91 @@
         <div class="flex min-h-screen bg-slate-50">
 
             <!-- Sidebar -->
-            <aside id="adminSidebar" class="w-60 bg-white border-l border-slate-100 shadow-sm flex-shrink-0 hidden lg:flex flex-col fixed lg:static top-14 right-0 h-full lg:h-auto z-20" style="height: calc(100vh - 56px); overflow-y: auto;">
+            <aside id="adminSidebar" class="admin-sidebar w-60 flex-shrink-0 hidden lg:flex flex-col fixed lg:static top-14 right-0 h-full lg:h-auto z-20" style="height: calc(100vh - 56px); overflow-y: auto;">
 
                 <!-- إحصائيات مصغّرة في الـ sidebar -->
-                <div class="p-4 border-b border-slate-100">
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="bg-amber-50 rounded-xl p-3 text-center">
-                            <h3 id="statPendingCount" class="text-xl font-black text-amber-600">0</h3>
-                            <p class="text-[10px] text-amber-600/70 font-bold mt-0.5">طلب معلق</p>
+                <div class="sidebar-stats">
+                    <div class="sidebar-stats-grid">
+                        <div class="sidebar-stat">
+                            <h3 id="statPendingCount">0</h3>
+                            <p>طلب معلق</p>
                         </div>
-                        <div class="bg-emerald-50 rounded-xl p-3 text-center">
-                            <h3 id="statUsersCount" class="text-xl font-black text-emerald-700">0</h3>
-                            <p class="text-[10px] text-emerald-700/70 font-bold mt-0.5">طالب</p>
+                        <div class="sidebar-stat">
+                            <h3 id="statUsersCount">0</h3>
+                            <p>طالب</p>
                         </div>
-                        <div class="bg-blue-50 rounded-xl p-3 text-center">
-                            <h3 id="statStaffCount" class="text-xl font-black text-blue-600">0</h3>
-                            <p class="text-[10px] text-blue-600/70 font-bold mt-0.5">موظف</p>
+                        <div class="sidebar-stat">
+                            <h3 id="statStaffCount">0</h3>
+                            <p>موظف</p>
                         </div>
-                        <div class="bg-slate-50 rounded-xl p-3 text-center">
-                            <span class="w-2 h-2 bg-emerald-400 rounded-full inline-block animate-pulse"></span>
-                            <p class="text-[10px] text-slate-500 font-bold mt-1">يعمل</p>
+                        <div class="sidebar-stat sidebar-live">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full inline-block animate-pulse"></span>
+                            <p>يعمل</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- قائمة التنقل -->
-                <nav class="p-3 space-y-1 flex-1">
-                    <button onclick="switchTab('requests')" id="nav-requests"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all bg-amber-50 text-amber-700 border border-amber-100">
+                <nav class="sidebar-nav flex-1">
+                    <button onclick="switchTab('requests')" id="nav-requests" aria-current="page"
+                        class="nav-btn is-active w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-list-check w-4 text-center"></i>
                         <span>طلبات الاشتراك</span>
-                        <span id="navBadgePending" class="hidden mr-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">0</span>
+                        <span id="navBadgePending" class="hidden sidebar-badge">0</span>
                     </button>
                     <button onclick="switchTab('students')" id="nav-students"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-user-graduate w-4 text-center"></i>
                         <span>إدارة الطلاب</span>
                     </button>
                     <button onclick="switchTab('performance')" id="nav-performance"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-chart-line w-4 text-center"></i>
                         <span>متابعة أداء الطلاب</span>
                     </button>
                     <button onclick="switchTab('inactive-students')" id="nav-inactive-students"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-user-clock w-4 text-center"></i>
                         <span>الطلاب غير النشطين</span>
                     </button>
                     <button onclick="switchTab('content')" id="nav-content"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-photo-film w-4 text-center"></i>
                         <span>المحتوى التعليمي</span>
                     </button>
                     <button onclick="switchTab('schedule')" id="nav-schedule"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-calendar-days w-4 text-center"></i>
                         <span>الجدول</span>
                     </button>
                     <button onclick="switchTab('quizzes')" id="nav-quizzes"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-clipboard-question w-4 text-center"></i>
                         <span>إدارة الاختبارات</span>
                     </button>
                     <button onclick="switchTab('assignments')" id="nav-assignments"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-file-pen w-4 text-center"></i>
                         <span>إدارة الواجبات</span>
                     </button>
                     <button onclick="switchTab('support')" id="nav-support"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-headset w-4 text-center"></i>
                         <span>الدعم الفني</span>
-                        <span id="navBadgeChat" class="hidden mr-auto bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">0</span>
+                        <span id="navBadgeChat" class="hidden sidebar-badge">0</span>
                     </button>
                     <button onclick="switchTab('announcements')" id="nav-announcements"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-bullhorn w-4 text-center"></i>
                         <span>إعلانات الطلاب</span>
                     </button>
                     <button onclick="switchTab('staff')" id="nav-staff"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-user-gear w-4 text-center"></i>
                         <span>إدارة الموظفين</span>
                     </button>
                     <button onclick="switchTab('settings')" id="nav-settings"
-                        class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-right text-sm font-bold transition-all text-slate-600 hover:bg-slate-50">
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-lock w-4 text-center"></i>
                         <span>الإعدادات</span>
                     </button>
@@ -1204,14 +1315,8 @@
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             // إخفاء active state من كل الأزرار
             document.querySelectorAll('.nav-btn').forEach(b => {
-                b.classList.remove('bg-amber-50', 'text-amber-700', 'border', 'border-amber-100',
-                    'bg-emerald-50', 'text-emerald-700', 'border-emerald-100',
-                    'bg-blue-50', 'text-blue-700', 'border-blue-100',
-                    'bg-cyan-50', 'text-cyan-700', 'border-cyan-100',
-                    'bg-purple-50', 'text-purple-700', 'border-purple-100',
-                    'bg-indigo-50', 'text-indigo-700', 'border-indigo-100',
-                    'bg-slate-100', 'text-slate-800');
-                b.classList.add('text-slate-600', 'hover:bg-slate-50');
+                b.classList.remove('is-active');
+                b.removeAttribute('aria-current');
             });
 
             // إظهار الـ tab المطلوب
@@ -1221,22 +1326,8 @@
             // تفعيل زر الـ sidebar
             const navBtn = document.getElementById('nav-' + tabName);
             if (navBtn) {
-                navBtn.classList.remove('text-slate-600', 'hover:bg-slate-50');
-                const colorMap = {
-                    'requests': ['bg-amber-50', 'text-amber-700', 'border', 'border-amber-100'],
-                    'students': ['bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100'],
-                    'performance': ['bg-cyan-50', 'text-cyan-700', 'border', 'border-cyan-100'],
-                    'inactive-students': ['bg-amber-50', 'text-amber-700', 'border', 'border-amber-100'],
-                    'content':  ['bg-purple-50', 'text-purple-700', 'border', 'border-purple-100'],
-                    'schedule': ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
-                    'quizzes':   ['bg-indigo-50', 'text-indigo-700', 'border', 'border-indigo-100'],
-                    'assignments': ['bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-100'],
-                    'support':  ['bg-blue-50', 'text-blue-700', 'border', 'border-blue-100'],
-                    'announcements': ['bg-orange-50', 'text-orange-700', 'border', 'border-orange-100'],
-                    'staff':    ['bg-slate-100', 'text-slate-800'],
-                    'settings': ['bg-slate-100', 'text-slate-800'],
-                };
-                (colorMap[tabName] || ['bg-slate-100', 'text-slate-800']).forEach(c => navBtn.classList.add(c));
+                navBtn.classList.add('is-active');
+                navBtn.setAttribute('aria-current', 'page');
             }
 
             // إغلاق الـ sidebar على الموبايل
