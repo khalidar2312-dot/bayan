@@ -2454,7 +2454,24 @@
                         <td class="px-4 py-3"><span class="inline-block px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-[11px]">${escapeQuizHtml(row.courseName)}</span></td>
                         <td class="px-4 py-3 text-slate-600">${escapeQuizHtml(row.grade)}<span class="block text-[10px] text-slate-400 mt-0.5">${escapeQuizHtml(row.term)}</span></td>
                         <td class="px-4 py-3 font-bold text-slate-700 font-mono" dir="ltr">${row.score} / ${row.total}</td>
-                        <td class="px-4 py-3"><span class="inline-block px-2 py-1 rounded-full border font-bold ${color}">${row.percentage}%</span></td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-1.5">
+                                <span class="inline-block px-2 py-1 rounded-full border font-bold ${color}">${row.percentage}%</span>
+                                <button type="button"
+                                    onclick="sendQuizResultMessage(this)"
+                                    title="إرسال رسالة للطالب عن نتيجته"
+                                    aria-label="إرسال رسالة للطالب عن نتيجته"
+                                    data-student-id="${escapeQuizHtml(row.studentId)}"
+                                    data-student-name="${escapeQuizHtml(row.studentName)}"
+                                    data-course="${escapeQuizHtml(row.courseName)}"
+                                    data-score="${row.score}"
+                                    data-total="${row.total}"
+                                    data-percentage="${row.percentage}"
+                                    class="w-7 h-7 shrink-0 rounded-lg border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white transition flex items-center justify-center disabled:opacity-50 disabled:cursor-wait">
+                                    <i class="fa-solid fa-paper-plane text-[10px]"></i>
+                                </button>
+                            </div>
+                        </td>
                         <td class="px-4 py-3 text-slate-500 text-[11px]">${escapeQuizHtml(dateLabel)}</td>
                     </tr>
                 `;
@@ -2464,6 +2481,84 @@
             countLabel.innerText = hiddenCount > 0
                 ? `يتم عرض أحدث ${displayed.length} نتيجة من أصل ${filtered.length}`
                 : `عدد النتائج: ${filtered.length}`;
+        }
+
+        function buildQuizResultMessage(percentage, courseName, score, total) {
+            const scoreLabel = `${score} من ${total}`;
+            if (percentage >= 90) {
+                return {
+                    title: 'نتيجة ممتازة',
+                    text: `ما شاء الله! حصلت على ${percentage}% (${scoreLabel}) في اختبار ${courseName}. نتيجة ممتازة تعكس مجهودك، استمر على هذا التميز.`
+                };
+            }
+            if (percentage >= 80) {
+                return {
+                    title: 'نتيجة جيدة جدًا',
+                    text: `أحسنت! حصلت على ${percentage}% (${scoreLabel}) في اختبار ${courseName}. نتيجة جيدة جدًا، وبمزيد من المراجعة تقترب من الامتياز.`
+                };
+            }
+            if (percentage >= 65) {
+                return {
+                    title: 'نتيجة جيدة',
+                    text: `حصلت على ${percentage}% (${scoreLabel}) في اختبار ${courseName}. نتيجة جيدة، راجع الأسئلة التي أخطأت فيها وستتحسن نتيجتك في المرة القادمة.`
+                };
+            }
+            if (percentage >= 50) {
+                return {
+                    title: 'رسالة تشجيع',
+                    text: `حصلت على ${percentage}% (${scoreLabel}) في اختبار ${courseName}. نتيجة مقبولة، وبمراجعة إضافية ستصل إلى نتيجة أفضل. لا تتوقف هنا.`
+                };
+            }
+            return {
+                title: 'رسالة تقوية',
+                text: `حصلت على ${percentage}% (${scoreLabel}) في اختبار ${courseName}. لا تقلق، هذه ليست نهاية الطريق. راجع الدرس وحاول مرة أخرى، ونحن معك خطوة بخطوة.`
+            };
+        }
+
+        async function sendQuizResultMessage(button) {
+            if (!button || button.disabled) return;
+
+            const studentId = button.dataset.studentId;
+            const studentName = button.dataset.studentName || 'الطالب';
+            const courseName = button.dataset.course || 'المادة';
+            const score = Number(button.dataset.score) || 0;
+            const total = Number(button.dataset.total) || 0;
+            const percentage = Math.max(0, Math.min(100, Number(button.dataset.percentage) || 0));
+
+            if (!studentId) return;
+
+            const message = buildQuizResultMessage(percentage, courseName, score, total);
+            if (!confirm(`إرسال رسالة إلى «${studentName}»؟\n\n${message.text}`)) return;
+
+            button.disabled = true;
+            try {
+                const studentRef = window.doc(window.db, 'students', studentId);
+                const studentSnapshot = await window.getDoc(studentRef);
+                if (!studentSnapshot.exists()) {
+                    alert('تعذر العثور على حساب الطالب. حدّث النتائج وحاول مرة أخرى.');
+                    return;
+                }
+
+                const studentData = studentSnapshot.data() || {};
+                const notifications = Array.isArray(studentData.notifications)
+                    ? studentData.notifications
+                    : [];
+                notifications.unshift({
+                    text: message.text,
+                    date: new Date().toLocaleString('ar-EG'),
+                    read: false,
+                    type: 'quiz_result'
+                });
+
+                await window.updateDoc(studentRef, { notifications });
+                void sendStudentPush(studentId, message.title, message.text, 'quiz_result');
+                showToast(`تم إرسال الرسالة إلى ${studentName}`);
+            } catch (error) {
+                console.error('تعذر إرسال رسالة نتيجة الاختبار:', error);
+                alert('تعذر إرسال الرسالة. تحقق من الاتصال وصلاحيات Firestore وحاول مرة أخرى.');
+            } finally {
+                button.disabled = false;
+            }
         }
 
         function getActivityTimestampMillis(value) {
