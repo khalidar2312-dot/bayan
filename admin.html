@@ -1974,6 +1974,12 @@
                     }
                 );
                 showToast('تم حفظ تصحيح الواجب');
+                void sendStudentPush(
+                    button.dataset.studentId,
+                    'تم تصحيح واجبك',
+                    'تم تصحيح أحد واجباتك. افتح المادة لمراجعة الدرجة وملاحظات المدرس.',
+                    'assignment_review'
+                );
                 await loadAssignmentsAdmin();
             } catch (error) {
                 console.error('تعذر حفظ تصحيح الواجب:', error);
@@ -2535,6 +2541,12 @@
                 } else {
                     console.warn('تعذر إضافة إشعار الدعم: بيانات الطالب غير موجودة.', currentChatUid);
                 }
+                void sendStudentPush(
+                    currentChatUid,
+                    'رسالة من الدعم الفني',
+                    text,
+                    'support_reply'
+                );
                 return true;
             } catch (error) {
                 console.error('خطأ في إرسال الرد:', error);
@@ -2623,6 +2635,47 @@
             document.getElementById('toastText').innerText = message;
             toast.classList.remove('hidden');
             setTimeout(() => { toast.classList.add('hidden'); }, 5000);
+        }
+
+        // ================================================
+        // إشعارات الهاتف (Push) عبر Cloudflare Worker
+        // بعد نشر الـ Worker ضع رابطه هنا بين علامتي التنصيص:
+        // window.BAYAN_PUSH_ENDPOINT = 'https://bayan-push.xxxx.workers.dev';
+        // ================================================
+        window.BAYAN_PUSH_ENDPOINT = window.BAYAN_PUSH_ENDPOINT || 'https://white-star-ddf8bayan-push.khalidar2312.workers.dev';
+
+        async function sendStudentPush(uids, title, body, type) {
+            const endpoint = window.BAYAN_PUSH_ENDPOINT;
+            const list = (Array.isArray(uids) ? uids : [uids])
+                .filter(uid => typeof uid === 'string' && uid.trim())
+                .map(uid => uid.trim());
+            if (!endpoint || !list.length || !title || !body) return false;
+
+            try {
+                const authInstance = window.adminAuth && window.adminAuth.instance;
+                const user = authInstance && authInstance.currentUser;
+                if (!user) return false;
+
+                const idToken = await user.getIdToken();
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        uids: list,
+                        title: title,
+                        body: body,
+                        type: type || 'general'
+                    })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return true;
+            } catch (error) {
+                console.warn('تعذر إرسال إشعار الهاتف:', error);
+                return false;
+            }
         }
 
         function loadAdminDashboard() {
@@ -3038,6 +3091,8 @@
 
                 const notification = {
                     text: `${title} — ${message}`,
+                    title,
+                    body: message,
                     date: new Date().toLocaleString('ar-EG'),
                     read: false,
                     type: 'announcement'
@@ -3054,6 +3109,15 @@
                     });
                     await batch.commit();
                     sentCount += chunk.length;
+
+                    for (let pushStart = 0; pushStart < chunk.length; pushStart += 20) {
+                        await sendStudentPush(
+                            chunk.slice(pushStart, pushStart + 20).map(student => student.id),
+                            title,
+                            message,
+                            'announcement'
+                        );
+                    }
                 }
 
                 result.innerText = `تم إرسال الإعلان بنجاح إلى ${sentCount} طالب.`;
@@ -3287,6 +3351,13 @@
                 // 2. تحديث حالة الطلب إلى approved في Firestore
                 await window.updateDoc(requestRef, { status: 'approved' });
 
+                void sendStudentPush(
+                    req.uid,
+                    'تم تفعيل اشتراكك',
+                    `تم تفعيل اشتراكك في مادة "${req.courseTitle}" بنجاح! يمكنك الآن مشاهدة المحتوى.`,
+                    'subscription_approved'
+                );
+
                 showToast('✅ تم قبول الطلب وتفعيل الاشتراك بنجاح');
                 loadAllUsersFromFirestore();
 
@@ -3335,6 +3406,13 @@
 
                 // 2. تحديث حالة الطلب إلى rejected
                 await window.updateDoc(requestRef, { status: 'rejected' });
+
+                void sendStudentPush(
+                    req.uid,
+                    'تم رفض طلب الاشتراك',
+                    `عذراً، تم رفض طلب اشتراكك في مادة "${req.courseTitle}". تواصل مع الإدارة للاستفسار.`,
+                    'subscription_rejected'
+                );
 
                 showToast('تم رفض الطلب وإبلاغ الطالب');
                 loadAllUsersFromFirestore();
