@@ -3488,8 +3488,7 @@
                 switchTab('support');
                 openAdminChat(uid, name, email);
                 const messageInput = document.getElementById('adminChatInput');
-                messageInput.value = `السلام عليكم يا ${name} 🌟\nحابين نطمن عليك، ونشجعك تكمّل دروسك في أكاديمية بيان. لو واجهتك أي مشكلة في الدخول أو محتاج مساعدة، ابعتلنا وإحنا معاك. بالتوفيق يا بطل!`;
-                await sendAdminReply();
+                if (messageInput) messageInput.value = '';
             } catch (error) {
                 console.error('تعذر بدء محادثة الدعم مع الطالب:', error);
                 alert('تعذر بدء المحادثة. تحقق من الاتصال وحاول مرة أخرى.');
