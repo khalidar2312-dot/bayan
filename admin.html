@@ -367,6 +367,11 @@
                         <i class="fa-solid fa-chart-line w-4 text-center"></i>
                         <span>متابعة أداء الطلاب</span>
                     </button>
+                    <button onclick="switchTab('results')" id="nav-results"
+                        class="nav-btn w-full flex items-center gap-3 text-right transition-all">
+                        <i class="fa-solid fa-square-poll-vertical w-4 text-center"></i>
+                        <span>نتائج الاختبارات</span>
+                    </button>
                     <button onclick="switchTab('inactive-students')" id="nav-inactive-students"
                         class="nav-btn w-full flex items-center gap-3 text-right transition-all">
                         <i class="fa-solid fa-user-clock w-4 text-center"></i>
@@ -621,6 +626,97 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- تاب: نتائج الاختبارات -->
+                <div id="tab-results" class="tab-content hidden">
+                    <div class="mb-4 flex items-start justify-between gap-3 flex-wrap">
+                        <div>
+                            <h2 class="text-lg font-extrabold font-kufi text-slate-800">نتائج الاختبارات</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">كل محاولات الطلاب في اختبارات المواد، مرتبة من الأحدث للأقدم</p>
+                        </div>
+                        <button onclick="loadQuizResults(true)" class="shrink-0 px-3 py-2 rounded-xl bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 transition">
+                            <i class="fa-solid fa-rotate ml-1"></i> تحديث
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-center">
+                            <p class="text-[10px] font-bold text-slate-400">عدد المحاولات</p>
+                            <p id="resultsStatAttempts" class="text-xl font-black text-emerald-800 mt-1">0</p>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-center">
+                            <p class="text-[10px] font-bold text-slate-400">عدد الطلاب</p>
+                            <p id="resultsStatStudents" class="text-xl font-black text-emerald-800 mt-1">0</p>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-center">
+                            <p class="text-[10px] font-bold text-slate-400">متوسط النسبة</p>
+                            <p id="resultsStatAverage" class="text-xl font-black text-amber-600 mt-1">0%</p>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 text-center">
+                            <p class="text-[10px] font-bold text-slate-400">أعلى نسبة</p>
+                            <p id="resultsStatTop" class="text-xl font-black text-emerald-700 mt-1">0%</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">المادة</label>
+                                <select id="resultsCourse" onchange="renderQuizResults()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="all">كل المواد</option>
+                                    <option value="fiqh">الفقه الميسر</option>
+                                    <option value="tafseer">علم التفسير</option>
+                                    <option value="hadith">الحديث الشريف</option>
+                                    <option value="tawheed">علم التوحيد</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">الصف</label>
+                                <select id="resultsGrade" onchange="renderQuizResults()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="all">كل الصفوف</option>
+                                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">الترم</label>
+                                <select id="resultsTerm" onchange="renderQuizResults()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="all">كل الترمات</option>
+                                    <option value="الترم الأول">الترم الأول</option>
+                                    <option value="الترم الثاني">الترم الثاني</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5">بحث باسم الطالب</label>
+                                <input id="resultsSearch" type="search" oninput="renderQuizResults()" placeholder="اكتب اسم الطالب..." class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-right border-collapse">
+                                <thead>
+                                    <tr class="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
+                                        <th class="px-4 py-3 font-bold">الطالب</th>
+                                        <th class="px-4 py-3 font-bold">المادة</th>
+                                        <th class="px-4 py-3 font-bold">الصف والترم</th>
+                                        <th class="px-4 py-3 font-bold">الدرجة</th>
+                                        <th class="px-4 py-3 font-bold">النسبة</th>
+                                        <th class="px-4 py-3 font-bold">تاريخ المحاولة</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="quizResultsTableBody" class="text-xs divide-y divide-slate-50">
+                                    <tr><td colspan="6" class="text-center py-8 text-slate-400">جاري تحميل النتائج...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="quizResultsCount" class="px-4 py-3 text-[11px] text-slate-400 border-t border-slate-100"></div>
                     </div>
                 </div>
 
@@ -1227,6 +1323,13 @@
                     </div>
                 </label>
                 <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
+                    <input type="checkbox" id="perm-results" class="w-4 h-4 text-emerald-600 rounded">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-square-poll-vertical text-amber-600 w-4 text-center"></i>
+                        <span class="font-bold text-slate-700 text-xs">نتائج الاختبارات</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition">
                     <input type="checkbox" id="perm-inactive-students" class="w-4 h-4 text-emerald-600 rounded">
                     <div class="flex items-center gap-2">
                         <i class="fa-solid fa-user-clock text-amber-600 w-4 text-center"></i>
@@ -1334,6 +1437,7 @@
             if (window.innerWidth < 1024) toggleSidebar(false);
 
             if (tabName === 'performance') loadPerformanceReport();
+            if (tabName === 'results') loadQuizResults(true);
             if (tabName === 'inactive-students') loadInactiveStudents();
             if (tabName === 'assignments') loadAssignmentsAdmin();
             if (tabName === 'schedule') loadScheduleAdmin();
@@ -2165,6 +2269,203 @@
             }
         }
 
+        // ================================================
+        // نتائج الاختبارات
+        // ================================================
+
+        let quizResultsCache = null;
+        let quizResultsLoading = false;
+
+        const resultCourseNames = {
+            fiqh: 'الفقه الميسر',
+            tafseer: 'علم التفسير',
+            hadith: 'الحديث الشريف',
+            tawheed: 'علم التوحيد'
+        };
+
+        function normalizeResultSearch(value) {
+            return String(value || '')
+                .toLowerCase()
+                .replace(/[\u064B-\u0652\u0640]/g, '')
+                .replace(/[أإآ]/g, 'ا')
+                .replace(/ى/g, 'ي')
+                .replace(/ة/g, 'ه')
+                .trim();
+        }
+
+        function getResultPercentage(attempt) {
+            const total = Number(attempt.total) || 0;
+            if (!total) return 0;
+            const stored = Number(attempt.percentage);
+            if (Number.isFinite(stored)) return Math.max(0, Math.min(100, Math.round(stored)));
+            return Math.max(0, Math.min(100, Math.round((Number(attempt.score) || 0) * 100 / total)));
+        }
+
+        async function loadQuizResults(force) {
+            const tbody = document.getElementById('quizResultsTableBody');
+            if (!tbody) return;
+            if (!force && Array.isArray(quizResultsCache)) {
+                renderQuizResults();
+                return;
+            }
+            if (quizResultsLoading) return;
+
+            quizResultsLoading = true;
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">جاري تحميل نتائج الاختبارات...</td></tr>';
+            const countLabel = document.getElementById('quizResultsCount');
+            if (countLabel) countLabel.innerText = '';
+
+            try {
+                const snapshot = await window.getDocs(window.collection(window.db, 'students'));
+                const rows = [];
+
+                snapshot.docs.forEach(studentDoc => {
+                    const student = studentDoc.data() || {};
+                    const progressMap = student.courseProgress && typeof student.courseProgress === 'object'
+                        ? student.courseProgress
+                        : {};
+
+                    Object.keys(progressMap).forEach(key => {
+                        const firstSeparator = key.indexOf('__');
+                        const secondSeparator = key.indexOf('__', firstSeparator + 2);
+                        if (firstSeparator < 0 || secondSeparator < 0) return;
+
+                        const courseId = key.slice(0, firstSeparator);
+                        const grade = key.slice(firstSeparator + 2, secondSeparator).replace(/_/g, ' ');
+                        const term = key.slice(secondSeparator + 2).replace(/_/g, ' ');
+                        const progress = progressMap[key];
+                        if (!progress || typeof progress !== 'object') return;
+
+                        const attempts = Array.isArray(progress.quizAttempts)
+                            ? progress.quizAttempts.filter(attempt => attempt && Number(attempt.total) > 0)
+                            : [];
+                        const collected = attempts.map(attempt => ({ ...attempt }));
+
+                        // دعم المحاولات القديمة المحفوظة في quiz فقط بدون quizAttempts
+                        const currentQuiz = progress.quiz;
+                        if (currentQuiz && currentQuiz.submitted === true && Number(currentQuiz.total) > 0) {
+                            const currentTime = getActivityTimestampMillis(currentQuiz.submittedAt);
+                            const alreadyListed = collected.some(attempt =>
+                                getActivityTimestampMillis(attempt.submittedAt) === currentTime &&
+                                String(attempt.score) === String(currentQuiz.score) &&
+                                String(attempt.total) === String(currentQuiz.total)
+                            );
+                            if (!alreadyListed) collected.push({ ...currentQuiz });
+                        }
+
+                        collected.forEach(attempt => {
+                            rows.push({
+                                studentId: studentDoc.id,
+                                studentName: student.fullName || student.name || 'طالب بدون اسم',
+                                studentPhone: student.phone || '',
+                                courseId,
+                                courseName: resultCourseNames[courseId] || courseId,
+                                grade,
+                                term,
+                                score: Number(attempt.score) || 0,
+                                total: Number(attempt.total) || 0,
+                                percentage: getResultPercentage(attempt),
+                                submittedAt: attempt.submittedAt || null,
+                                time: getActivityTimestampMillis(attempt.submittedAt)
+                            });
+                        });
+                    });
+                });
+
+                rows.sort((a, b) => b.time - a.time || a.studentName.localeCompare(b.studentName, 'ar'));
+                quizResultsCache = rows;
+                renderQuizResults();
+            } catch (error) {
+                console.error('خطأ في تحميل نتائج الاختبارات:', error);
+                quizResultsCache = null;
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-red-500">تعذر تحميل النتائج. تحقق من الاتصال وصلاحيات Firestore.</td></tr>';
+                ['resultsStatAttempts', 'resultsStatStudents'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerText = '0';
+                });
+                ['resultsStatAverage', 'resultsStatTop'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerText = '0%';
+                });
+            } finally {
+                quizResultsLoading = false;
+            }
+        }
+
+        function renderQuizResults() {
+            const tbody = document.getElementById('quizResultsTableBody');
+            if (!tbody || !Array.isArray(quizResultsCache)) return;
+
+            const course = document.getElementById('resultsCourse')?.value || 'all';
+            const grade = document.getElementById('resultsGrade')?.value || 'all';
+            const term = document.getElementById('resultsTerm')?.value || 'all';
+            const search = normalizeResultSearch(document.getElementById('resultsSearch')?.value || '');
+
+            const filtered = quizResultsCache.filter(row => {
+                if (course !== 'all' && row.courseId !== course) return false;
+                if (grade !== 'all' && row.grade !== grade) return false;
+                if (term !== 'all' && row.term !== term) return false;
+                if (search) {
+                    const haystack = normalizeResultSearch(`${row.studentName} ${row.studentPhone}`);
+                    if (!haystack.includes(search)) return false;
+                }
+                return true;
+            });
+
+            const attemptsCount = filtered.length;
+            const studentCount = new Set(filtered.map(row => row.studentId)).size;
+            const average = attemptsCount
+                ? Math.round(filtered.reduce((total, row) => total + row.percentage, 0) / attemptsCount)
+                : 0;
+            const top = attemptsCount ? Math.max(...filtered.map(row => row.percentage)) : 0;
+
+            document.getElementById('resultsStatAttempts').innerText = attemptsCount;
+            document.getElementById('resultsStatStudents').innerText = studentCount;
+            document.getElementById('resultsStatAverage').innerText = `${average}%`;
+            document.getElementById('resultsStatTop').innerText = `${top}%`;
+
+            const countLabel = document.getElementById('quizResultsCount');
+
+            if (!quizResultsCache.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">لا توجد نتائج اختبارات مسجلة بعد</td></tr>';
+                countLabel.innerText = '';
+                return;
+            }
+
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">لا توجد نتائج مطابقة للفلاتر المحددة</td></tr>';
+                countLabel.innerText = `إجمالي المحاولات المسجلة: ${quizResultsCache.length}`;
+                return;
+            }
+
+            const displayed = filtered.slice(0, 300);
+            tbody.innerHTML = displayed.map(row => {
+                const color = row.percentage >= 85
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                    : row.percentage >= 50
+                        ? 'bg-amber-50 text-amber-700 border-amber-100'
+                        : 'bg-red-50 text-red-600 border-red-100';
+                const dateLabel = row.time
+                    ? new Date(row.time).toLocaleString('ar-EG')
+                    : '—';
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-bold text-slate-800">${escapeQuizHtml(row.studentName)}</td>
+                        <td class="px-4 py-3"><span class="inline-block px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-[11px]">${escapeQuizHtml(row.courseName)}</span></td>
+                        <td class="px-4 py-3 text-slate-600">${escapeQuizHtml(row.grade)}<span class="block text-[10px] text-slate-400 mt-0.5">${escapeQuizHtml(row.term)}</span></td>
+                        <td class="px-4 py-3 font-bold text-slate-700 font-mono" dir="ltr">${row.score} / ${row.total}</td>
+                        <td class="px-4 py-3"><span class="inline-block px-2 py-1 rounded-full border font-bold ${color}">${row.percentage}%</span></td>
+                        <td class="px-4 py-3 text-slate-500 text-[11px]">${escapeQuizHtml(dateLabel)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const hiddenCount = filtered.length - displayed.length;
+            countLabel.innerText = hiddenCount > 0
+                ? `يتم عرض أحدث ${displayed.length} نتيجة من أصل ${filtered.length}`
+                : `عدد النتائج: ${filtered.length}`;
+        }
+
         function getActivityTimestampMillis(value) {
             if (!value) return 0;
             if (typeof value.toMillis === 'function') return value.toMillis();
@@ -2807,7 +3108,7 @@
         }
 
         let staffMembers = [];
-        const allTabs = ['requests', 'students', 'performance', 'inactive-students', 'content', 'schedule', 'quizzes', 'assignments', 'support', 'announcements'];
+        const allTabs = ['requests', 'students', 'performance', 'results', 'inactive-students', 'content', 'schedule', 'quizzes', 'assignments', 'support', 'announcements'];
 
         function escapeStaffHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -2824,7 +3125,7 @@
             const defaultPermissions = {
                 'موظف خدمة عملاء': ['support', 'students'],
                 'مساعد مراجعة اشتراكات': ['requests', 'students'],
-                'مشرف أكاديمي': ['content', 'schedule', 'quizzes', 'assignments']
+                'مشرف أكاديمي': ['content', 'schedule', 'quizzes', 'results', 'assignments']
             };
             let createdUser = null;
             const provisioningAuth = window.adminAuth.staffProvisioningAuth;
