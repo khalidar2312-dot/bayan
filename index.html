@@ -2587,6 +2587,50 @@
         }
 
 
+        // بعد إنشاء الحساب أو تسجيل الدخول: إغلاق نوافذ الاشتراك والرجوع لصفحة الطالب الرئيسية
+        function returnStudentToDashboard() {
+
+            ['registerModal', 'loginModal', 'courseGradeModal', 'fiqhModal', 'checkoutModal']
+                .forEach(function (modalId) {
+
+                    const modal = document.getElementById(modalId);
+
+                    if (modal) modal.classList.add('hidden');
+
+                });
+
+
+            // إزالة #courses من العنوان عشان الصفحة متفضلش واقفة على قسم الاشتراك
+            if (window.location.hash) {
+
+                try {
+
+                    history.replaceState(
+                        null,
+                        '',
+                        window.location.pathname + window.location.search
+                    );
+
+                } catch (error) {
+
+                    console.warn('تعذر تحديث عنوان الصفحة:', error);
+
+                }
+
+            }
+
+
+            // الرجوع لفوق الصفحة فوراً (مع تعطيل التمرير الناعم لحظة النقل)
+            const root = document.documentElement;
+            const previousBehavior = root.style.scrollBehavior;
+
+            root.style.scrollBehavior = 'auto';
+            window.scrollTo(0, 0);
+            root.style.scrollBehavior = previousBehavior;
+
+        }
+
+
         // =========================
         // إنشاء حساب جديد
         // =========================
@@ -2723,6 +2767,8 @@
 
 
                 showLoggedInUser(localUser);
+
+                returnStudentToDashboard();
 
 
                 // تنظيف النموذج
@@ -2919,6 +2965,8 @@
 
 
                 showLoggedInUser(userData);
+
+                returnStudentToDashboard();
 
 
                 // تنظيف النموذج
