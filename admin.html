@@ -1018,13 +1018,22 @@
                             </div>
                             <div id="adminChatMessages" class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50 hidden"></div>
                             <div id="adminChatInputArea" class="p-3 border-t border-slate-100 bg-white hidden">
-                                <div class="flex items-center gap-2">
-                                    <input type="text" id="adminChatInput" placeholder="اكتب ردك..."
-                                        class="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50"
-                                        onkeydown="if(event.key==='Enter') sendAdminReply()">
-                                    <button onclick="sendAdminReply()" class="w-9 h-9 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center transition text-sm flex-shrink-0">
-                                        <i class="fa-solid fa-paper-plane"></i>
-                                    </button>
+                                <div class="relative">
+                                    <div id="emojiPanel" class="hidden absolute bottom-11 right-0 bg-white border border-slate-200 rounded-2xl shadow-xl p-2.5 w-64 z-20">
+                                        <div id="emojiGrid" class="grid grid-cols-8 gap-1"></div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="toggleEmojiPanel()" title="إيموجي"
+                                            class="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 hover:bg-amber-50 hover:border-amber-300 text-slate-500 hover:text-amber-600 flex items-center justify-center transition text-sm flex-shrink-0">
+                                            <i class="fa-regular fa-face-smile"></i>
+                                        </button>
+                                        <input type="text" id="adminChatInput" placeholder="اكتب ردك..."
+                                            class="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-emerald-500 bg-slate-50"
+                                            onkeydown="if(event.key==='Enter') sendAdminReply()">
+                                        <button onclick="sendAdminReply()" class="w-9 h-9 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center transition text-sm flex-shrink-0">
+                                            <i class="fa-solid fa-paper-plane"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2903,12 +2912,21 @@
                     ? new Date(data.lastMessageTime.seconds * 1000).toLocaleTimeString('ar-EG', {hour: '2-digit', minute: '2-digit'})
                     : '';
 
+                const safeName = (data.studentName || 'طالب').replace(/'/g, "\\'");
+                const safeEmail = (data.studentEmail || '').replace(/'/g, "\\'");
                 return `
-                    <div onclick="openAdminChat('${uid}', '${(data.studentName||'').replace(/'/g,"\\'")}', '${(data.studentEmail||'').replace(/'/g,"\\'")}' )"
+                    <div onclick="openAdminChat('${uid}', '${safeName}', '${safeEmail}')"
                         class="px-3 py-3 cursor-pointer transition ${isActive ? 'bg-emerald-50 border-r-2 border-emerald-600' : 'hover:bg-slate-50'}">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-1">
                             <p class="font-bold text-xs text-slate-800 ${isUnread ? 'text-emerald-800' : ''}">${data.studentName || 'طالب'}</p>
-                            <span class="text-[10px] text-slate-400">${time}</span>
+                            <span class="flex items-center gap-1 flex-shrink-0">
+                                <span class="text-[10px] text-slate-400">${time}</span>
+                                <button type="button" title="حذف المحادثة"
+                                    onclick="event.stopPropagation(); deleteAdminChat('${uid}', '${safeName}')"
+                                    class="w-6 h-6 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center text-[11px]">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </span>
                         </div>
                         <p class="text-[11px] text-slate-400 truncate mt-0.5">${data.lastMessage || ''}</p>
                         ${isUnread ? '<span class="inline-block mt-1 w-2 h-2 bg-red-500 rounded-full"></span>' : ''}
@@ -3040,6 +3058,70 @@
                 if (!input.value.trim()) input.value = text;
                 alert('تعذر إرسال الرسالة. بقيت في خانة الكتابة؛ تحقق من الاتصال وحاول مرة أخرى.');
                 return false;
+            }
+        }
+
+        const CHAT_EMOJIS = [
+            '😀','😁','😂','🤣','😊','😍','🥰','😘',
+            '😎','🤩','🙂','😉','😅','😢','😭','🥺',
+            '😡','🤔','🤗','😴','🙃','😇','🤝','👍',
+            '👎','👏','🙏','💪','🌟','✨','🔥','❤️',
+            '💚','🎉','🎊','✅','❌','⭐','🌙','📚'
+        ];
+        let emojiPanelReady = false;
+
+        function toggleEmojiPanel() {
+            const panel = document.getElementById('emojiPanel');
+            if (!emojiPanelReady) {
+                const grid = document.getElementById('emojiGrid');
+                grid.innerHTML = CHAT_EMOJIS.map(emoji =>
+                    `<button type="button" onclick="insertChatEmoji('${emoji}')"
+                        class="text-lg leading-none p-1 rounded-lg hover:bg-amber-100 transition">${emoji}</button>`
+                ).join('');
+                emojiPanelReady = true;
+            }
+            panel.classList.toggle('hidden');
+        }
+
+        function insertChatEmoji(emoji) {
+            const input = document.getElementById('adminChatInput');
+            if (!input) return;
+            input.value += emoji;
+            input.focus();
+        }
+
+        document.addEventListener('click', function(event) {
+            const panel = document.getElementById('emojiPanel');
+            if (!panel || panel.classList.contains('hidden')) return;
+            if (event.target.closest('#emojiPanel') || event.target.closest('button[onclick="toggleEmojiPanel()"]')) return;
+            panel.classList.add('hidden');
+        });
+
+        async function deleteAdminChat(uid, name) {
+            const displayName = name || 'هذا الطالب';
+            if (!confirm(`حذف محادثة "${displayName}" نهائيًا؟\nسيتم مسح كل رسائلها من القائمة ولن تظهر مرة أخرى.`)) return;
+            try {
+                const messagesRef = window.collection(window.db, 'support_chats', uid, 'messages');
+                const snapshot = await window.getDocs(messagesRef);
+                const deletePromises = snapshot.docs.map(msgDoc => window.deleteDoc(msgDoc.ref));
+                await Promise.all(deletePromises);
+                await window.deleteDoc(window.doc(window.db, 'support_chats', uid));
+
+                if (currentChatUid === uid) {
+                    currentChatUid = null;
+                    if (adminChatUnsubscribe) {
+                        adminChatUnsubscribe();
+                        adminChatUnsubscribe = null;
+                    }
+                    document.getElementById('chatHeader').classList.add('hidden');
+                    document.getElementById('adminChatMessages').classList.add('hidden');
+                    document.getElementById('adminChatInputArea').classList.add('hidden');
+                    document.getElementById('chatPlaceholder').classList.remove('hidden');
+                }
+                showToast(`تم حذف محادثة ${displayName}.`);
+            } catch (error) {
+                console.error('خطأ في حذف المحادثة:', error);
+                alert('تعذر حذف المحادثة. تحقق من الاتصال وحاول مرة أخرى.');
             }
         }
 
