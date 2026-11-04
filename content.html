@@ -58,40 +58,130 @@
             max-width: 68rem;
         }
 
-        #contentState > section,
-        #quizPanel {
-            border-radius: 1.25rem;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.045);
+        /* ===== تصميم البطاقات المريحة ===== */
+        #contentState .content-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 22px;
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
         }
 
-        #contentState > section {
-            padding: 1.25rem;
+        .icon-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
+
+        .ic-green { background: #d1fae5; color: #059669; }
+        .ic-amber { background: #fef3c7; color: #d97706; }
+        .ic-blue { background: #dbeafe; color: #2563eb; }
+        .ic-rose { background: #ffe4e6; color: #e11d48; }
+
+        .big-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #065f46;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 13px;
+            border-radius: 16px;
+            margin-top: 12px;
+            transition: background 160ms ease;
+        }
+
+        .big-btn:hover:not(:disabled) { background: #047857; }
+        .big-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         #lessonProgressBar {
             background-image: linear-gradient(90deg, #10b981, #047857);
         }
 
-        #studentAssignmentsList article,
-        #videosList > div,
-        #filesList > a,
-        #filesList > div {
-            border-radius: 1rem;
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
-            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        .lesson-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 2px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background 160ms ease;
         }
 
-        #studentAssignmentsList article:hover,
-        #videosList > div:hover,
-        #filesList > a:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.09);
-        }
+        .lesson-row:hover { background: #f8fafc; }
+        .lesson-row:last-child { border-bottom: none; }
 
-        #tabVideos,
-        #tabFiles {
-            flex: 1;
+        .lesson-num {
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .lesson-num.done { background: #d1fae5; color: #059669; }
+
+        .lesson-title { font-size: 13px; font-weight: 700; color: #1e293b; }
+        .lesson-dur { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+        .lesson-state {
+            margin-inline-start: auto;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .state-done { background: #d1fae5; color: #065f46; }
+        .state-new { background: #fef3c7; color: #92400e; }
+
+        .file-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 2px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .file-row:last-child { border-bottom: none; }
+        .file-ic { color: #e11d48; font-size: 16px; flex-shrink: 0; }
+
+        .file-ext {
+            margin-inline-start: auto;
+            font-size: 10px;
+            color: #e11d48;
+            font-weight: 800;
+            background: #ffe4e6;
+            padding: 4px 9px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        #studentAssignmentsList article {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 14px;
+            background: #fff;
         }
 
         #videoModal > div {
@@ -105,12 +195,9 @@
                 padding-bottom: 2rem;
             }
 
-            #contentState > section {
-                padding: 1rem;
-            }
-
-            #contentState > div:first-of-type {
-                width: 100%;
+            #contentState .content-card {
+                padding: 15px;
+                border-radius: 18px;
             }
         }
     </style>
@@ -164,24 +251,27 @@
         </div>
 
         <!-- المحتوى الفعلي -->
-        <div id="contentState" class="hidden">
+        <div id="contentState" class="hidden max-w-2xl mx-auto">
 
-            <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
-                <div class="flex items-center justify-between gap-3 mb-2">
-                    <div>
-                        <h2 class="font-bold text-sm text-slate-800">تقدمك في المادة</h2>
-                        <p id="lessonProgressText" class="text-[11px] text-slate-400 mt-1">جاري تحميل تقدمك...</p>
+            <section class="content-card">
+                <div class="flex items-center gap-3">
+                    <div class="icon-circle ic-green">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
                     </div>
-                    <span id="lessonProgressPercent" class="text-sm font-extrabold text-emerald-800">0%</span>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="font-bold text-sm text-slate-800">تقدمك في المادة</h2>
+                        <p id="lessonProgressText" class="text-[11px] text-slate-400 mt-0.5">جاري تحميل تقدمك...</p>
+                    </div>
+                    <span id="lessonProgressPercent" class="text-sm font-extrabold text-emerald-600">0%</span>
                 </div>
-                <div class="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-2.5 bg-slate-100 rounded-full overflow-hidden mt-3">
                     <div id="lessonProgressBar" class="h-full bg-emerald-600 rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
             </section>
 
-            <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <section class="content-card">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                    <div class="icon-circle ic-amber">
                         <i class="fa-solid fa-clipboard-question"></i>
                     </div>
                     <div>
@@ -189,12 +279,12 @@
                         <p id="quizAvailability" class="text-[11px] text-slate-400 mt-0.5">جاري التحقق من توفر الاختبار...</p>
                     </div>
                 </div>
-                <button id="startQuizButton" onclick="startQuiz()" disabled class="px-4 py-2.5 rounded-xl bg-indigo-700 text-white text-xs font-bold hover:bg-indigo-800 disabled:opacity-40 disabled:cursor-not-allowed transition">
-                    <i class="fa-solid fa-play ml-1"></i> ابدأ الاختبار
+                <button id="startQuizButton" onclick="startQuiz()" disabled class="big-btn">
+                    <i class="fa-solid fa-play"></i> ابدأ الاختبار
                 </button>
             </section>
 
-            <section id="quizPanel" class="hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
+            <section id="quizPanel" class="content-card hidden">
                 <div class="flex items-center justify-between gap-3 mb-4">
                     <h2 class="font-bold text-slate-800">اختبار المادة</h2>
                     <button onclick="closeQuiz()" class="text-slate-400 hover:text-slate-700" title="إغلاق الاختبار">
@@ -210,9 +300,9 @@
                 <div id="quizResult" class="hidden mt-4 p-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-bold"></div>
             </section>
 
-            <section id="studentAssignmentsSection" class="hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
+            <section id="studentAssignmentsSection" class="content-card hidden">
                 <div class="flex items-center gap-3 mb-4">
-                    <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                    <div class="icon-circle ic-rose">
                         <i class="fa-solid fa-file-pen"></i>
                     </div>
                     <div>
@@ -223,37 +313,43 @@
                 <div id="studentAssignmentsList" class="space-y-3"></div>
             </section>
 
-            <!-- tabs الفيديو والملفات -->
-            <div class="flex items-center gap-2 mb-5 p-1.5 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                <button onclick="switchTab('videos')" id="tabVideos"
-                    class="px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm">
-                    <i class="fa-solid fa-play-circle ml-1"></i> الفيديوهات
-                </button>
-                <button onclick="switchTab('files')" id="tabFiles"
-                    class="px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500">
-                    <i class="fa-solid fa-file-pdf ml-1"></i> الملفات
-                </button>
-            </div>
-
             <!-- قسم الفيديوهات -->
-            <div id="videosSection">
-                <div id="videosList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="text-center py-12 text-slate-400 col-span-2">
-                        <i class="fa-solid fa-video-slash text-3xl mb-3 block opacity-40"></i>
-                        <p class="text-sm">لا توجد فيديوهات متاحة حالياً</p>
+            <section class="content-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="icon-circle ic-blue">
+                        <i class="fa-solid fa-play"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">الفيديوهات</h2>
+                        <p id="videosCountText" class="text-[11px] text-slate-400 mt-0.5">لا توجد فيديوهات بعد</p>
                     </div>
                 </div>
-            </div>
+                <div id="videosList">
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        <i class="fa-solid fa-video-slash text-2xl mb-2 block opacity-40"></i>
+                        لا توجد فيديوهات متاحة حالياً
+                    </div>
+                </div>
+            </section>
 
             <!-- قسم الملفات -->
-            <div id="filesSection" class="hidden">
-                <div id="filesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="text-center py-12 text-slate-400 col-span-3">
-                        <i class="fa-solid fa-folder-open text-3xl mb-3 block opacity-40"></i>
-                        <p class="text-sm">لا توجد ملفات متاحة حالياً</p>
+            <section class="content-card">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="icon-circle ic-rose">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-sm text-slate-800">الملفات</h2>
+                        <p class="text-[11px] text-slate-400 mt-0.5">مذكرات وملخصات للتحميل</p>
                     </div>
                 </div>
-            </div>
+                <div id="filesList">
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        <i class="fa-solid fa-folder-open text-2xl mb-2 block opacity-40"></i>
+                        لا توجد ملفات متاحة حالياً
+                    </div>
+                </div>
+            </section>
 
         </div>
 
@@ -433,11 +529,7 @@
         }
 
         function updateLessonProgress() {
-            const watchedUrls = new Set(
-                Object.values(currentAttendance)
-                    .filter(lesson => lesson && lesson.url)
-                    .map(lesson => lesson.url)
-            );
+            const watchedUrls = getWatchedVideoUrls();
             const startedCount = currentVideos.filter(video => watchedUrls.has(video.url)).length;
             const total = currentVideos.length;
             const percentage = total ? Math.round(startedCount / total * 100) : 0;
@@ -446,6 +538,8 @@
                 total ? `بدأت مشاهدة ${startedCount} من ${total} درس` : 'لا توجد دروس فيديو في هذه المادة بعد';
             document.getElementById('lessonProgressPercent').innerText = `${percentage}%`;
             document.getElementById('lessonProgressBar').style.width = `${percentage}%`;
+
+            if (currentVideos.length) renderVideos(currentVideos);
         }
 
         function renderStudentAssignments() {
@@ -544,87 +638,74 @@
             }
         }
 
+        function getWatchedVideoUrls() {
+            return new Set(
+                Object.values(currentAttendance)
+                    .filter(lesson => lesson && lesson.url)
+                    .map(lesson => lesson.url)
+            );
+        }
+
         function renderVideos(videos) {
             const container = document.getElementById('videosList');
+            const countText = document.getElementById('videosCountText');
+
+            if (!videos.length) {
+                countText.innerText = 'لا توجد فيديوهات بعد';
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        <i class="fa-solid fa-video-slash text-2xl mb-2 block opacity-40"></i>
+                        لا توجد فيديوهات متاحة حالياً
+                    </div>`;
+                return;
+            }
+
+            const watchedUrls = getWatchedVideoUrls();
+            const startedCount = videos.filter(video => watchedUrls.has(video.url)).length;
+            countText.innerText = `${videos.length} دروس — شاهدت ${startedCount} منها`;
+
             container.innerHTML = videos.map(function(v, i) {
-
                 const isDrive = v.url && v.url.includes('drive.google.com');
-                const ytId = !isDrive ? extractYoutubeId(v.url) : null;
-
-                let thumb = 'https://placehold.co/320x180/064e3b/fbbf24?text=Video';
-                if (ytId) thumb = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
-                if (isDrive) thumb = 'https://placehold.co/320x180/064e3b/fbbf24?text=فيديو';
+                const watched = watchedUrls.has(v.url);
+                const subLine = v.duration
+                    ? `${v.duration}${v.description ? ' — ' + v.description : ''}`
+                    : (v.description || '');
 
                 return `
-                    <div class="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition cursor-pointer"
-                        onclick="openVideo('${v.url}', '${escapeAttr(v.title)}', ${isDrive})">
-                        <div class="relative">
-                            <img src="${thumb}" alt="${escapeAttr(v.title)}" class="w-full h-44 object-cover">
-                            <div class="absolute inset-0 bg-slate-950/30 flex items-center justify-center">
-                                <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                                    <i class="fa-solid fa-play text-emerald-800 mr-0.5"></i>
-                                </div>
-                            </div>
-                            ${v.duration ? `<span class="absolute top-2 right-2 bg-slate-900/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">${v.duration}</span>` : ''}
+                    <div class="lesson-row" onclick="openVideo('${v.url}', '${escapeAttr(v.title)}', ${isDrive})">
+                        <span class="lesson-num ${watched ? 'done' : ''}">${watched ? '<i class="fa-solid fa-check"></i>' : i + 1}</span>
+                        <div class="min-w-0">
+                            <p class="lesson-title truncate">${escapeHtml(v.title)}</p>
+                            ${subLine ? `<p class="lesson-dur truncate">${escapeHtml(subLine)}</p>` : ''}
                         </div>
-                        <div class="p-3">
-                            <h3 class="font-bold text-slate-800 text-sm">${escapeHtml(v.title)}</h3>
-                            ${v.description ? `<p class="text-xs text-slate-400 mt-1">${escapeHtml(v.description)}</p>` : ''}
-                        </div>
+                        <span class="lesson-state ${watched ? 'state-done' : 'state-new'}">${watched ? 'تمت المشاهدة' : 'جديد'}</span>
                     </div>`;
             }).join('');
         }
 
         function renderFiles(files) {
             const container = document.getElementById('filesList');
+
+            if (!files.length) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        <i class="fa-solid fa-folder-open text-2xl mb-2 block opacity-40"></i>
+                        لا توجد ملفات متاحة حالياً
+                    </div>`;
+                return;
+            }
+
             container.innerHTML = files.map(function(f, i) {
                 const isDrive = f.url && f.url.includes('drive.google.com');
+                const openUrl = isDrive ? f.url.replace('/preview', '/view') : f.url;
 
-                if (isDrive) {
-                    // عرض PDF في iframe
-                    return `
-                        <div class="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm col-span-1 md:col-span-2 lg:col-span-3">
-                            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                                <div class="flex items-center gap-2">
-                                    <i class="fa-solid fa-file-pdf text-red-500 text-lg"></i>
-                                    <span class="font-bold text-slate-800 text-sm">${escapeHtml(f.title)}</span>
-                                </div>
-                                <a href="${f.url.replace('/preview', '/view')}" target="_blank"
-                                    class="px-3 py-1.5 rounded-xl bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 transition">
-                                    <i class="fa-solid fa-external-link-alt ml-1"></i> فتح في تبويب جديد
-                                </a>
-                            </div>
-                            <iframe src="${f.url}" class="w-full" style="height: 500px;" frameborder="0" allowfullscreen></iframe>
-                        </div>`;
-                } else {
-                    return `
-                        <a href="${f.url}" target="_blank"
-                            class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-300 transition flex items-center gap-3">
-                            <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                                <i class="fa-solid fa-file text-slate-500"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate">${escapeHtml(f.title)}</p>
-                                <p class="text-[11px] text-slate-400 mt-0.5">اضغط للفتح</p>
-                            </div>
-                            <i class="fa-solid fa-external-link-alt text-emerald-700 text-sm flex-shrink-0"></i>
-                        </a>`;
-                }
+                return `
+                    <a href="${openUrl}" target="_blank" class="file-row">
+                        <span class="file-ic"><i class="fa-solid fa-file-pdf"></i></span>
+                        <span class="min-w-0 truncate">${escapeHtml(f.title)}</span>
+                        <span class="file-ext">PDF</span>
+                    </a>`;
             }).join('');
-        }
-
-        function switchTab(tab) {
-            if (tab === 'videos') {
-                document.getElementById('videosSection').classList.remove('hidden');
-                document.getElementById('filesSection').classList.add('hidden');
-                document.getElementById('tabVideos').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm';
-                document.getElementById('tabFiles').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500';
-            } else {
-                document.getElementById('filesSection').classList.remove('hidden');
-                document.getElementById('videosSection').classList.add('hidden');
-                document.getElementById('tabFiles').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-emerald-800 text-white shadow-sm';
-                document.getElementById('tabVideos').className = 'px-5 py-2.5 rounded-xl font-bold text-sm transition bg-white text-slate-600 border border-slate-200 hover:border-emerald-500';
-            }
         }
 
         function openVideo(url, title, isDrive) {
