@@ -786,19 +786,41 @@
 
             const questionsContainer = document.getElementById('quizQuestions');
             document.getElementById('quizForm').reset();
-            questionsContainer.innerHTML = currentQuizQuestions.map((question, questionIndex) => `
-                <fieldset class="p-4 rounded-xl border border-slate-100">
-                    <legend class="font-bold text-sm text-slate-800 px-1">${questionIndex + 1}. ${escapeHtml(question.prompt)}</legend>
-                    <div class="space-y-2 mt-2">
-                        ${(question.options || []).map((option, optionIndex) => `
-                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer text-xs text-slate-700">
-                                <input type="radio" name="quiz-answer-${questionIndex}" value="${optionIndex}" required class="text-emerald-700">
-                                <span>${escapeHtml(option)}</span>
-                            </label>
-                        `).join('')}
-                    </div>
-                </fieldset>
-            `).join('');
+            questionsContainer.innerHTML = currentQuizQuestions.map((question, questionIndex) => {
+                const type = question.type || 'mcq';
+                const typeBadge = type === 'tf'
+                    ? '<span class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full mr-2">صح وخطأ</span>'
+                    : type === 'essay'
+                        ? '<span class="text-[10px] font-bold bg-violet-100 text-violet-800 px-2 py-0.5 rounded-full mr-2">مقالي</span>'
+                        : '';
+
+                let answerHtml;
+                if (type === 'essay') {
+                    answerHtml = `
+                        <textarea name="quiz-answer-${questionIndex}" rows="4" required
+                            placeholder="اكتب إجابتك هنا..."
+                            class="w-full mt-2 px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:border-emerald-500 resize-y"></textarea>`;
+                } else {
+                    const options = type === 'tf'
+                        ? ['صح', 'خطأ']
+                        : (question.options || []);
+                    answerHtml = `
+                        <div class="space-y-2 mt-2">
+                            ${options.map((option, optionIndex) => `
+                                <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer text-xs text-slate-700">
+                                    <input type="radio" name="quiz-answer-${questionIndex}" value="${optionIndex}" required class="text-emerald-700">
+                                    <span>${escapeHtml(option)}</span>
+                                </label>
+                            `).join('')}
+                        </div>`;
+                }
+
+                return `
+                    <fieldset class="p-4 rounded-xl border border-slate-100">
+                        <legend class="font-bold text-sm text-slate-800 px-1">${questionIndex + 1}. ${escapeHtml(question.prompt)} ${typeBadge}</legend>
+                        ${answerHtml}
+                    </fieldset>`;
+            }).join('');
 
             document.getElementById('quizResult').classList.add('hidden');
             document.getElementById('quizForm').querySelector('button[type="submit"]').disabled = false;
@@ -814,23 +836,45 @@
             event.preventDefault();
             if (!currentStudentUid || !currentQuizQuestions.length) return;
 
-            const answers = currentQuizQuestions.map((_, questionIndex) => {
-                const selected = document.querySelector(`input[name="quiz-answer-${questionIndex}"]:checked`);
-                return selected ? Number(selected.value) : -1;
-            });
-            if (answers.some(answer => answer < 0)) {
-                alert('أجب عن جميع الأسئلة قبل تسليم الاختبار.');
-                return;
+            const answers = [];
+            let hasEssay = false;
+            for (let questionIndex = 0; questionIndex < currentQuizQuestions.length; questionIndex++) {
+                const question = currentQuizQuestions[questionIndex];
+                if ((question.type || 'mcq') === 'essay') {
+                    const text = document.querySelector(`[name="quiz-answer-${questionIndex}"]`).value.trim();
+                    if (!text) {
+                        alert('أجب عن جميع الأسئلة قبل تسليم الاختبار.');
+                        return;
+                    }
+                    answers.push(text);
+                    hasEssay = true;
+                } else {
+                    const selected = document.querySelector(`input[name="quiz-answer-${questionIndex}"]:checked`);
+                    if (!selected) {
+                        alert('أجب عن جميع الأسئلة قبل تسليم الاختبار.');
+                        return;
+                    }
+                    answers.push(Number(selected.value));
+                }
             }
 
-            const score = currentQuizQuestions.reduce((total, question, index) =>
-                total + (answers[index] === Number(question.correctIndex) ? 1 : 0), 0);
+            const autoScore = currentQuizQuestions.reduce((total, question, index) =>
+                (question.type || 'mcq') === 'essay'
+                    ? total
+                    : total + (answers[index] === Number(question.correctIndex) ? 1 : 0), 0);
+            const total = currentQuizQuestions.length;
+            const autoTotal = currentQuizQuestions.filter(q => (q.type || 'mcq') !== 'essay').length;
+            const savedAnswers = {};
+            answers.forEach((answer, index) => { savedAnswers[index] = answer; });
             const attempt = {
-                score,
-                total: currentQuizQuestions.length,
-                percentage: Math.round(score / currentQuizQuestions.length * 100),
+                score: autoScore,
+                autoScore,
+                total,
+                graded: !hasEssay,
+                answers: savedAnswers,
                 submittedAt: new Date().toISOString()
             };
+            if (!hasEssay) attempt.percentage = Math.round(autoScore / total * 100);
 
             try {
                 await db
@@ -842,7 +886,9 @@
                     });
 
                 const result = document.getElementById('quizResult');
-                result.innerText = `نتيجتك: ${score} من ${currentQuizQuestions.length} (${attempt.percentage}%)`;
+                result.innerText = hasEssay
+                    ? `تم تسليم إجاباتك. نتيجتك المؤقتة على الأسئلة المؤتمتة: ${autoScore} من ${autoTotal} — والأسئلة المقالية بانتظار تصحيح المدرس، وسيصلك إشعار بالنتيجة النهائية.`
+                    : `نتيجتك: ${autoScore} من ${total} (${attempt.percentage}%)`;
                 result.classList.remove('hidden');
                 document.getElementById('quizForm').querySelector('button[type="submit"]').disabled = true;
             } catch (error) {

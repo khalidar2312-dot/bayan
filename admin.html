@@ -897,20 +897,40 @@
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
                             <h3 class="text-sm font-bold text-slate-700 mb-4">إضافة سؤال</h3>
                             <div class="space-y-3">
-                                <input id="quizQuestionText" type="text" placeholder="اكتب السؤال" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <input id="quizOption0" type="text" placeholder="الخيار الأول" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
-                                    <input id="quizOption1" type="text" placeholder="الخيار الثاني" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
-                                    <input id="quizOption2" type="text" placeholder="الخيار الثالث" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
-                                    <input id="quizOption3" type="text" placeholder="الخيار الرابع" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
-                                </div>
                                 <div>
-                                    <label for="quizCorrectOption" class="block text-xs font-bold text-slate-500 mb-1.5">الإجابة الصحيحة</label>
-                                    <select id="quizCorrectOption" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
-                                        <option value="0">الخيار الأول</option><option value="1">الخيار الثاني</option>
-                                        <option value="2">الخيار الثالث</option><option value="3">الخيار الرابع</option>
+                                    <label for="quizQuestionType" class="block text-xs font-bold text-slate-500 mb-1.5">نوع السؤال</label>
+                                    <select id="quizQuestionType" onchange="quizTypeChanged()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                        <option value="mcq">اختيار من متعدد</option>
+                                        <option value="tf">صح وخطأ</option>
+                                        <option value="essay">سؤال مقالي (إجابة مفتوحة)</option>
                                     </select>
                                 </div>
+                                <input id="quizQuestionText" type="text" placeholder="اكتب السؤال" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                <div id="quizMcqFields" class="space-y-3">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <input id="quizOption0" type="text" placeholder="الخيار الأول" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                        <input id="quizOption1" type="text" placeholder="الخيار الثاني" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                        <input id="quizOption2" type="text" placeholder="الخيار الثالث" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                        <input id="quizOption3" type="text" placeholder="الخيار الرابع" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    </div>
+                                    <div>
+                                        <label for="quizCorrectOption" class="block text-xs font-bold text-slate-500 mb-1.5">الإجابة الصحيحة</label>
+                                        <select id="quizCorrectOption" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                            <option value="0">الخيار الأول</option><option value="1">الخيار الثاني</option>
+                                            <option value="2">الخيار الثالث</option><option value="3">الخيار الرابع</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="quizTfFields" class="hidden">
+                                    <label for="quizTfCorrect" class="block text-xs font-bold text-slate-500 mb-1.5">الإجابة الصحيحة</label>
+                                    <select id="quizTfCorrect" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                        <option value="0">صح</option>
+                                        <option value="1">خطأ</option>
+                                    </select>
+                                </div>
+                                <p id="quizEssayHint" class="hidden text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 leading-relaxed">
+                                    الطالب سيُجيب بكتابة نص حر، ولن تُحتسب النتيجة النهائية إلا بعد تصحيحك أنت للإجابة من قسم «تصحيح إجابات الطلاب» بالأسفل.
+                                </p>
                                 <button onclick="addQuizQuestion()" class="w-full py-2.5 rounded-xl bg-emerald-800 text-white font-bold text-xs hover:bg-emerald-900">
                                     <i class="fa-solid fa-plus ml-1"></i> إضافة السؤال للاختبار
                                 </button>
@@ -921,6 +941,34 @@
                             <div id="quizQuestionsList" class="space-y-2 max-h-[28rem] overflow-y-auto">
                                 <p class="text-center text-xs text-slate-400 py-6">جاري تحميل الأسئلة...</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- تصحيح إجابات الطلاب (الأسئلة المقالية) -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mt-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-700">تصحيح إجابات الطلاب</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">الأسئلة المقالية لا تُحتسب في النتيجة إلا بعد تصحيحك لها هنا</p>
+                            </div>
+                            <button onclick="loadQuizSubmissions()" class="px-4 py-2 rounded-xl bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900">
+                                <i class="fa-solid fa-rotate ml-1"></i> تحديث قائمة التسليمات
+                            </button>
+                        </div>
+                        <div id="quizGradingList">
+                            <p class="text-center text-xs text-slate-400 py-6">اضغط «تحديث قائمة التسليمات» لعرض إجابات الطلاب بانتظار التصحيح</p>
+                        </div>
+                        <div id="quizGradingPanel" class="hidden mt-4 border-t border-slate-100 pt-4">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <h4 id="quizGradingStudentName" class="text-sm font-extrabold text-slate-800"></h4>
+                                <button onclick="closeQuizGrading()" class="text-xs text-slate-400 hover:text-slate-700">
+                                    <i class="fa-solid fa-xmark ml-1"></i> إغلاق
+                                </button>
+                            </div>
+                            <div id="quizGradingQuestions" class="space-y-3"></div>
+                            <button onclick="saveQuizGrading()" id="saveQuizGradingBtn" class="w-full mt-4 py-2.5 rounded-xl bg-emerald-800 text-white font-bold text-xs hover:bg-emerald-900">
+                                <i class="fa-solid fa-check ml-1"></i> حفظ التصحيح وإرسال النتيجة للطالب
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1887,6 +1935,29 @@
             return element.innerHTML;
         }
 
+        function quizTypeChanged() {
+            const type = document.getElementById('quizQuestionType').value;
+            document.getElementById('quizMcqFields').classList.toggle('hidden', type !== 'mcq');
+            document.getElementById('quizTfFields').classList.toggle('hidden', type !== 'tf');
+            document.getElementById('quizEssayHint').classList.toggle('hidden', type !== 'essay');
+        }
+
+        function getQuizQuestionTypeLabel(question) {
+            if (question.type === 'tf') return '<span class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">صح وخطأ</span>';
+            if (question.type === 'essay') return '<span class="text-[10px] font-bold bg-violet-100 text-violet-800 px-2 py-0.5 rounded-full">مقالي</span>';
+            return '<span class="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">اختيار من متعدد</span>';
+        }
+
+        function getQuizQuestionSummary(question) {
+            if (question.type === 'tf') {
+                return `الإجابة: ${Number(question.correctIndex) === 1 ? 'خطأ' : 'صح'}`;
+            }
+            if (question.type === 'essay') return 'إجابة مفتوحة — يُصحَّح يدويًا';
+            const options = question.options || [];
+            const correct = options[Number(question.correctIndex)];
+            return `${options.map(escapeQuizHtml).join(' · ')}${correct ? ` <b>(الصحيح: ${escapeQuizHtml(correct)})</b>` : ''}`;
+        }
+
         async function loadQuizQuestions() {
             const container = document.getElementById('quizQuestionsList');
             if (!container) return;
@@ -1911,8 +1982,8 @@
                 container.innerHTML = questions.map((question, index) => `
                     <div class="flex items-start justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50">
                         <div class="min-w-0">
-                            <p class="font-bold text-slate-800 mb-1">${index + 1}. ${escapeQuizHtml(question.prompt)}</p>
-                            <p class="text-[11px] text-slate-500">${(question.options || []).map(escapeQuizHtml).join(' · ')}</p>
+                            <p class="font-bold text-slate-800 mb-1">${index + 1}. ${escapeQuizHtml(question.prompt)} ${getQuizQuestionTypeLabel(question)}</p>
+                            <p class="text-[11px] text-slate-500">${getQuizQuestionSummary(question)}</p>
                         </div>
                         <button type="button" onclick="deleteQuizQuestion(${index})" class="w-8 h-8 shrink-0 rounded-lg text-red-500 hover:bg-red-50" title="حذف السؤال">
                             <i class="fa-solid fa-trash-can"></i>
@@ -1934,13 +2005,26 @@
         }
 
         async function addQuizQuestion() {
+            const type = document.getElementById('quizQuestionType').value;
             const prompt = document.getElementById('quizQuestionText').value.trim();
-            const options = [0, 1, 2, 3].map(index => document.getElementById(`quizOption${index}`).value.trim());
-            const correctIndex = Number(document.getElementById('quizCorrectOption').value);
 
-            if (!prompt || options.some(option => !option)) {
-                alert('اكتب السؤال وجميع الخيارات الأربعة.');
+            if (!prompt) {
+                alert('اكتب نص السؤال أولًا.');
                 return;
+            }
+
+            let question;
+            if (type === 'tf') {
+                question = { type: 'tf', prompt, correctIndex: Number(document.getElementById('quizTfCorrect').value) };
+            } else if (type === 'essay') {
+                question = { type: 'essay', prompt };
+            } else {
+                const options = [0, 1, 2, 3].map(index => document.getElementById(`quizOption${index}`).value.trim());
+                if (options.some(option => !option)) {
+                    alert('اكتب السؤال وجميع الخيارات الأربعة.');
+                    return;
+                }
+                question = { type: 'mcq', prompt, options, correctIndex: Number(document.getElementById('quizCorrectOption').value) };
             }
 
             const contentKey = getQuizContentKey();
@@ -1951,16 +2035,206 @@
                     ? snapshot.data().quizQuestions
                     : [];
 
-                questions.push({ prompt, options, correctIndex });
+                questions.push(question);
                 await saveQuizQuestions(contentKey, questions);
 
                 document.getElementById('quizQuestionText').value = '';
-                options.forEach((_, index) => { document.getElementById(`quizOption${index}`).value = ''; });
+                [0, 1, 2, 3].forEach(index => { document.getElementById(`quizOption${index}`).value = ''; });
                 await loadQuizQuestions();
                 showToast('تمت إضافة السؤال للاختبار');
             } catch (error) {
                 console.error('خطأ في إضافة سؤال الاختبار:', error);
                 alert('تعذر حفظ السؤال. تحقق من الاتصال والصلاحيات.');
+            }
+        }
+
+        // ================================================
+        // تصحيح الأسئلة المقالية
+        // ================================================
+        let quizGradingState = null;
+
+        async function loadQuizSubmissions() {
+            const container = document.getElementById('quizGradingList');
+            const contentKey = getQuizContentKey();
+            container.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">جاري البحث عن تسليمات بانتظار التصحيح...</p>';
+            closeQuizGrading();
+
+            try {
+                const contentSnapshot = await window.getDoc(window.doc(window.db, 'course_content', contentKey));
+                const questions = contentSnapshot.exists() && Array.isArray(contentSnapshot.data().quizQuestions)
+                    ? contentSnapshot.data().quizQuestions
+                    : [];
+                currentGradingQuestionsCache = questions;
+
+                const snapshot = await window.getDocs(window.collection(window.db, 'students'));
+                const pending = [];
+
+                snapshot.docs.forEach(docSnap => {
+                    const student = docSnap.data();
+                    const progress = student.courseProgress || {};
+                    const course = progress[contentKey];
+                    const attempts = course && Array.isArray(course.quizAttempts) ? course.quizAttempts : [];
+                    attempts.forEach((attempt, attemptIndex) => {
+                        if (!attempt || attempt.graded !== false) return;
+                        const answers = attempt.answers || {};
+                        const hasEssay = Object.keys(answers).some(index => {
+                            const question = questions[Number(index)];
+                            return question && question.type === 'essay' && typeof answers[index] === 'string';
+                        });
+                        if (hasEssay) {
+                            pending.push({
+                                uid: docSnap.id,
+                                studentName: student.fullName || student.name || 'طالب',
+                                attempt,
+                                attemptIndex
+                            });
+                        }
+                    });
+                });
+
+                if (!pending.length) {
+                    container.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">لا توجد إجابات مقالية بانتظار التصحيح حاليًا 🎉</p>';
+                    return;
+                }
+
+                container.innerHTML = pending.map((item, listIndex) => `
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border border-amber-200 bg-amber-50 mb-2">
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">${escapeQuizHtml(item.studentName)}</p>
+                            <p class="text-[11px] text-slate-500 mt-0.5">
+                                تسليم بتاريخ ${item.attempt.submittedAt ? new Date(item.attempt.submittedAt).toLocaleString('ar-EG') : '—'}
+                                — نتيجة الأسئلة المؤتمتة: ${Number(item.attempt.autoScore ?? item.attempt.score) || 0} من ${Number(item.attempt.total) || 0}
+                            </p>
+                        </div>
+                        <button type="button" onclick="openQuizGrading(${listIndex})"
+                            class="px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700">
+                            <i class="fa-solid fa-marker ml-1"></i> تصحيح
+                        </button>
+                    </div>
+                `).join('');
+                window.__pendingGrading = pending;
+            } catch (error) {
+                console.error('خطأ في تحميل التسليمات:', error);
+                container.innerHTML = '<p class="text-center text-xs text-red-500 py-6">تعذر تحميل التسليمات. تحقق من الاتصال والصلاحيات.</p>';
+            }
+        }
+
+        let currentGradingQuestionsCache = null;
+
+        async function openQuizGrading(listIndex) {
+            const item = (window.__pendingGrading || [])[listIndex];
+            if (!item) return;
+
+            const contentKey = getQuizContentKey();
+            try {
+                const snapshot = await window.getDoc(window.doc(window.db, 'course_content', contentKey));
+                const questions = snapshot.exists() && Array.isArray(snapshot.data().quizQuestions)
+                    ? snapshot.data().quizQuestions
+                    : [];
+                currentGradingQuestionsCache = questions;
+
+                const attempt = item.attempt;
+                const answers = attempt.answers || {};
+                const essayScores = attempt.essayScores || {};
+                const autoTotal = questions.filter(q => q.type !== 'essay').length;
+
+                const essayItems = questions
+                    .map((question, questionIndex) => ({ question, questionIndex }))
+                    .filter(item => item.question.type === 'essay');
+
+                quizGradingState = { uid: item.uid, studentName: item.studentName, attemptIndex: item.attemptIndex, contentKey, autoScore: Number(attempt.autoScore ?? attempt.score) || 0, total: Number(attempt.total) || questions.length };
+
+                document.getElementById('quizGradingStudentName').innerText = `تصحيح إجابات: ${item.studentName} — الأسئلة المؤتمتة: ${quizGradingState.autoScore} من ${autoTotal}`;
+                document.getElementById('quizGradingQuestions').innerHTML = essayItems.map(({ question, questionIndex }) => `
+                    <div class="p-3 rounded-xl border border-slate-200 bg-slate-50">
+                        <p class="font-bold text-slate-800 text-xs mb-2">${questionIndex + 1}. ${escapeQuizHtml(question.prompt)}</p>
+                        <div class="bg-white rounded-lg border border-slate-200 p-3 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed mb-2 min-h-[2.5rem]">${escapeQuizHtml(answers[questionIndex] || '— بدون إجابة —')}</div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[11px] font-bold text-slate-500">التصحيح:</label>
+                            <select data-essay-index="${questionIndex}" class="essay-grade-select px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-white">
+                                <option value="1" ${Number(essayScores[questionIndex]) === 1 ? 'selected' : ''}>صحيح ✅</option>
+                                <option value="0" ${Number(essayScores[questionIndex]) !== 1 ? 'selected' : ''}>خاطئ ❌</option>
+                            </select>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('quizGradingPanel').classList.remove('hidden');
+                document.getElementById('quizGradingPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (error) {
+                console.error('خطأ في فتح التصحيح:', error);
+                alert('تعذر فتح الإجابات. حاول مرة أخرى.');
+            }
+        }
+
+        function closeQuizGrading() {
+            quizGradingState = null;
+            const panel = document.getElementById('quizGradingPanel');
+            if (panel) panel.classList.add('hidden');
+        }
+
+        async function saveQuizGrading() {
+            if (!quizGradingState) return;
+            const selects = document.querySelectorAll('#quizGradingQuestions .essay-grade-select');
+            const essayScores = {};
+            selects.forEach(select => { essayScores[select.dataset.essayIndex] = Number(select.value); });
+
+            const earnedEssay = Object.values(essayScores).reduce((sum, value) => sum + value, 0);
+            const finalScore = quizGradingState.autoScore + earnedEssay;
+            const total = quizGradingState.total;
+            const percentage = total ? Math.round(finalScore / total * 100) : 0;
+
+            const button = document.getElementById('saveQuizGradingBtn');
+            button.disabled = true;
+            try {
+                const studentRef = window.doc(window.db, 'students', quizGradingState.uid);
+                const snapshot = await window.getDoc(studentRef);
+                if (!snapshot.exists()) throw new Error('بيانات الطالب غير موجودة.');
+
+                const course = (snapshot.data().courseProgress || {})[quizGradingState.contentKey] || {};
+                const attempts = Array.isArray(course.quizAttempts) ? [...course.quizAttempts] : [];
+                const attempt = attempts[quizGradingState.attemptIndex];
+                if (!attempt) throw new Error('محاولة الاختبار غير موجودة.');
+
+                attempts[quizGradingState.attemptIndex] = {
+                    ...attempt,
+                    essayScores,
+                    score: finalScore,
+                    percentage,
+                    graded: true,
+                    gradedAt: new Date().toISOString()
+                };
+
+                await window.updateDoc(studentRef, {
+                    [`courseProgress.${quizGradingState.contentKey}.quizAttempts`]: attempts,
+                    [`courseProgress.${quizGradingState.contentKey}.quiz.essayScores`]: essayScores,
+                    [`courseProgress.${quizGradingState.contentKey}.quiz.score`]: finalScore,
+                    [`courseProgress.${quizGradingState.contentKey}.quiz.percentage`]: percentage,
+                    [`courseProgress.${quizGradingState.contentKey}.quiz.graded`]: true
+                });
+
+                // إشعار الطالب بالنتيجة النهائية
+                const studentData = snapshot.data();
+                const notifications = Array.isArray(studentData.notifications) ? studentData.notifications : [];
+                const courseName = document.getElementById('quizCourse');
+                const courseLabel = courseName.options[courseName.selectedIndex].text;
+                notifications.unshift({
+                    text: `تم تصحيح اختبارك في مادة "${courseLabel}". نتيجتك النهائية: ${finalScore} من ${total} (${percentage}%).`,
+                    date: new Date().toLocaleString('ar-EG'),
+                    read: false,
+                    type: 'quiz_result'
+                });
+                await window.updateDoc(studentRef, { notifications });
+                void sendStudentPush(quizGradingState.uid, 'تم تصحيح اختبارك', `نتيجتك النهائية في ${courseLabel}: ${percentage}% (${finalScore} من ${total}).`, 'quiz_result');
+
+                showToast(`تم حفظ التصحيح وإرسال النتيجة (${percentage}%)`);
+                closeQuizGrading();
+                await loadQuizSubmissions();
+            } catch (error) {
+                console.error('خطأ في حفظ التصحيح:', error);
+                alert('تعذر حفظ التصحيح. تحقق من الاتصال وحاول مرة أخرى.');
+            } finally {
+                button.disabled = false;
             }
         }
 
@@ -2373,7 +2647,8 @@
                                 term,
                                 score: Number(attempt.score) || 0,
                                 total: Number(attempt.total) || 0,
-                                percentage: getResultPercentage(attempt),
+                                percentage: attempt.graded === false ? null : getResultPercentage(attempt),
+                                pending: attempt.graded === false,
                                 submittedAt: attempt.submittedAt || null,
                                 time: getActivityTimestampMillis(attempt.submittedAt)
                             });
@@ -2423,10 +2698,11 @@
 
             const attemptsCount = filtered.length;
             const studentCount = new Set(filtered.map(row => row.studentId)).size;
-            const average = attemptsCount
-                ? Math.round(filtered.reduce((total, row) => total + row.percentage, 0) / attemptsCount)
+            const gradedRows = filtered.filter(row => row.percentage != null);
+            const average = gradedRows.length
+                ? Math.round(gradedRows.reduce((total, row) => total + row.percentage, 0) / gradedRows.length)
                 : 0;
-            const top = attemptsCount ? Math.max(...filtered.map(row => row.percentage)) : 0;
+            const top = gradedRows.length ? Math.max(...gradedRows.map(row => row.percentage)) : 0;
 
             document.getElementById('resultsStatAttempts').innerText = attemptsCount;
             document.getElementById('resultsStatStudents').innerText = studentCount;
@@ -2449,11 +2725,16 @@
 
             const displayed = filtered.slice(0, 300);
             tbody.innerHTML = displayed.map(row => {
-                const color = row.percentage >= 85
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                    : row.percentage >= 50
-                        ? 'bg-amber-50 text-amber-700 border-amber-100'
-                        : 'bg-red-50 text-red-600 border-red-100';
+                const color = row.percentage == null
+                    ? 'bg-slate-100 text-slate-500 border-slate-200'
+                    : row.percentage >= 85
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                        : row.percentage >= 50
+                            ? 'bg-amber-50 text-amber-700 border-amber-100'
+                            : 'bg-red-50 text-red-600 border-red-100';
+                const pctBadge = row.percentage == null
+                    ? '<span class="inline-block px-2 py-1 rounded-full border font-bold bg-amber-50 text-amber-700 border-amber-200">قيد التصحيح</span>'
+                    : `<span class="inline-block px-2 py-1 rounded-full border font-bold ${color}">${row.percentage}%</span>`;
                 const dateLabel = row.time
                     ? new Date(row.time).toLocaleString('ar-EG')
                     : '—';
@@ -2465,7 +2746,7 @@
                         <td class="px-4 py-3 font-bold text-slate-700 font-mono" dir="ltr">${row.score} / ${row.total}</td>
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-1.5">
-                                <span class="inline-block px-2 py-1 rounded-full border font-bold ${color}">${row.percentage}%</span>
+                                ${pctBadge}
                                 <button type="button"
                                     onclick="sendQuizResultMessage(this)"
                                     title="إرسال رسالة للطالب عن نتيجته"
@@ -2475,8 +2756,9 @@
                                     data-course="${escapeQuizHtml(row.courseName)}"
                                     data-score="${row.score}"
                                     data-total="${row.total}"
-                                    data-percentage="${row.percentage}"
-                                    class="w-7 h-7 shrink-0 rounded-lg border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white transition flex items-center justify-center disabled:opacity-50 disabled:cursor-wait">
+                                    data-percentage="${row.percentage ?? ''}"
+                                    ${row.percentage == null ? 'disabled' : ''}
+                                    class="w-7 h-7 shrink-0 rounded-lg border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white transition flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
                                     <i class="fa-solid fa-paper-plane text-[10px]"></i>
                                 </button>
                             </div>
