@@ -809,7 +809,12 @@
         // قفل الاختبار بعد التسليم — محاولة واحدة فقط حتى لو حدّث الطالب الصفحة
         function applyQuizLock() {
             if (!currentQuizQuestions.length || !quizSignature) return;
-            const attempt = currentQuizAttempts.find(a => a && a.signature === quizSignature);
+            // نطابق إما بصمة الأسئلة الحالية، أو أي محاولة قديمة مسجلة قبل وجود البصمة
+            // (بنفس عدد الأسئلة) — عشان محاولات ما قبل القفل تفضل محفوظة ومقفولة.
+            const attempt = currentQuizAttempts.find(a =>
+                a && (a.signature === quizSignature ||
+                    (!a.signature && a.total === currentQuizQuestions.length))
+            );
             if (!attempt) return;
 
             quizSubmitted = true;
