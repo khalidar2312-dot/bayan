@@ -22,7 +22,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, deleteUser, signOut, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, writeBatch, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, writeBatch, arrayUnion, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // إعدادات فايربيس الخاصة بك (تأكد من مطابقتها لإعدادات موقعك)
         const firebaseConfig = {
@@ -70,6 +70,7 @@
         window.query = query;
         window.where = where;
         window.addDoc = addDoc;
+        window.deleteField = deleteField;
         window.serverTimestamp = serverTimestamp;
         window.orderBy = orderBy;
         window.writeBatch = writeBatch;
@@ -942,6 +943,20 @@
                                 <p class="text-center text-xs text-slate-400 py-6">جاري تحميل الأسئلة...</p>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- إعادة فتح الاختبار -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-amber-200 p-5 mt-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-rotate-right ml-1 text-amber-600"></i> إعادة فتح الاختبار</h3>
+                                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">الاختبار يُقفل نهائيًا بعد أول تسليم لكل طالب. لو عدّلت الأسئلة أو أضفت سؤالًا، استخدم هذا الزر لمسح جميع المحاولات السابقة وفتح الاختبار من جديد لكل الطلاب المشتركين.</p>
+                            </div>
+                            <button onclick="resetQuizAttempts()" class="shrink-0 px-4 py-2.5 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600">
+                                <i class="fa-solid fa-lock-open ml-1"></i> إعادة فتح الاختبار للطلاب
+                            </button>
+                        </div>
+                        <p id="quizResetStatus" class="hidden text-[11px] font-bold mt-3"></p>
                     </div>
 
                     <!-- تصحيح إجابات الطلاب (الأسئلة المقالية) -->
@@ -2255,6 +2270,38 @@
             } catch (error) {
                 console.error('خطأ في حذف سؤال الاختبار:', error);
                 alert('تعذر حذف السؤال. تحقق من الاتصال والصلاحيات.');
+            }
+        }
+
+        // إعادة فتح الاختبار: مسح جميع محاولات الطلاب لهذا الاختبار حتى يستطيعوا
+        // حل النسخة الجديدة بعد تعديل الأسئلة أو إضافة أسئلة.
+        async function resetQuizAttempts() {
+            const contentKey = getQuizContentKey();
+            const status = document.getElementById('quizResetStatus');
+            if (!confirm('سيتم مسح جميع محاولات هذا الاختبار عند كل الطلاب وفتحه من جديد، وسيُحذف سجل النتائج السابقة. متابعة؟')) return;
+
+            try {
+                const snapshot = await window.getDocs(window.query(window.collection(window.db, 'students')));
+                let count = 0;
+                for (const studentDoc of snapshot.docs) {
+                    const progress = studentDoc.data().courseProgress || {};
+                    if (!progress[contentKey]) continue;
+                    await window.updateDoc(window.doc(window.db, 'students', studentDoc.id), {
+                        [`courseProgress.${contentKey}.quizAttempts`]: window.deleteField(),
+                        [`courseProgress.${contentKey}.quiz`]: window.deleteField()
+                    });
+                    count++;
+                }
+                status.innerText = `تم فتح الاختبار من جديد لـ ${count} طالب، وتم مسح المحاولات السابقة.`;
+                status.className = 'text-[11px] font-bold mt-3 text-emerald-700';
+                status.classList.remove('hidden');
+                showToast(`تمت إعادة فتح الاختبار لـ ${count} طالب`);
+                if (typeof quizResultsCache !== 'undefined') quizResultsCache = [];
+            } catch (error) {
+                console.error('خطأ في إعادة فتح الاختبار:', error);
+                status.innerText = 'تعذر إعادة فتح الاختبار. حاول مرة أخرى.';
+                status.className = 'text-[11px] font-bold mt-3 text-red-600';
+                status.classList.remove('hidden');
             }
         }
 
