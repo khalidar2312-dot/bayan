@@ -395,6 +395,9 @@
         const contentKey = `${courseId}__${grade}__${term}`.replace(/\s+/g, '_');
         let currentStudentUid = null;
         let currentQuizQuestions = [];
+        let currentQuizAttempts = [];
+        let quizSignature = '';
+        let quizSubmitted = false;
         let currentVideos = [];
         let currentAttendance = {};
         let currentAssignments = [];
@@ -487,6 +490,9 @@
                     const courseProgress = savedProgress[contentKey] || {};
                     currentAttendance = courseProgress.attendance || {};
                     currentAssignmentSubmissions = courseProgress.assignmentSubmissions || {};
+                    currentQuizAttempts = Array.isArray(courseProgress.quizAttempts)
+                        ? courseProgress.quizAttempts
+                        : [];
                     updateLessonProgress();
                     renderStudentAssignments();
                 } catch (progressError) {
@@ -511,6 +517,7 @@
                 currentQuizQuestions = contentDoc.exists && Array.isArray(contentDoc.data().quizQuestions)
                     ? contentDoc.data().quizQuestions
                     : [];
+                quizSignature = computeQuizSignature(currentQuizQuestions);
                 const availability = document.getElementById('quizAvailability');
                 const startButton = document.getElementById('startQuizButton');
 
@@ -521,6 +528,8 @@
                     availability.innerText = 'لا يوجد اختبار متاح لهذه المادة حاليًا';
                     startButton.disabled = true;
                 }
+
+                applyQuizLock();
 
             } catch (error) {
                 console.error('خطأ في تحميل المحتوى:', error);
@@ -781,8 +790,48 @@
             }
         }
 
+        function fnvHash(text) {
+            let hash = 0x811c9dc5;
+            for (let i = 0; i < text.length; i++) {
+                hash ^= text.charCodeAt(i);
+                hash = Math.imul(hash, 0x01000193) >>> 0;
+            }
+            return hash.toString(16);
+        }
+
+        function computeQuizSignature(questions) {
+            const raw = questions.map(q =>
+                `${q.type || 'mcq'}#${q.prompt || ''}#${(q.options || []).join('|')}#${q.correctIndex ?? ''}`
+            ).join('##');
+            return fnvHash(raw);
+        }
+
+        // قفل الاختبار بعد التسليم — محاولة واحدة فقط حتى لو حدّث الطالب الصفحة
+        function applyQuizLock() {
+            if (!currentQuizQuestions.length || !quizSignature) return;
+            const attempt = currentQuizAttempts.find(a => a && a.signature === quizSignature);
+            if (!attempt) return;
+
+            quizSubmitted = true;
+            const availability = document.getElementById('quizAvailability');
+            const startButton = document.getElementById('startQuizButton');
+            startButton.disabled = true;
+
+            if (attempt.graded === false) {
+                availability.innerText = 'تم تسليم الاختبار — نتيجتك بانتظار تصحيح المدرس، وسيصلك إشعار بالنتيجة النهائية.';
+            } else {
+                availability.innerText = `تم تسليم الاختبار — نتيجتك: ${attempt.score} من ${attempt.total} (${attempt.percentage}%)`;
+            }
+
+            const result = document.getElementById('quizResult');
+            result.innerText = attempt.graded === false
+                ? 'لقد سلّمت هذا الاختبار مسبقًا. نتيجتك بانتظار تصحيح المدرس، وسيصلك إشعار بالنتيجة النهائية.'
+                : `لقد سلّمت هذا الاختبار مسبقًا. نتيجتك: ${attempt.score} من ${attempt.total} (${attempt.percentage}%)`;
+            result.classList.remove('hidden');
+        }
+
         function startQuiz() {
-            if (!currentQuizQuestions.length) return;
+            if (!currentQuizQuestions.length || quizSubmitted) return;
 
             const questionsContainer = document.getElementById('quizQuestions');
             document.getElementById('quizForm').reset();
@@ -871,6 +920,7 @@
                 autoScore,
                 total,
                 graded: !hasEssay,
+                signature: quizSignature,
                 answers: savedAnswers,
                 submittedAt: new Date().toISOString()
             };
@@ -891,6 +941,9 @@
                     : `نتيجتك: ${autoScore} من ${total} (${attempt.percentage}%)`;
                 result.classList.remove('hidden');
                 document.getElementById('quizForm').querySelector('button[type="submit"]').disabled = true;
+                quizSubmitted = true;
+                currentQuizAttempts.push(attempt);
+                applyQuizLock();
             } catch (error) {
                 console.error('تعذر حفظ نتيجة الاختبار:', error);
                 const errorDetails = error.code || error.message || 'سبب غير معروف';
