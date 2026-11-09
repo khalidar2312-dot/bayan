@@ -2158,9 +2158,12 @@
                 });
                 const data = await response.json().catch(() => null);
                 if (!response.ok || !data || !Array.isArray(data.questions) || !data.questions.length) {
-                    const reason = data && data.error === 'ai_not_configured'
-                        ? 'مفتاح الذكاء الاصطناعي لم يُضف بعد في إعدادات الـ Worker (GEMINI_API_KEY).'
-                        : 'تعذر توليد الأسئلة الآن، حاول مرة أخرى بعد قليل.';
+                    let reason = 'تعذر توليد الأسئلة الآن، حاول مرة أخرى بعد قليل.';
+                    if (data && data.error === 'ai_not_configured') {
+                        reason = 'مفتاح الذكاء الاصطناعي (GEMINI_API_KEY) لم يُضف بعد في إعدادات الـ Worker.';
+                    } else if (data && data.error === 'ai_failed') {
+                        reason = `فشل الاتصال بجوجل (كود ${data.status || 'غير معروف'}): ${data.detail || 'حاول مرة أخرى'}`;
+                    }
                     status.innerText = reason;
                     status.className = 'text-[11px] font-bold mt-2 text-red-600';
                     return;
