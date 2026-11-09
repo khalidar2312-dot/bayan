@@ -945,6 +945,52 @@
                         </div>
                     </div>
 
+                    <!-- توليد الأسئلة بالذكاء الاصطناعي -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 p-5 mt-4">
+                        <div class="mb-3">
+                            <h3 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-wand-magic-sparkles ml-1 text-indigo-600"></i> توليد أسئلة بالذكاء الاصطناعي</h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">اكتب موضوع الدرس والذكاء الاصطناعي يقترح لك أسئلة — راجعها وعدّلها قبل إضافاتها للاختبار</p>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="sm:col-span-2">
+                                <input id="aiTopic" type="text" maxlength="300" placeholder="الموضوع، مثال: الطهارة — أنواع المياه"
+                                    class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <select id="aiCount" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50">
+                                    <option value="3">3 أسئلة</option>
+                                    <option value="5" selected>5 أسئلة</option>
+                                    <option value="8">8 أسئلة</option>
+                                    <option value="10">10 أسئلة</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-5 mt-3">
+                            <label class="flex items-center gap-1.5 text-xs font-bold text-slate-600 cursor-pointer">
+                                <input type="checkbox" id="aiTypeMcq" checked class="accent-indigo-700"> اختيار من متعدد
+                            </label>
+                            <label class="flex items-center gap-1.5 text-xs font-bold text-slate-600 cursor-pointer">
+                                <input type="checkbox" id="aiTypeTf" checked class="accent-indigo-700"> صح وخطأ
+                            </label>
+                            <label class="flex items-center gap-1.5 text-xs font-bold text-slate-600 cursor-pointer">
+                                <input type="checkbox" id="aiTypeEssay" class="accent-indigo-700"> مقالي
+                            </label>
+                        </div>
+                        <button onclick="generateQuizQuestions()" id="aiGenerateBtn" class="w-full mt-3 py-2.5 rounded-xl bg-indigo-700 text-white font-bold text-xs hover:bg-indigo-800 disabled:opacity-50 disabled:cursor-wait transition">
+                            <i class="fa-solid fa-wand-magic-sparkles ml-1"></i> توليد الأسئلة
+                        </button>
+                        <p id="aiGenerateStatus" class="hidden text-[11px] font-bold mt-2"></p>
+                        <div id="aiDraftsWrap" class="hidden mt-4 border-t border-slate-100 pt-4">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <h4 class="text-xs font-extrabold text-slate-700">الأسئلة المقترحة — راجعها ثم أضفها</h4>
+                                <button onclick="addAllAiDrafts()" class="px-3 py-1.5 rounded-lg bg-emerald-800 text-white text-[11px] font-bold hover:bg-emerald-900">
+                                    <i class="fa-solid fa-check-double ml-1"></i> إضافة الكل
+                                </button>
+                            </div>
+                            <div id="aiDrafts" class="space-y-3"></div>
+                        </div>
+                    </div>
+
                     <!-- إعادة فتح الاختبار -->
                     <div class="bg-white rounded-2xl shadow-sm border border-amber-200 p-5 mt-4">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -2061,6 +2107,186 @@
                 console.error('خطأ في إضافة سؤال الاختبار:', error);
                 alert('تعذر حفظ السؤال. تحقق من الاتصال والصلاحيات.');
             }
+        }
+
+        // ================================================
+        // توليد أسئلة الاختبار بالذكاء الاصطناعي (Gemini)
+        // ================================================
+        let aiDraftQuestions = [];
+
+        function escapeAiAttr(value) {
+            return escapeQuizHtml(value).replace(/"/g, '&quot;');
+        }
+
+        async function generateQuizQuestions() {
+            const topic = document.getElementById('aiTopic').value.trim();
+            const count = Number(document.getElementById('aiCount').value);
+            const types = [];
+            if (document.getElementById('aiTypeMcq').checked) types.push('mcq');
+            if (document.getElementById('aiTypeTf').checked) types.push('tf');
+            if (document.getElementById('aiTypeEssay').checked) types.push('essay');
+
+            const btn = document.getElementById('aiGenerateBtn');
+            const status = document.getElementById('aiGenerateStatus');
+
+            if (!topic) { showToast('اكتب موضوع الأسئلة أولًا'); return; }
+            if (!types.length) { showToast('اختر نوع سؤال واحدًا على الأقل'); return; }
+
+            const authInstance = window.adminAuth && window.adminAuth.instance;
+            const user = authInstance && authInstance.currentUser;
+            if (!user) { showToast('سجّل الدخول أولًا ثم أعد المحاولة'); return; }
+
+            const courseSel = document.getElementById('quizCourse');
+            const gradeSel = document.getElementById('quizGrade');
+            const courseLabel = courseSel.options[courseSel.selectedIndex] ? courseSel.options[courseSel.selectedIndex].text : '';
+            const gradeLabel = gradeSel.options[gradeSel.selectedIndex] ? gradeSel.options[gradeSel.selectedIndex].text : '';
+
+            btn.disabled = true;
+            status.innerText = 'جاري توليد الأسئلة... قد يستغرق الأمر عشر ثوانٍ';
+            status.className = 'text-[11px] font-bold mt-2 text-indigo-700';
+            status.classList.remove('hidden');
+
+            try {
+                const idToken = await user.getIdToken();
+                const response = await fetch(window.BAYAN_PUSH_ENDPOINT.replace(/\/$/, '') + '/generate-quiz', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ topic, count, types, course: courseLabel, grade: gradeLabel })
+                });
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data || !Array.isArray(data.questions) || !data.questions.length) {
+                    const reason = data && data.error === 'ai_not_configured'
+                        ? 'مفتاح الذكاء الاصطناعي لم يُضف بعد في إعدادات الـ Worker (GEMINI_API_KEY).'
+                        : 'تعذر توليد الأسئلة الآن، حاول مرة أخرى بعد قليل.';
+                    status.innerText = reason;
+                    status.className = 'text-[11px] font-bold mt-2 text-red-600';
+                    return;
+                }
+                aiDraftQuestions = data.questions;
+                status.innerText = `تم توليد ${data.questions.length} أسئلة — راجعها بالأسفل ثم أضفها للاختبار.`;
+                status.className = 'text-[11px] font-bold mt-2 text-emerald-700';
+                renderAiDrafts();
+            } catch (error) {
+                console.error('خطأ في توليد الأسئلة:', error);
+                status.innerText = 'تعذر الاتصال بخادم التوليد. تحقق من الإنترنت وأن الـ Worker منشور.';
+                status.className = 'text-[11px] font-bold mt-2 text-red-600';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function renderAiDrafts() {
+            const container = document.getElementById('aiDrafts');
+            const wrap = document.getElementById('aiDraftsWrap');
+            const typeLabels = { mcq: 'اختيار من متعدد', tf: 'صح وخطأ', essay: 'مقالي' };
+            const typeColors = {
+                mcq: 'bg-blue-100 text-blue-700',
+                tf: 'bg-emerald-100 text-emerald-700',
+                essay: 'bg-violet-100 text-violet-700'
+            };
+
+            container.innerHTML = aiDraftQuestions.map((q, i) => {
+                if (!q) return '';
+                let fields = '';
+                if (q.type === 'mcq') {
+                    const opts = (q.options || []).concat(['', '', '', '']).slice(0, 4);
+                    fields = opts.map((opt, j) => `
+                        <input id="aiDraftOpt${i}_${j}" type="text" value="${escapeAiAttr(opt)}" placeholder="الخيار ${j + 1}"
+                            class="w-full px-3 py-2 rounded-lg border border-slate-200 text-[11px] bg-white focus:outline-none focus:border-indigo-500">`).join('');
+                    fields += `
+                        <select id="aiDraftCorrect${i}" class="w-full px-3 py-2 rounded-lg border border-emerald-300 text-[11px] bg-emerald-50 font-bold">
+                            ${opts.map((_, j) => `<option value="${j}" ${q.correctIndex === j ? 'selected' : ''}>الإجابة الصحيحة: الخيار ${j + 1}</option>`).join('')}
+                        </select>`;
+                } else if (q.type === 'tf') {
+                    fields = `
+                        <select id="aiDraftCorrect${i}" class="w-full px-3 py-2 rounded-lg border border-emerald-300 text-[11px] bg-emerald-50 font-bold">
+                            <option value="0" ${q.correctIndex === 0 ? 'selected' : ''}>الإجابة الصحيحة: صح</option>
+                            <option value="1" ${q.correctIndex === 1 ? 'selected' : ''}>الإجابة الصحيحة: خطأ</option>
+                        </select>`;
+                }
+                return `
+                    <div id="aiDraft-${i}" class="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${typeColors[q.type] || 'bg-slate-200 text-slate-600'}">${typeLabels[q.type] || q.type}</span>
+                            <button type="button" onclick="removeAiDraft(${i})" title="تجاهل هذا السؤال" class="w-6 h-6 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                        <input id="aiDraftPrompt${i}" type="text" value="${escapeAiAttr(q.prompt)}"
+                            class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-bold focus:outline-none focus:border-indigo-500">
+                        ${fields}
+                        <button type="button" onclick="addAiDraftToQuiz(${i})" class="w-full py-2 rounded-lg bg-emerald-800 text-white text-[11px] font-bold hover:bg-emerald-900 transition">
+                            <i class="fa-solid fa-plus ml-1"></i> إضافة للاختبار
+                        </button>
+                    </div>`;
+            }).join('');
+            wrap.classList.remove('hidden');
+            wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function removeAiDraft(i) {
+            aiDraftQuestions[i] = null;
+            const el = document.getElementById(`aiDraft-${i}`);
+            if (el) el.remove();
+            if (aiDraftQuestions.every(q => !q)) {
+                document.getElementById('aiDraftsWrap').classList.add('hidden');
+            }
+        }
+
+        async function addAiDraftToQuiz(i) {
+            const draft = aiDraftQuestions[i];
+            if (!draft) return;
+            const prompt = document.getElementById(`aiDraftPrompt${i}`).value.trim();
+            if (!prompt) { showToast('اكتب نص السؤال أولًا'); return; }
+
+            let question;
+            if (draft.type === 'essay') {
+                question = { type: 'essay', prompt };
+            } else if (draft.type === 'tf') {
+                question = { type: 'tf', prompt, correctIndex: Number(document.getElementById(`aiDraftCorrect${i}`).value) === 1 ? 1 : 0 };
+            } else {
+                const options = [];
+                for (let j = 0; j < 6; j++) {
+                    const input = document.getElementById(`aiDraftOpt${i}_${j}`);
+                    if (!input) continue;
+                    const text = input.value.trim();
+                    if (text) options.push(text);
+                }
+                if (options.length < 2) { showToast('اكتب خيارين على الأقل'); return; }
+                let correctIndex = Number(document.getElementById(`aiDraftCorrect${i}`).value);
+                if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= options.length) correctIndex = 0;
+                question = { type: 'mcq', prompt, options, correctIndex };
+            }
+
+            const contentKey = getQuizContentKey();
+            try {
+                const snapshot = await window.getDoc(window.doc(window.db, 'course_content', contentKey));
+                const questions = snapshot.exists() && Array.isArray(snapshot.data().quizQuestions)
+                    ? snapshot.data().quizQuestions
+                    : [];
+                questions.push(question);
+                await saveQuizQuestions(contentKey, questions);
+                await loadQuizQuestions();
+                removeAiDraft(i);
+                showToast('تمت إضافة السؤال للاختبار — راجع قائمة الأسئلة بالأعلى');
+            } catch (error) {
+                console.error('خطأ في إضافة السؤال المولد:', error);
+                alert('تعذر حفظ السؤال. تحقق من الاتصال والصلاحيات.');
+            }
+        }
+
+        async function addAllAiDrafts() {
+            let added = 0;
+            for (let i = 0; i < aiDraftQuestions.length; i++) {
+                if (!aiDraftQuestions[i]) continue;
+                const before = aiDraftQuestions.filter(Boolean).length;
+                await addAiDraftToQuiz(i);
+                if (aiDraftQuestions.filter(Boolean).length < before) added++;
+            }
+            if (added) showToast(`تمت إضافة ${added} سؤال للاختبار — راجع قائمة الأسئلة بالأعلى`);
         }
 
         // ================================================
