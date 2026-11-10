@@ -806,11 +806,12 @@
             return fnvHash(raw);
         }
 
-        // قفل الاختبار نهائيًا — أي محاولة تسليم مسجلة (من الويب أو التطبيق)
-        // تعني أن الاختبار اتحل مرة واحدة ولن يستطيع الطالب دخوله مرة أخرى.
+        // قفل الاختبار فقط عند وجود محاولة تخص نسخة الأسئلة المنشورة حاليًا.
         function applyQuizLock() {
             if (!currentQuizQuestions.length) return;
-            const attempt = currentQuizAttempts.find(a => a && typeof a === 'object');
+            const attempt = [...currentQuizAttempts].reverse().find(a =>
+                a && typeof a === 'object' && a.signature === quizSignature
+            );
             if (!attempt) return;
 
             quizSubmitted = true;
