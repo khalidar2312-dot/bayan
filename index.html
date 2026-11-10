@@ -191,12 +191,13 @@
                         <i class="fa-solid fa-gear text-lg"></i>
                     </button>
 
-                    <div class="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-2xl">
-
-                        <div class="w-8 h-8 rounded-full bg-emerald-800 text-amber-400 flex items-center justify-center font-bold text-sm">
-                            <i class="fa-solid fa-user"></i>
+                    <button type="button" onclick="openStudentProfile()"
+                        class="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-2xl hover:bg-emerald-100 transition"
+                        title="الملف الشخصي" aria-label="فتح الملف الشخصي">
+                        <div class="w-8 h-8 rounded-full bg-emerald-800 text-amber-400 flex items-center justify-center font-bold text-sm overflow-hidden">
+                            <img id="headerUserPhoto" class="hidden w-full h-full object-cover" alt="الصورة الشخصية">
+                            <i id="headerUserAvatarIcon" class="fa-solid fa-user"></i>
                         </div>
-
                         <div class="text-right">
                             <span
                                 id="headerUserName"
@@ -210,8 +211,7 @@
                                 المرحلة
                             </span>
                         </div>
-
-                    </div>
+                    </button>
 
                     <button
                         onclick="handleLogout()"
@@ -972,6 +972,73 @@
 
     </div>
 
+    <!-- Student profile -->
+    <div id="studentProfileModal" onclick="if(event.target===this) closeStudentProfile()"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative">
+            <button type="button" onclick="closeStudentProfile()"
+                class="absolute top-4 left-4 w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                title="إغلاق" aria-label="إغلاق الملف الشخصي">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="text-center mb-5">
+                <div class="w-20 h-20 rounded-full bg-emerald-800 text-amber-400 flex items-center justify-center mx-auto mb-3 overflow-hidden border-2 border-amber-400 shadow-lg">
+                    <img id="studentProfilePhoto" class="hidden w-full h-full object-cover" alt="الصورة الشخصية">
+                    <i id="studentProfileAvatarIcon" class="fa-solid fa-user text-3xl"></i>
+                </div>
+                <input id="studentProfilePhotoInput" type="file" accept="image/*" class="hidden" onchange="changeStudentProfilePhoto(event)">
+                <div class="flex justify-center gap-2">
+                    <button type="button" onclick="document.getElementById('studentProfilePhotoInput').click()"
+                        class="px-3 py-2 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition">
+                        <i class="fa-solid fa-camera ml-1"></i> تغيير الصورة
+                    </button>
+                    <button id="removeStudentProfilePhotoButton" type="button" onclick="removeStudentProfilePhoto()"
+                        class="hidden px-3 py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition">
+                        <i class="fa-solid fa-trash-can ml-1"></i> حذف الصورة
+                    </button>
+                </div>
+                <p id="studentProfilePhotoMessage" class="hidden text-[11px] mt-2" role="status" aria-live="polite"></p>
+                <h3 class="text-xl font-extrabold font-kufi text-slate-900 mt-4">الملف الشخصي</h3>
+                <p class="text-xs text-slate-400 mt-1">حدّث اسمك وصورتك الشخصية</p>
+            </div>
+
+            <form onsubmit="saveStudentProfileName(event)" class="space-y-2 mb-5">
+                <label for="studentProfileName" class="block text-xs font-bold text-slate-600">اسم الطالب</label>
+                <div class="flex gap-2">
+                    <input id="studentProfileName" type="text" minlength="3" maxlength="60" required
+                        class="min-w-0 flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-600">
+                    <button id="saveStudentProfileNameButton" type="submit"
+                        class="shrink-0 px-4 py-2.5 rounded-xl bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 transition">
+                        حفظ الاسم
+                    </button>
+                </div>
+                <p id="studentProfileNameMessage" class="hidden text-[11px]" role="status" aria-live="polite"></p>
+            </form>
+
+            <div class="border-t border-slate-100 pt-4">
+                <h4 class="text-sm font-extrabold text-slate-800 mb-3">بيانات التواصل</h4>
+                <div class="space-y-3">
+                    <div>
+                        <label for="studentProfilePhone" class="block text-[11px] font-bold text-slate-500 mb-1">رقم الموبايل</label>
+                        <input id="studentProfilePhone" type="tel" readonly aria-readonly="true"
+                            class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600 cursor-not-allowed" dir="ltr">
+                    </div>
+                    <div>
+                        <label for="studentProfileParentPhone" class="block text-[11px] font-bold text-slate-500 mb-1">رقم هاتف ولي الأمر</label>
+                        <input id="studentProfileParentPhone" type="tel" readonly aria-readonly="true"
+                            class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600 cursor-not-allowed" dir="ltr">
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-3 leading-5">لا يمكن تعديل أرقام الهاتف من الموقع. لتحديثها، تواصل مع الإدارة.</p>
+                <button type="button" onclick="contactAdminAboutProfile()"
+                    class="w-full mt-3 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition">
+                    <i class="fa-solid fa-headset ml-1"></i> مراسلة الإدارة لتعديل الأرقام
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Student account settings -->
     <div
         id="studentSettingsModal"
@@ -1029,12 +1096,13 @@
 
 
     <nav id="studentBottomNav" aria-label="التنقل في تطبيق الطالب" class="hidden md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-lg shadow-[0_-8px_30px_rgba(15,23,42,0.08)]" style="padding-bottom:max(.35rem,env(safe-area-inset-bottom))">
-        <div class="max-w-xl mx-auto grid grid-cols-5 px-1 pt-2">
+        <div class="max-w-xl mx-auto grid grid-cols-6 px-1 pt-2">
             <a href="#studentDashboard" class="flex flex-col items-center gap-1 py-1.5 text-emerald-800 text-[10px] font-bold"><i class="fa-solid fa-house text-base"></i><span>الرئيسية</span></a>
             <a href="#courses" class="flex flex-col items-center gap-1 py-1.5 text-slate-500 hover:text-emerald-800 text-[10px] font-bold"><i class="fa-solid fa-book-quran text-base"></i><span>المواد</span></a>
             <a href="#studentSubscriptions" class="flex flex-col items-center gap-1 py-1.5 text-slate-500 hover:text-emerald-800 text-[10px] font-bold"><i class="fa-solid fa-id-card text-base"></i><span>اشتراكاتي</span></a>
             <button type="button" onclick="toggleNotificationModal()" class="relative flex flex-col items-center gap-1 py-1.5 text-slate-500 hover:text-emerald-800 text-[10px] font-bold"><i class="fa-solid fa-bell text-base"></i><span>الإشعارات</span><span id="studentBottomNotifBadge" class="hidden absolute top-0 right-1/2 translate-x-5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] leading-4">0</span></button>
             <a href="#schedule" class="flex flex-col items-center gap-1 py-1.5 text-slate-500 hover:text-emerald-800 text-[10px] font-bold"><i class="fa-regular fa-calendar-days text-base"></i><span>الجدول</span></a>
+            <button type="button" onclick="openStudentProfile()" class="flex flex-col items-center gap-1 py-1.5 text-slate-500 hover:text-emerald-800 text-[10px] font-bold"><i class="fa-solid fa-user text-base"></i><span>حسابي</span></button>
         </div>
     </nav>
 
@@ -1796,6 +1864,8 @@
                 .getElementById('headerUserGrade')
                 .innerText = user.grade || 'طالب علم';
 
+            renderStudentHeaderProfile(user);
+
             renderStudentDashboard(user);
             updateCourseButtons(user);
             loadStudentLearningProgress(user);
@@ -1804,6 +1874,203 @@
             renderNotifications(user);
             subscribeToChatNotifications(user.uid);
             subscribeToStudentNotifications(user.uid);
+        }
+
+        function renderStudentHeaderProfile(user) {
+            const photo = document.getElementById('headerUserPhoto');
+            const icon = document.getElementById('headerUserAvatarIcon');
+            if (!photo || !icon) return;
+            const photoBase64 = typeof user?.photoBase64 === 'string' ? user.photoBase64.trim() : '';
+            if (photoBase64) {
+                photo.src = `data:image/jpeg;base64,${photoBase64}`;
+                photo.classList.remove('hidden');
+                icon.classList.add('hidden');
+            } else {
+                photo.removeAttribute('src');
+                photo.classList.add('hidden');
+                icon.classList.remove('hidden');
+            }
+        }
+
+        function setStudentProfileMessage(id, text, success = false) {
+            const element = document.getElementById(id);
+            if (!element) return;
+            element.innerText = text;
+            element.classList.remove('hidden', 'text-emerald-700', 'text-rose-600');
+            element.classList.add(success ? 'text-emerald-700' : 'text-rose-600');
+        }
+
+        function openStudentProfile() {
+            const user = currentUserData || getActiveUser();
+            if (!user) return;
+            currentUserData = user;
+            document.getElementById('studentProfileName').value = user.fullName || '';
+            document.getElementById('studentProfilePhone').value = user.phone || 'غير مسجل';
+            document.getElementById('studentProfileParentPhone').value = user.parentPhone || 'غير مسجل';
+            document.getElementById('studentProfileNameMessage').classList.add('hidden');
+            document.getElementById('studentProfilePhotoMessage').classList.add('hidden');
+
+            const photo = document.getElementById('studentProfilePhoto');
+            const icon = document.getElementById('studentProfileAvatarIcon');
+            const removeButton = document.getElementById('removeStudentProfilePhotoButton');
+            const photoBase64 = typeof user.photoBase64 === 'string' ? user.photoBase64.trim() : '';
+            if (photoBase64) {
+                photo.src = `data:image/jpeg;base64,${photoBase64}`;
+                photo.classList.remove('hidden');
+                icon.classList.add('hidden');
+                removeButton.classList.remove('hidden');
+            } else {
+                photo.removeAttribute('src');
+                photo.classList.add('hidden');
+                icon.classList.remove('hidden');
+                removeButton.classList.add('hidden');
+            }
+            document.getElementById('studentProfileModal').classList.remove('hidden');
+        }
+
+        function closeStudentProfile() {
+            document.getElementById('studentProfileModal').classList.add('hidden');
+            document.getElementById('studentProfilePhotoInput').value = '';
+        }
+
+        function updateStudentProfileCache(changes) {
+            const user = currentUserData || getActiveUser();
+            if (!user) return null;
+            currentUserData = { ...user, ...changes };
+            localStorage.setItem('activeUser', JSON.stringify(currentUserData));
+            document.getElementById('headerUserName').innerText = currentUserData.fullName || 'طالب';
+            document.getElementById('headerUserGrade').innerText = currentUserData.grade || 'طالب علم';
+            renderStudentHeaderProfile(currentUserData);
+            renderStudentDashboard(currentUserData);
+            return currentUserData;
+        }
+
+        async function saveStudentProfileName(event) {
+            event.preventDefault();
+            const user = auth.currentUser;
+            const newName = document.getElementById('studentProfileName').value.trim();
+            const button = document.getElementById('saveStudentProfileNameButton');
+            if (!user || !currentUserData || user.uid !== currentUserData.uid) {
+                setStudentProfileMessage('studentProfileNameMessage', 'انتهت جلسة الدخول. سجّل الدخول مرة أخرى.', false);
+                return;
+            }
+            if (newName.length < 3 || newName.length > 60) {
+                setStudentProfileMessage('studentProfileNameMessage', 'اكتب اسمًا من 3 إلى 60 حرفًا.', false);
+                return;
+            }
+            button.disabled = true;
+            button.innerText = 'جارٍ الحفظ...';
+            try {
+                await db.collection('students').doc(user.uid).update({ fullName: newName });
+                try { await user.updateProfile({ displayName: newName }); } catch (profileError) {
+                    console.warn('تعذر تحديث اسم Firebase Auth:', profileError);
+                }
+                updateStudentProfileCache({ fullName: newName });
+                setStudentProfileMessage('studentProfileNameMessage', 'تم تحديث الاسم.', true);
+            } catch (error) {
+                console.error('تعذر تحديث اسم الطالب:', error);
+                setStudentProfileMessage('studentProfileNameMessage', 'تعذر حفظ الاسم. تحقق من الاتصال وحاول مرة أخرى.', false);
+            } finally {
+                button.disabled = false;
+                button.innerText = 'حفظ الاسم';
+            }
+        }
+
+        async function compressStudentProfilePhoto(file) {
+            if (!file || !file.type.startsWith('image/')) throw new Error('invalid_image');
+            const objectUrl = URL.createObjectURL(file);
+            try {
+                const image = await new Promise((resolve, reject) => {
+                    const element = new Image();
+                    element.onload = () => resolve(element);
+                    element.onerror = () => reject(new Error('image_read_failed'));
+                    element.src = objectUrl;
+                });
+                const scale = Math.min(1, 512 / Math.max(image.naturalWidth, image.naturalHeight));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+                canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+                const context = canvas.getContext('2d');
+                if (!context) throw new Error('canvas_unavailable');
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                for (const quality of [0.82, 0.72, 0.62, 0.52]) {
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+                    if (!blob) continue;
+                    if (blob.size > 300 * 1024) continue;
+                    return await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+                        reader.onerror = () => reject(new Error('image_read_failed'));
+                        reader.readAsDataURL(blob);
+                    });
+                }
+                throw new Error('image_too_large');
+            } finally {
+                URL.revokeObjectURL(objectUrl);
+            }
+        }
+
+        async function changeStudentProfilePhoto(event) {
+            const file = event.target.files && event.target.files[0];
+            event.target.value = '';
+            if (!file) return;
+            const user = auth.currentUser;
+            if (!user || !currentUserData || user.uid !== currentUserData.uid) {
+                setStudentProfileMessage('studentProfilePhotoMessage', 'انتهت جلسة الدخول. سجّل الدخول مرة أخرى.', false);
+                return;
+            }
+            const button = event.target.parentElement.querySelector('button');
+            button.disabled = true;
+            setStudentProfileMessage('studentProfilePhotoMessage', 'جارٍ تجهيز الصورة وحفظها...', true);
+            try {
+                const photoBase64 = await compressStudentProfilePhoto(file);
+                await db.collection('students').doc(user.uid).update({ photoBase64 });
+                updateStudentProfileCache({ photoBase64 });
+                openStudentProfile();
+                setStudentProfileMessage('studentProfilePhotoMessage', 'تم تحديث الصورة الشخصية.', true);
+            } catch (error) {
+                console.error('تعذر تحديث صورة الطالب:', error);
+                const message = error.message === 'image_too_large'
+                    ? 'الصورة كبيرة. اختر صورة أوضح وأصغر حجمًا.'
+                    : 'تعذر حفظ الصورة. اختر صورة أخرى وحاول مرة أخرى.';
+                setStudentProfileMessage('studentProfilePhotoMessage', message, false);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        async function removeStudentProfilePhoto() {
+            const user = auth.currentUser;
+            if (!user || !currentUserData || user.uid !== currentUserData.uid) return;
+            if (!confirm('هل تريد حذف صورتك الشخصية؟')) return;
+            const button = document.getElementById('removeStudentProfilePhotoButton');
+            button.disabled = true;
+            try {
+                await db.collection('students').doc(user.uid).update({
+                    photoBase64: firebase.firestore.FieldValue.delete()
+                });
+                const { photoBase64, ...profileWithoutPhoto } = currentUserData;
+                currentUserData = profileWithoutPhoto;
+                localStorage.setItem('activeUser', JSON.stringify(currentUserData));
+                renderStudentHeaderProfile(currentUserData);
+                openStudentProfile();
+                setStudentProfileMessage('studentProfilePhotoMessage', 'تم حذف الصورة الشخصية.', true);
+            } catch (error) {
+                console.error('تعذر حذف صورة الطالب:', error);
+                setStudentProfileMessage('studentProfilePhotoMessage', 'تعذر حذف الصورة. حاول مرة أخرى.', false);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        function contactAdminAboutProfile() {
+            closeStudentProfile();
+            const widget = document.getElementById('chatWidget');
+            if (widget && widget.classList.contains('hidden')) toggleChatWidget();
+            const input = document.getElementById('chatInput');
+            if (input && !input.value.trim()) input.value = 'أرغب في تعديل رقم الهاتف أو رقم هاتف ولي الأمر.';
+            input?.focus();
         }
 
         async function loadAcademicSchedule(user) {
