@@ -1318,6 +1318,20 @@
             <input type="hidden" id="editingUserDocId">
 
             <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-5 max-h-[55vh] overflow-y-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-white border border-slate-100">
+                    <div>
+                        <label for="editStudentPhone" class="block text-[11px] font-bold text-slate-600 mb-1.5">رقم هاتف الطالب / الواتساب</label>
+                        <input id="editStudentPhone" type="tel" inputmode="tel" maxlength="25" autocomplete="off"
+                            placeholder="رقم موبايل الطالب"
+                            class="w-full px-2.5 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:border-emerald-500" dir="ltr">
+                    </div>
+                    <div>
+                        <label for="editStudentParentPhone" class="block text-[11px] font-bold text-slate-600 mb-1.5">رقم هاتف ولي الأمر</label>
+                        <input id="editStudentParentPhone" type="tel" inputmode="tel" maxlength="25" autocomplete="off"
+                            placeholder="رقم هاتف ولي الأمر"
+                            class="w-full px-2.5 py-2 rounded-lg border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:border-emerald-500" dir="ltr">
+                    </div>
+                </div>
                 <div class="p-2 rounded-xl bg-white">
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" id="sub-fiqh" onchange="toggleSubscriptionMetadata('fiqh')" class="w-4 h-4 text-emerald-600 rounded border-slate-300">
@@ -4363,6 +4377,8 @@
                 if (!targetUser) return;
 
                 document.getElementById('editStudentNameTitle').innerText = `الطالب: ${targetUser.fullName || targetUser.name}`;
+                document.getElementById('editStudentPhone').value = targetUser.phone || '';
+                document.getElementById('editStudentParentPhone').value = targetUser.parentPhone || '';
 
                 const subs = targetUser.subscriptions || {};
                 ['fiqh', 'tafseer', 'hadith', 'tawheed'].forEach(courseId => {
@@ -4435,11 +4451,13 @@
                 });
 
                 await window.updateDoc(studentRef, {
-                    subscriptions: updatedSubs
+                    subscriptions: updatedSubs,
+                    phone: document.getElementById('editStudentPhone').value.trim(),
+                    parentPhone: document.getElementById('editStudentParentPhone').value.trim()
                 });
 
                 closeEditModal();
-                showToast('تم تحديث اشتراكات الطالب في قاعدة البيانات بنجاح');
+                showToast('تم تحديث بيانات الطالب واشتراكاته بنجاح');
                 loadAllUsersFromFirestore();
             } catch (e) {
                 console.error(e);
