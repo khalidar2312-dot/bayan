@@ -938,7 +938,14 @@
                             </div>
                         </div>
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                            <h3 id="quizQuestionsHeading" class="text-sm font-bold text-slate-700 mb-3">أسئلة الاختبار</h3>
+                            <div class="flex items-center justify-between gap-2 mb-3">
+                                <h3 id="quizQuestionsHeading" class="text-sm font-bold text-slate-700">أسئلة الاختبار</h3>
+                                <button id="deleteAllQuizQuestionsButton" type="button" onclick="deleteAllQuizQuestions()" disabled
+                                    class="w-8 h-8 shrink-0 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    title="حذف جميع الأسئلة" aria-label="حذف جميع الأسئلة">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
                             <div id="quizQuestionsList" class="space-y-2 max-h-[28rem] overflow-y-auto">
                                 <p class="text-center text-xs text-slate-400 py-6">جاري تحميل الأسئلة...</p>
                             </div>
@@ -2034,6 +2041,8 @@
                     ? snapshot.data().quizQuestions
                     : [];
                 document.getElementById('quizQuestionsHeading').innerText = `أسئلة الاختبار (${questions.length})`;
+                const deleteAllButton = document.getElementById('deleteAllQuizQuestionsButton');
+                if (deleteAllButton) deleteAllButton.disabled = questions.length === 0;
 
                 if (!questions.length) {
                     container.innerHTML = '<p class="text-center text-xs text-slate-400 py-6">لم تتم إضافة أسئلة لهذا الاختبار بعد</p>';
@@ -2063,6 +2072,24 @@
                 { quizQuestions: questions, updatedAt: window.serverTimestamp() },
                 { merge: true }
             );
+        }
+
+        async function deleteAllQuizQuestions() {
+            const contentKey = getQuizContentKey();
+            const button = document.getElementById('deleteAllQuizQuestionsButton');
+            if (!button || button.disabled) return;
+            if (!confirm('سيتم حذف جميع أسئلة الاختبار المحدد. لن تُحذف سجلات إجابات الطلاب. هل تريد المتابعة؟')) return;
+
+            button.disabled = true;
+            try {
+                await saveQuizQuestions(contentKey, []);
+                await loadQuizQuestions();
+                showToast('تم حذف جميع أسئلة الاختبار');
+            } catch (error) {
+                console.error('تعذر حذف جميع أسئلة الاختبار:', error);
+                button.disabled = false;
+                alert('تعذر حذف الأسئلة. تحقق من الاتصال والصلاحيات ثم حاول مرة أخرى.');
+            }
         }
 
         async function addQuizQuestion() {
@@ -2162,7 +2189,12 @@
                     if (data && data.error === 'ai_not_configured') {
                         reason = 'مفتاح الذكاء الاصطناعي (GEMINI_API_KEY) لم يُضف بعد في إعدادات الـ Worker.';
                     } else if (data && data.error === 'ai_failed') {
-                        reason = `فشل الاتصال بجوجل (كود ${data.status || 'غير معروف'}): ${data.detail || 'حاول مرة أخرى'}`;
+                        const detail = String(data.detail || '');
+                        if (data.status === 404 && /models\/gemini-(?:1\.5|2\.0|2\.5)-flash/i.test(detail)) {
+                            reason = 'اسم نموذج Gemini مضبوط على إصدار قديم. غيّر GEMINI_MODEL في إعدادات Cloudflare إلى gemini-3.8-flash ثم أعد نشر الـ Worker.';
+                        } else {
+                            reason = `فشل الاتصال بجوجل (كود ${data.status || 'غير معروف'}): ${detail || 'حاول مرة أخرى'}`;
+                        }
                     }
                     status.innerText = reason;
                     status.className = 'text-[11px] font-bold mt-2 text-red-600';
